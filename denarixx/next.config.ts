@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
     "*.kirk.replit.dev",
     "*.repl.co",
   ],
+  devIndicators: false,
 };
 
 export default nextConfig;
