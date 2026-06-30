@@ -30,3 +30,11 @@ NODE_ENV = "production"
 
 [services.production.health.startup]
 path = "/api/healthz"
+
+[[services]]
+localPort = 3000
+name = "Denarixx Vision AI"
+paths = ["/"]
+
+[services.development]
+run = "cd /home/runner/workspace/denarixx && npm run dev"
