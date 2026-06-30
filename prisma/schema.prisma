@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String?  @unique
+  displayName String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sessions        VisionSession[]
+  memoryItems     MemoryItem[]
+  routeMemories   RouteMemory[]
+  preferences     UserPreference[]
+  consentRecords  ConsentRecord[]
+  auditLogs       AuditLog[]
+}
+
+model VisionSession {
+  id        String    @id @default(cuid())
+  userId    String?
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  status    String    @default("active") // active | ended | error
+  mode      String    @default("simulation") // simulation | camera | upload
+
+  user            User?            @relation(fields: [userId], references: [id])
+  frameAnalyses   FrameAnalysis[]
+  hazardAlerts    HazardAlert[]
+  sceneDescriptions SceneDescription[]
+  safetyEvents    SafetyEvent[]
+
+  @@index([userId])
+  @@index([startedAt])
+}
+
+model FrameAnalysis {
+  id            String   @id @default(cuid())
+  sessionId     String
+  timestamp     DateTime @default(now())
+  source        String   @default("simulation") // camera | simulation | upload
+  detections    String   // JSON array of Detection[]
+  processingMs  Int      @default(0)
+
+  session       VisionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+model HazardAlert {
+  id          String   @id @default(cuid())
+  sessionId   String
+  timestamp   DateTime @default(now())
+  type        String
+  description String
+  severity    String   // critical | high | medium | low
+  confidence  Float
+  interrupted Boolean  @default(false)
+  dismissed   Boolean  @default(false)
+  metadata    String?  // JSON
+
+  session     VisionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([severity])
+}
+
+model SceneDescription {
+  id          String   @id @default(cuid())
+  sessionId   String
+  timestamp   DateTime @default(now())
+  summary     String
+  confidence  Float
+  isUncertain Boolean  @default(false)
+  detections  String   // JSON
+  provider    String   @default("mock") // mock | openai | local
+
+  session     VisionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+model MemoryItem {
+  id          String   @id @default(cuid())
+  userId      String?
+  type        String   // location | route | preference | object
+  label       String
+  description String
+  metadata    String   // JSON
+  createdAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([type])
+}
+
+model RouteMemory {
+  id          String   @id @default(cuid())
+  userId      String?
+  name        String
+  description String?
+  waypoints   String   // JSON array
+  visitCount  Int      @default(1)
+  lastVisited DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model UserPreference {
+  id        String   @id @default(cuid())
+  userId    String
+  key       String
+  value     String
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+}
+
+model ConsentRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  feature     String   // face_recognition | emergency_streaming | analytics | etc.
+  granted     Boolean
+  grantedAt   DateTime @default(now())
+  revokedAt   DateTime?
+  ipAddress   String?
+  userAgent   String?
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, feature])
+}
+
+model SafetyEvent {
+  id          String   @id @default(cuid())
+  sessionId   String
+  timestamp   DateTime @default(now())
+  eventType   String   // hazard_detected | hazard_dismissed | navigation_assist | uncertainty
+  severity    String?
+  confidence  Float?
+  description String
+  metadata    String?  // JSON
+
+  session     VisionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([eventType])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  resource  String
+  metadata  String?  // JSON
+  timestamp DateTime @default(now())
+  ipAddress String?
+
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([timestamp])
+}
