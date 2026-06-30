@@ -1,4 +1,4 @@
-import { ok, err, handleError } from '@/lib/api';
+import { ok, handleError } from '@/lib/api';
 import { getAllSessions } from '@/lib/sessionStore';
 
 export async function GET() {

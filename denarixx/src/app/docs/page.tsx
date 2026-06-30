@@ -1,4 +1,4 @@
-import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 
 const API_ROUTES = [
   { method: 'GET', path: '/api/health', desc: 'System health check', body: null, response: '{ status, version, mode, timestamp }' },
