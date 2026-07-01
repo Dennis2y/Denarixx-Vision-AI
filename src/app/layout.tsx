@@ -46,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Link>
             <div className="flex gap-1 flex-wrap text-sm" role="navigation" aria-label="Site links">
               {[
+                ['/v2-demo', '✦ V2 Guardian'],
                 ['/session', 'Session'],
                 ['/hazards', 'Hazards'],
                 ['/memory', 'Memory'],
