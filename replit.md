@@ -22,6 +22,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/multiCameraSupport.test.ts` — V14 Multi-Camera Smart Glasses tests (164/164)
 - `cd denarixx && npx tsx tests/onDeviceAI.test.ts` — V15 On-Device AI Optimization tests (170/170)
 - `cd denarixx && npx tsx tests/denarixxGlassesPrototype.test.ts` — V16 Denarixx Vision Glasses Prototype tests (176/176)
+- `cd denarixx && npx tsx tests/fieldTrial.test.ts` — V17 Real-World Field Trial tests (161/161)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
@@ -118,6 +119,13 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V16 component:** `denarixx/src/components/devices/GlassesPrototypePanel.tsx` — live prototype panel: connect/disconnect, mode card, battery/thermal, subsystem status, camera modules grid, haptic pattern preview, hardware bridge status, prototype spec
 - **V16 tests:** `denarixx/tests/denarixxGlassesPrototype.test.ts` (176 tests)
 - **V16 docs:** `denarixx/docs/V16_DENARIXX_VISION_GLASSES_PROTOTYPE.md`, `denarixx/docs/HARDWARE_PROTOTYPE_SPEC.md`
+- **V17 types:** `denarixx/src/types/fieldTrial.ts` — `TrialScenario` (9), `TrialPhase`, `TrialConsent`, `AlertFeedback`, `FeedbackQuestion`, `FeedbackSummary`, `IncidentReport`, `SupervisorNote`, `TrialSilenceDecision`, `SafetyMetrics`, `TrialSession`, `TrialReport`, `TRIAL_PRIVACY`, `TRIAL_SCENARIO_REGISTRY`
+- **V17 engines:** `fieldTrialEngine.ts` — session lifecycle, consent validation, alert/silence/incident/note recording, deleteSessionData, emergency stop; `safetyValidationEngine.ts` — 8 safety metrics, usefulnessToScore/clarityToScore, isSafeToPublish, validateSafetyRules, SAFETY_THRESHOLDS; `userFeedbackEngine.ts` — 8-question bank, createAlertFeedback, validateFeedbackResponses, calculateFeedbackSummary, buildFeedbackGuidance; `trialReportEngine.ts` — generateTrialReport, buildRecommendations, getPrivacyGuarantees, exportReportAsJSON, deleteReport
+- **V17 store:** `denarixx/src/lib/fieldTrialStore.ts` — in-memory session + report stores
+- **V17 page:** `denarixx/src/app/field-trials/page.tsx` — 4-phase UI: Consent (5 checkboxes + participant ID) → Setup (9 scenario cards) → Active (alerts, feedback, notes, incidents, Emergency Stop) → Report (metrics, recommendations, privacy, JSON export, delete)
+- **V17 routes:** `denarixx/src/app/api/field-trials/session/route.ts` — POST/GET/PATCH/DELETE; `feedback/route.ts` — POST/GET; `report/route.ts` — POST/GET/DELETE
+- **V17 tests:** `denarixx/tests/fieldTrial.test.ts` (161 tests)
+- **V17 docs:** `denarixx/docs/V17_REAL_WORLD_FIELD_TRIALS.md`, `denarixx/docs/FIELD_TRIAL_SAFETY_PROTOCOL.md`
 - **Camera hook:** `denarixx/src/hooks/useCameraCapture.ts` — getUserMedia, stream lifecycle, frame capture (JPEG base64), 4-state status machine
 - **Alert throttle engine:** `denarixx/src/engines/alertThrottleEngine.ts` — per-severity cooldowns, shouldSpeak() decision, confidence-escalation override, speak-count tracking
 - **Session hook:** `denarixx/src/hooks/useVisionSession.ts` — 7-step demo flow, camera integration, spatial intelligence, completedSteps tracking, session report generation
@@ -172,16 +180,25 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V16 camera modules:** 4 cameras: front 1920×1080/30fps/80°, left 1280×720/15fps/100°, right 1280×720/15fps/100°, downward 640×480/10fps/120°+depth. No local video storage (privacy rule).
 - **V16 prototype spec:** 42g, 300mAh LiPo, 4h battery, Qualcomm AR2 (placeholder), 2GB RAM, 8GB storage, BT LE primary, €399 target, Q2 2026 Germany prototype.
 - **V16 bridge integration:** `buildHardwareBridgeStatus()` provides visionSource/audioOutput/hapticOutput/processingMode to V8 Hardware Bridge, V14 Multi-Camera, V15 On-Device AI, V2 Cognitive Guardian.
+- **V17 types separation:** `src/types/fieldTrial.ts` is separate from `src/types/pilot.ts` (V11 lab pilot). `TrialSilenceDecision` avoids clash with V11's `SilenceDecision`.
+- **V17 consent gate:** `createTrialSession` throws if `validateConsent` fails — all 5 consent fields + non-empty participantId required. Same pattern as V11.
+- **V17 safety metrics:** `isSafeToPublish()` requires usefulness ≥ 50, clarity ≥ 50, supervisor safety ≥ 70, false alerts < 30. All thresholds in `SAFETY_THRESHOLDS` constant.
+- **V17 privacy constants:** `TRIAL_PRIVACY.{noVideoStorage, noFaceRecognition, noEmergencyStreaming, noBiometricStorage, consentRequired, supervisorRequired, locationStorageDisabled, dataDeleteOnRequest}` — all true.
+- **V17 delete flow:** `deleteSessionData` → redacts participantId to `[deleted]`, clears all arrays, sets phase `deleted`. `deleteReport` → redacts participantId, zeroes feedbackSummary, sets deleted=true. API returns HTTP 410 for deleted records.
+- **V17 Emergency Stop:** sets `emergencyStopUsed: true`, transitions to `completed` from any phase. Report embeds this flag. Debrief required before next session.
+- **V17 9 scenarios:** road_crossing and stairs are high-risk, require 2 supervisors, simulation-only in Phase 17. Never with real traffic or live platforms.
+- **V17 feedback questions:** 8 questions covering usefulness, timing, frequency, clarity, overwhelmed, safer, alternative text, supervisor missed hazard.
 
 ## Product
 
-Denarixx Vision AI is a Phase 16 platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
+Denarixx Vision AI is a Phase 17 platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
 
 **14 pages:**
 - **Homepage (`/`)** — Investor-grade landing with 7-step demo flow, AI pipeline diagram, roadmap
 - **Vision Session (`/session`)** — Interactive 7-step guided demo with live DemoFlow tracker, SpatialMapPanel, SensorStatusPanel, and SessionReport
 - **Live AI Vision (`/vision`)** — V12 real-time perception pipeline: camera preview, tracked objects (IoU), scene understanding, performance metrics, speech guidance, provider + battery mode selectors
 - **Pilot Testing (`/pilot`)** — V11 4-phase supervised pilot testing: consent screen, 7 test scenarios, live feedback collection, session report with privacy guarantees and delete option
+- **Field Trials (`/field-trials`)** — V17 4-phase UI: Consent (5 checkboxes, participant ID, disclaimers) → Scenario (9 scenarios with risk/safety labels) → Active (alert simulation, feedback, supervisor notes, incidents, 72px Emergency Stop) → Report (8 safety metrics, recommendations, privacy guarantees, JSON export, full data delete)
 - **Devices (`/devices`)** — V8 + V14 + V16: Smart Glasses Integration Layer + Multi-Camera System + Denarixx Vision Glasses prototype panel (connect/disconnect sim, mode, battery, thermal, subsystems, haptic preview, camera modules, bridge status, prototype spec)
 - **Performance (`/performance`)** — V15 On-Device AI dashboard: battery slider, cloud status, runtime registry, latency budget, edge detections, processing mode selector
 - **Cognitive Guardian (`/guardian`)** — V2 pipeline debugger: pick a scenario, run the full AI decision pipeline, see live timings per stage
@@ -207,6 +224,7 @@ Denarixx Vision AI is a Phase 16 platform for blind and visually impaired users.
 - V14 Multi-Camera Smart Glasses: **164/164 passing**
 - V15 On-Device AI Optimization: **170/170 passing**
 - V16 Denarixx Glasses Prototype: **176/176 passing**
+- V17 Real-World Field Trials: **161/161 passing**
 
 ## User preferences
 
@@ -242,3 +260,5 @@ Denarixx Vision AI is a Phase 16 platform for blind and visually impaired users.
 - V15 docs: `denarixx/docs/V15_ON_DEVICE_AI_OPTIMIZATION.md`
 - V16 docs: `denarixx/docs/V16_DENARIXX_VISION_GLASSES_PROTOTYPE.md`
 - V16 spec: `denarixx/docs/HARDWARE_PROTOTYPE_SPEC.md`
+- V17 docs: `denarixx/docs/V17_REAL_WORLD_FIELD_TRIALS.md`
+- V17 protocol: `denarixx/docs/FIELD_TRIAL_SAFETY_PROTOCOL.md`
