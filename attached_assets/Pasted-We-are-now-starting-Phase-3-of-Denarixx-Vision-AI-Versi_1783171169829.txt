@@ -1,0 +1,270 @@
+We are now starting Phase 3 of Denarixx Vision AI.
+
+Version 1 is complete.
+Version 2 (Cognitive Guardian) is stable.
+
+Now begin Version 3: Cognitive Reasoning Engine.
+
+IMPORTANT:
+Do NOT remove or rewrite existing code.
+Extend the architecture cleanly.
+Keep all tests passing.
+
+GOAL
+
+Transform Denarixx Vision AI from an AI that detects objects into an AI that understands situations.
+
+The AI should continuously reason about the environment before speaking.
+
+====================================================
+NEW ENGINES
+====================================================
+
+Create:
+
+src/engines/cognitiveReasoningEngine.ts
+
+src/engines/environmentUnderstandingEngine.ts
+
+src/engines/actionDecisionEngine.ts
+
+src/engines/riskPredictionEngine.ts
+
+src/engines/humanGuideEngine.ts
+
+src/types/reasoning.ts
+
+====================================================
+COGNITIVE REASONING
+====================================================
+
+The AI should continuously answer internally:
+
+What is happening?
+
+What is likely to happen next?
+
+Is the user safe?
+
+Does the user need guidance?
+
+Should I stay silent?
+
+Should I interrupt immediately?
+
+Should I reassure the user?
+
+Should I predict danger?
+
+====================================================
+ENVIRONMENT UNDERSTANDING
+====================================================
+
+Instead of detecting objects individually,
+understand the entire environment.
+
+Example outputs:
+
+"Walking on pavement."
+
+"Approaching pedestrian crossing."
+
+"Standing inside supermarket."
+
+"Walking through train station."
+
+"Entering narrow corridor."
+
+"Moving beside traffic."
+
+====================================================
+ACTION DECISION ENGINE
+====================================================
+
+Determine what the user should do.
+
+Possible actions:
+
+Continue walking.
+
+Slow down.
+
+Stop.
+
+Turn left.
+
+Turn right.
+
+Move slightly left.
+
+Move slightly right.
+
+Wait.
+
+Cross now.
+
+Avoid obstacle.
+
+====================================================
+RISK PREDICTION
+====================================================
+
+Predict events before they become dangerous.
+
+Examples:
+
+Fast bicycle approaching.
+
+Person suddenly changing direction.
+
+Vehicle turning toward crossing.
+
+Crowded area ahead.
+
+Construction zone ahead.
+
+Wet floor.
+
+Low branch.
+
+====================================================
+HUMAN GUIDE ENGINE
+====================================================
+
+Speak naturally.
+
+Avoid robotic messages.
+
+GOOD:
+
+"You're doing fine."
+
+"The pavement is clear."
+
+"Keep walking straight."
+
+"There's a bicycle approaching from behind on your left."
+
+"You're almost at the crossing."
+
+BAD:
+
+"Object detected."
+
+"Hazard level medium."
+
+====================================================
+PRIORITY LEVELS
+====================================================
+
+Critical
+
+High
+
+Medium
+
+Low
+
+Informational
+
+Only interrupt for Critical and High.
+
+====================================================
+CONFIDENCE
+====================================================
+
+If confidence is below 70%:
+
+"I'm not completely sure. Please check carefully."
+
+Never sound certain if confidence is low.
+
+====================================================
+LEARNING
+====================================================
+
+Learn routines.
+
+Examples:
+
+Usual route.
+
+Frequently visited locations.
+
+Walking speed.
+
+Preferred guidance style.
+
+====================================================
+UI
+====================================================
+
+Create a Cognitive Reasoning panel.
+
+Show:
+
+Current environment
+
+Current reasoning
+
+Predicted event
+
+Recommended action
+
+Confidence
+
+Risk level
+
+Why the AI decided this
+
+====================================================
+TESTS
+====================================================
+
+Create reasoning tests.
+
+Environment tests.
+
+Decision tests.
+
+Prediction tests.
+
+Human guide tests.
+
+====================================================
+DOCUMENTATION
+====================================================
+
+Create:
+
+docs/V3_COGNITIVE_REASONING_ENGINE.md
+
+Explain:
+
+Architecture
+
+Decision flow
+
+Reasoning pipeline
+
+Future real-camera integration
+
+====================================================
+QUALITY
+====================================================
+
+Run:
+
+npm run type-check
+
+npm test
+
+npx tsx tests/cognitiveGuardian.test.ts
+
+npm run build
+
+Fix every error until everything passes.
+
+Maintain full backward compatibility with Version 1 and Version 2.
+
+Do not remove any existing functionality.

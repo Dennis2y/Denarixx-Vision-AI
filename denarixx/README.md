@@ -52,8 +52,8 @@ npx tsx tests/cognitiveGuardian.test.ts
 | Suite | Result |
 |---|---|
 | V1 Core Engines | 24 / 24 passed |
-| V2 Cognitive Guardian | 27 / 27 passed |
-| **Total** | **46 / 46 passed** |
+| V2 Cognitive Guardian + AlertThrottleEngine | 37 / 37 passed |
+| **Total** | **61 / 61 passed** |
 
 ---
 
@@ -78,6 +78,7 @@ npx tsx tests/cognitiveGuardian.test.ts
 | V2 Predictive Risk Engine | Working |
 | V2 Companion Context Engine | Working |
 | V2 Routine Learning Engine | Working |
+| Alert Throttling + Silence Intelligence | Working |
 | TypeScript — zero errors | Clean |
 | Next.js build | Clean |
 

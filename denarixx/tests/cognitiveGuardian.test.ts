@@ -9,6 +9,7 @@ import { SilenceDecisionEngine } from '../src/engines/silenceDecisionEngine';
 import { PredictiveRiskEngine } from '../src/engines/predictiveRiskEngine';
 import { CompanionContextEngine } from '../src/engines/companionContextEngine';
 import { RoutineLearningEngine } from '../src/engines/routineLearningEngine';
+import { AlertThrottleEngine } from '../src/engines/alertThrottleEngine';
 import type { Detection, SafetyDecision } from '../src/types';
 
 let passed = 0;
@@ -280,6 +281,124 @@ async function runAll() {
     guardian.process(vehicleDetections, baseDecision, []);
     guardian.reset();
     assert(guardian.getFrameCount() === 0, 'frame count should be 0 after reset');
+  });
+
+  // ── AlertThrottleEngine ──────────────────────────────────────────────────────
+  console.log('\nAlertThrottleEngine');
+
+  const throttle = new AlertThrottleEngine();
+
+  await test('returns shouldSpeak: true for a new hazard type', () => {
+    throttle.reset();
+    const result = throttle.shouldSpeak({
+      hazardType: 'vehicle',
+      severity: 'high',
+      confidence: 0.85,
+      message: 'Vehicle ahead.',
+    });
+    assert(result.shouldSpeak, 'new hazard should always speak');
+    assert(result.isNew, 'isNew should be true for first occurrence');
+  });
+
+  await test('silences same medium hazard immediately after speaking', () => {
+    throttle.reset();
+    throttle.record('step', 'medium', 0.7, 'Step ahead.');
+    const result = throttle.shouldSpeak({
+      hazardType: 'step',
+      severity: 'medium',
+      confidence: 0.72,
+      message: 'Step ahead.',
+    });
+    assert(!result.shouldSpeak, 'same medium hazard within 30s cooldown should be silenced');
+    assert(!result.isNew, 'isNew should be false for repeated hazard');
+    assert(result.msUntilCooldownExpires > 0, 'cooldown remaining should be positive');
+  });
+
+  await test('silences same high hazard within 15s cooldown', () => {
+    throttle.reset();
+    throttle.record('obstacle', 'high', 0.8, 'Obstacle ahead.');
+    const result = throttle.shouldSpeak({
+      hazardType: 'obstacle',
+      severity: 'high',
+      confidence: 0.81, // only tiny confidence increase — not enough to override
+      message: 'Obstacle ahead.',
+    });
+    assert(!result.shouldSpeak, 'same high hazard within 15s cooldown should be silenced');
+  });
+
+  await test('always speaks for critical hazard regardless of cooldown', () => {
+    throttle.reset();
+    throttle.record('vehicle', 'critical', 0.9, 'Stop now!');
+    const result = throttle.shouldSpeak({
+      hazardType: 'vehicle',
+      severity: 'critical',
+      confidence: 0.91,
+      message: 'Stop now!',
+    });
+    assert(result.shouldSpeak, 'critical hazard must never be silenced');
+    assert(result.reason.includes('critical'), 'reason should mention critical');
+  });
+
+  await test('speaks for high hazard when confidence improves significantly', () => {
+    throttle.reset();
+    throttle.record('obstacle', 'high', 0.55, 'Possible obstacle.');
+    const result = throttle.shouldSpeak({
+      hazardType: 'obstacle',
+      severity: 'high',
+      confidence: 0.78, // +23% — exceeds the 12% override threshold
+      message: 'Obstacle confirmed closer.',
+    });
+    assert(result.shouldSpeak, 'should speak when confidence improved significantly');
+    assert(result.confidenceImproved, 'confidenceImproved flag should be true');
+  });
+
+  await test('does not speak for high hazard with minor confidence change', () => {
+    throttle.reset();
+    throttle.record('obstacle', 'high', 0.7, 'Obstacle ahead.');
+    const result = throttle.shouldSpeak({
+      hazardType: 'obstacle',
+      severity: 'high',
+      confidence: 0.72, // only +2% — below override threshold
+      message: 'Obstacle ahead.',
+    });
+    assert(!result.shouldSpeak, 'minor confidence change should not override cooldown');
+  });
+
+  await test('two different hazard types are tracked independently', () => {
+    throttle.reset();
+    throttle.record('vehicle', 'high', 0.8, 'Vehicle ahead.');
+    // Bicycle has never been spoken — should speak even though vehicle was recent
+    const result = throttle.shouldSpeak({
+      hazardType: 'bicycle',
+      severity: 'medium',
+      confidence: 0.7,
+      message: 'Cyclist nearby.',
+    });
+    assert(result.shouldSpeak, 'different hazard type should be independent');
+    assert(result.isNew, 'bicycle should be new in throttle engine');
+  });
+
+  await test('getSpeakCount tracks how many times an alert was spoken', () => {
+    throttle.reset();
+    throttle.record('bicycle', 'medium', 0.7, 'Cyclist nearby.');
+    throttle.record('bicycle', 'medium', 0.7, 'Cyclist still nearby.');
+    assert(throttle.getSpeakCount('bicycle', 'medium') === 2, 'should count 2 speaks');
+  });
+
+  await test('getLastSpokenKey returns key of most recent spoken alert', () => {
+    throttle.reset();
+    throttle.record('vehicle', 'critical', 0.95, 'Stop!');
+    throttle.record('step', 'high', 0.8, 'Step ahead.');
+    assert(throttle.getLastSpokenKey() === 'step:high', 'last key should be step:high');
+  });
+
+  await test('reset clears all records and last spoken state', () => {
+    throttle.record('vehicle', 'high', 0.9, 'test');
+    throttle.reset();
+    assert(throttle.getLastSpokenKey() === null, 'last key should be null after reset');
+    const result = throttle.shouldSpeak({ hazardType: 'vehicle', severity: 'high', confidence: 0.9, message: 'test' });
+    assert(result.isNew, 'hazard should be treated as new after reset');
+    assert(result.shouldSpeak, 'should speak after reset');
   });
 
   // ── Results ──────────────────────────────────────────────────────────────────

@@ -16,36 +16,44 @@ const PROACTIVE_RULES: ProactiveRule[] = [
     anticipatedSeconds: 3,
     messageTemplate: (c) =>
       c >= 0.7
-        ? 'Vehicle may be approaching. Be prepared to stop.'
-        : 'Possible vehicle in the area. Please be cautious.',
+        ? 'Vehicle may be approaching. Get ready to stop.'
+        : 'There might be a vehicle in the area. Move with caution.',
   },
   {
     label: 'bicycle',
     riskLevel: 'medium',
     anticipatedSeconds: 5,
     messageTemplate: (c) =>
-      c >= 0.7 ? 'Cyclist may cross your path.' : 'Possible cyclist nearby.',
+      c >= 0.7
+        ? 'A cyclist might cross your path. Slow down and wait a moment.'
+        : 'Possible cyclist nearby — keep to the side.',
   },
   {
     label: 'step',
     riskLevel: 'medium',
     anticipatedSeconds: 4,
     messageTemplate: (c) =>
-      c >= 0.6 ? 'Elevation change ahead. Slow your pace.' : 'Possible step change ahead.',
+      c >= 0.6
+        ? 'Elevation change coming up — reduce your pace.'
+        : 'There may be a step change ahead. Check with your foot as you move.',
   },
   {
     label: 'stairs',
     riskLevel: 'medium',
     anticipatedSeconds: 4,
     messageTemplate: (c) =>
-      c >= 0.6 ? 'Stairs ahead. Prepare to change pace.' : 'Possible stairs ahead.',
+      c >= 0.6
+        ? 'Stairs are coming up. Slow down and reach for a railing.'
+        : "I think there may be stairs ahead — be ready to slow down.",
   },
   {
     label: 'obstacle',
     riskLevel: 'medium',
     anticipatedSeconds: 3,
     messageTemplate: (c) =>
-      c >= 0.7 ? 'Obstacle ahead — reduce speed.' : 'Possible obstacle in path.',
+      c >= 0.7
+        ? "Something's in your path. Slow down now."
+        : 'There might be something ahead. Check before continuing.',
   },
   {
     label: 'person',
@@ -53,8 +61,8 @@ const PROACTIVE_RULES: ProactiveRule[] = [
     anticipatedSeconds: 6,
     messageTemplate: (c) =>
       c >= 0.8
-        ? 'Person ahead — may need to navigate around them.'
-        : 'Person may be nearby.',
+        ? 'Someone is ahead — you may need to navigate around them.'
+        : 'There might be someone nearby.',
   },
 ];
 

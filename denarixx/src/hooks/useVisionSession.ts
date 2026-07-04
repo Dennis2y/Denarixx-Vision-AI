@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAudioGuidance } from './useAudioGuidance';
 import { useCameraCapture } from './useCameraCapture';
 import type { CameraStatus } from './useCameraCapture';
+import { AlertThrottleEngine } from '@/engines/alertThrottleEngine';
 import type { Detection, HazardAlert, SceneDescription, SafetyDecision } from '@/types';
 
 export type { CameraStatus };
@@ -17,6 +18,7 @@ export interface SessionReport {
   peakUrgency: string;
   completedSteps: boolean[];
   cameraFrames: number;
+  silencedAlerts: number;
 }
 
 export interface SessionState {
@@ -26,6 +28,7 @@ export interface SessionState {
   frameCount: number;
   alertCount: number;
   cameraFrames: number;
+  silencedAlerts: number;
   currentScene: SceneDescription | null;
   currentAlerts: HazardAlert[];
   currentDecision: SafetyDecision | null;
@@ -48,10 +51,15 @@ export function useVisionSession() {
   const startTimeRef = useRef<number | null>(null);
   const audioCountRef = useRef(0);
   const cameraFramesRef = useRef(0);
+  const silencedAlertsRef = useRef(0);
   const peakUrgencyRef = useRef<string>('none');
   const currentSceneRef = useRef<SceneDescription | null>(null);
+  const prevSceneSummaryRef = useRef<string | null>(null);
 
-  // Refs for camera access inside the interval callback (avoids stale closures)
+  // Alert throttle — prevents the same alert from repeating within cooldown window
+  const alertThrottleRef = useRef(new AlertThrottleEngine());
+
+  // Camera refs to avoid stale closures inside setInterval
   const cameraStatusRef = useRef<CameraStatus>('inactive');
   const captureFrameRef = useRef<typeof camera.captureFrame>(camera.captureFrame);
   cameraStatusRef.current = camera.status;
@@ -64,6 +72,7 @@ export function useVisionSession() {
     frameCount: 0,
     alertCount: 0,
     cameraFrames: 0,
+    silencedAlerts: 0,
     currentScene: null,
     currentAlerts: [],
     currentDecision: null,
@@ -104,7 +113,7 @@ export function useVisionSession() {
         const newCount = s.frameCount + 1;
         const camCount = s.cameraFrames + (imageData ? 1 : 0);
         const steps = [...s.completedSteps];
-        if (newCount >= 2) steps[1] = true; // Step 2: walking
+        if (newCount >= 2) steps[1] = true;
         return { ...s, frameCount: newCount, cameraFrames: camCount, completedSteps: steps };
       });
       if (imageData) cameraFramesRef.current += 1;
@@ -119,8 +128,18 @@ export function useVisionSession() {
       const scene: SceneDescription = sceneData.scene;
       currentSceneRef.current = scene;
 
+      // Track whether the scene changed vs the previous frame
+      const sceneChanged = prevSceneSummaryRef.current !== scene.summary;
+      prevSceneSummaryRef.current = scene.summary;
+
       setState((s) => ({ ...s, currentScene: scene }));
-      addLog(`Scene [${source}]: ${scene.summary}`);
+
+      // Log scene to UI (quiet indicator when unchanged)
+      if (sceneChanged) {
+        addLog(`Scene [${source}]: ${scene.summary}`);
+      } else {
+        addLog(`[scene] Unchanged · ${scene.summary.slice(0, 50)}${scene.summary.length > 50 ? '…' : ''}`);
+      }
 
       // 3. Evaluate hazards
       const hazardRes = await fetch('/api/hazards/evaluate', {
@@ -150,8 +169,8 @@ export function useVisionSession() {
 
       setState((s) => {
         const steps = [...s.completedSteps];
-        if (alerts.length > 0) steps[2] = true; // Step 3: alert
-        if (decision.shouldAlert) steps[3] = true; // Step 4: guardian
+        if (alerts.length > 0) steps[2] = true;
+        if (decision.shouldAlert) steps[3] = true;
         return {
           ...s,
           currentAlerts: alerts,
@@ -161,27 +180,74 @@ export function useVisionSession() {
         };
       });
 
-      // 5. Audio output
+      // 5. Audio output — throttle-aware
       if (decision.shouldAlert && decision.message) {
-        const priority =
-          decision.urgency === 'critical'
-            ? 'critical'
-            : decision.urgency === 'high'
-            ? 'high'
-            : 'normal';
-        speak(decision.message, priority, decision.interruptNarration);
-        audioCountRef.current += 1;
-        setState((s) => {
-          const steps = [...s.completedSteps];
-          steps[4] = true; // Step 5: audio spoken
-          return { ...s, audioCount: s.audioCount + 1, completedSteps: steps };
-        });
-        addLog(`ALERT [${decision.urgency}]: ${decision.message}`);
+        const topAlert = alerts[0]; // already sorted by severity, then confidence
+
+        if (topAlert) {
+          // Ask the throttle engine whether to speak this alert
+          const throttleResult = alertThrottleRef.current.shouldSpeak({
+            hazardType: topAlert.type,
+            severity: topAlert.severity,
+            confidence: topAlert.confidence,
+            message: decision.message,
+          });
+
+          if (throttleResult.shouldSpeak) {
+            // Speak the alert
+            const priority =
+              decision.urgency === 'critical'
+                ? 'critical'
+                : decision.urgency === 'high'
+                ? 'high'
+                : 'normal';
+            speak(decision.message, priority, decision.interruptNarration);
+
+            // Record it in the throttle engine
+            alertThrottleRef.current.record(
+              topAlert.type,
+              topAlert.severity,
+              topAlert.confidence,
+              decision.message
+            );
+
+            audioCountRef.current += 1;
+            setState((s) => {
+              const steps = [...s.completedSteps];
+              steps[4] = true;
+              return { ...s, audioCount: s.audioCount + 1, completedSteps: steps };
+            });
+            addLog(`ALERT [${decision.urgency}]: ${decision.message}`);
+          } else {
+            // Throttled — log silently, do not speak
+            silencedAlertsRef.current += 1;
+            setState((s) => ({ ...s, silencedAlerts: s.silencedAlerts + 1 }));
+            addLog(`[quiet] ${topAlert.type} · ${throttleResult.reason}`);
+          }
+        } else {
+          // No hazard alert object but decision says speak — unusual, speak it
+          const priority =
+            decision.urgency === 'critical' ? 'critical' : decision.urgency === 'high' ? 'high' : 'normal';
+          speak(decision.message, priority, decision.interruptNarration);
+          audioCountRef.current += 1;
+          setState((s) => {
+            const steps = [...s.completedSteps];
+            steps[4] = true;
+            return { ...s, audioCount: s.audioCount + 1, completedSteps: steps };
+          });
+          addLog(`ALERT [${decision.urgency}]: ${decision.message}`);
+        }
       } else if (!scene.isUncertain) {
-        speak(scene.summary, 'low');
+        // Scene narration — only speak if scene changed
+        if (sceneChanged) {
+          speak(scene.summary, 'low');
+        }
       } else if (scene.uncertaintyMessage) {
-        speak(scene.uncertaintyMessage, 'normal');
-        addLog(`Uncertainty: ${scene.uncertaintyMessage}`);
+        // Only speak uncertainty if scene also changed
+        if (sceneChanged) {
+          speak(scene.uncertaintyMessage, 'normal');
+          addLog(`Uncertainty: ${scene.uncertaintyMessage}`);
+        }
       }
 
       // 6. Memory recall check
@@ -214,8 +280,12 @@ export function useVisionSession() {
       startTimeRef.current = Date.now();
       audioCountRef.current = 0;
       cameraFramesRef.current = 0;
+      silencedAlertsRef.current = 0;
       peakUrgencyRef.current = 'none';
       currentSceneRef.current = null;
+      prevSceneSummaryRef.current = null;
+      alertThrottleRef.current.reset();
+
       setState((s) => ({
         ...s,
         sessionId: data.sessionId,
@@ -224,6 +294,7 @@ export function useVisionSession() {
         frameCount: 0,
         alertCount: 0,
         cameraFrames: 0,
+        silencedAlerts: 0,
         audioCount: 0,
         log: [],
         currentAlerts: [],
@@ -264,7 +335,7 @@ export function useVisionSession() {
       });
       setState((s) => {
         const steps = [...s.completedSteps];
-        steps[5] = true; // Step 6: memory saved
+        steps[5] = true;
         return { ...s, completedSteps: steps };
       });
       addLog(`Memory saved: ${label}`);
@@ -295,7 +366,7 @@ export function useVisionSession() {
 
     setState((s) => {
       const steps = [...s.completedSteps];
-      steps[6] = true; // Step 7: report
+      steps[6] = true;
       const report: SessionReport = {
         sessionId: sid ?? 'unknown',
         durationSeconds,
@@ -305,13 +376,13 @@ export function useVisionSession() {
         peakUrgency: peakUrgencyRef.current,
         completedSteps: steps,
         cameraFrames: cameraFramesRef.current,
+        silencedAlerts: silencedAlertsRef.current,
       };
       return { ...s, isActive: false, sessionId: null, completedSteps: steps, report };
     });
     addLog('Session ended');
   }, [stopAudio, addLog]);
 
-  // Cleanup interval on unmount
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);

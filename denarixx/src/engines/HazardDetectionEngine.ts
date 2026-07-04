@@ -7,7 +7,7 @@ interface HazardRule {
   label: string;
   severity: HazardSeverity;
   messageTemplate: (confidence: number) => string;
-  interruptThreshold: number; // confidence above which we interrupt narration
+  interruptThreshold: number;
 }
 
 const HAZARD_RULES: HazardRule[] = [
@@ -16,8 +16,8 @@ const HAZARD_RULES: HazardRule[] = [
     severity: 'critical',
     messageTemplate: (c) =>
       c >= 0.85
-        ? 'Warning: vehicle detected ahead. Confidence high. Stop and wait.'
-        : "Possible vehicle nearby. I'm not fully sure. Please check carefully.",
+        ? 'Vehicle approaching — please stop and wait for it to pass.'
+        : "Something that may be a vehicle is nearby. Please check carefully before moving.",
     interruptThreshold: 0.6,
   },
   {
@@ -25,8 +25,8 @@ const HAZARD_RULES: HazardRule[] = [
     severity: 'high',
     messageTemplate: (c) =>
       c >= 0.85
-        ? 'Obstacle ahead, about two metres away. Confidence ' + Math.round(c * 100) + '%.'
-        : "Possible obstacle ahead. I'm not fully sure. Please check carefully.",
+        ? "There's an obstacle in your path ahead. I'd recommend pausing."
+        : "Something may be blocking your path. I'm not fully certain — check carefully.",
     interruptThreshold: 0.65,
   },
   {
@@ -34,8 +34,8 @@ const HAZARD_RULES: HazardRule[] = [
     severity: 'high',
     messageTemplate: (c) =>
       c >= 0.75
-        ? 'Step detected ahead. Take care.'
-        : "Possible step down ahead. I'm not fully sure. Please check carefully.",
+        ? 'Step down ahead. Use your cane or foot to confirm, then take it slowly.'
+        : "There may be a step ahead. I'm not certain — feel ahead carefully.",
     interruptThreshold: 0.55,
   },
   {
@@ -43,8 +43,8 @@ const HAZARD_RULES: HazardRule[] = [
     severity: 'high',
     messageTemplate: (c) =>
       c >= 0.75
-        ? 'Stairs ahead. Confidence ' + Math.round(c * 100) + '%.'
-        : "Stairs may be ahead. I'm not fully sure. Please check carefully.",
+        ? 'Stairs are ahead. Grip the handrail if available and take your time.'
+        : "I think there may be stairs ahead. Please check carefully before continuing.",
     interruptThreshold: 0.55,
   },
   {
@@ -52,8 +52,8 @@ const HAZARD_RULES: HazardRule[] = [
     severity: 'medium',
     messageTemplate: (c) =>
       c >= 0.7
-        ? 'A bicycle may cross your path from the left.'
-        : "Possible bicycle nearby. Confidence low. Please check carefully.",
+        ? 'Cyclist may be approaching from your left. Pause a moment and let them pass.'
+        : "There might be a bicycle nearby. I'm not fully sure — stay alert.",
     interruptThreshold: 0.7,
   },
   {
@@ -61,8 +61,8 @@ const HAZARD_RULES: HazardRule[] = [
     severity: 'low',
     messageTemplate: (c) =>
       c >= 0.8
-        ? 'A person is ahead.'
-        : 'A person may be nearby.',
+        ? 'Someone is just ahead of you.'
+        : 'There may be someone nearby.',
     interruptThreshold: 0.85,
   },
 ];
@@ -94,7 +94,6 @@ export class HazardDetectionEngine implements IHazardDetectionEngine {
       });
     }
 
-    // Sort: critical first, then by confidence descending
     return alerts.sort((a, b) => {
       const severityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
       const diff =
