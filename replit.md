@@ -9,6 +9,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npm run type-check` — TypeScript check for the Next.js app
 - `cd denarixx && npm test` — V1 core engine tests (24/24)
 - `cd denarixx && npx tsx tests/cognitiveGuardian.test.ts` — V2 Cognitive Guardian + AlertThrottleEngine tests (37/37)
+- `cd denarixx && npx tsx tests/v3reasoning.test.ts` — V3 Cognitive Reasoning Engine tests (27/27)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
@@ -26,8 +27,11 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V1 engines:** `denarixx/src/engines/` — VisionEngine, HazardDetectionEngine, SafetyDecisionEngine, SceneReasoningEngine, MemoryEngine, ConversationEngine
 - **V2 engines:** `denarixx/src/engines/` — cognitiveGuardianEngine, proactiveAlertEngine, silenceDecisionEngine, predictiveRiskEngine, companionContextEngine, routineLearningEngine
 - **V2 types:** `denarixx/src/types/cognitive.ts`
+- **V3 engines:** `denarixx/src/engines/` — environmentUnderstandingEngine, cognitiveReasoningEngine, riskPredictionEngine, actionDecisionEngine, humanGuideEngine
+- **V3 types:** `denarixx/src/types/reasoning.ts`
 - **V1 tests:** `denarixx/tests/engines.test.ts` (24 tests)
 - **V2 tests:** `denarixx/tests/cognitiveGuardian.test.ts` (37 tests — includes AlertThrottleEngine suite)
+- **V3 tests:** `denarixx/tests/v3reasoning.test.ts` (27 tests)
 - **Camera hook:** `denarixx/src/hooks/useCameraCapture.ts` — getUserMedia, stream lifecycle, frame capture (JPEG base64), 4-state status machine
 - **Alert throttle engine:** `denarixx/src/engines/alertThrottleEngine.ts` — per-severity cooldowns, shouldSpeak() decision, confidence-escalation override, speak-count tracking
 - **Session hook:** `denarixx/src/hooks/useVisionSession.ts` — 7-step demo flow, camera integration, completedSteps tracking, session report generation
@@ -49,10 +53,11 @@ An assistive AI perception platform for blind and visually impaired users — pr
 
 Denarixx Vision AI is a Phase 2 MVP of an assistive AI perception platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as an automatic fallback. All vision analysis remains simulated — real model inference is Phase 3.
 
-**10 pages:**
+**11 pages:**
 - **Homepage (`/`)** — Investor-grade landing with 7-step demo flow, AI pipeline diagram, roadmap
 - **Vision Session (`/session`)** — Interactive 7-step guided demo with live DemoFlow tracker and SessionReport
 - **Cognitive Guardian (`/guardian`)** — V2 pipeline debugger: pick a scenario, run the full AI decision pipeline, see live timings per stage
+- **Cognitive Reasoning (`/reasoning`)** — V3 live pipeline debugger: 6-panel view showing environment understanding, internal reasoning, risk prediction, action decision, and human guide message
 - **Hazards (`/hazards`)** — Standalone HazardDetectionEngine tester with 4 example scenarios
 - **Memory (`/memory`)** — AI memory store with seed demo data, stats bar, add/view items
 - **Navigation (`/navigation`)**, **Settings (`/settings`)**, **Privacy (`/privacy`)**, **Admin (`/admin`)**, **Docs (`/docs`)**
@@ -60,6 +65,7 @@ Denarixx Vision AI is a Phase 2 MVP of an assistive AI perception platform for b
 **Test status:**
 - V1 core engines: **24/24 passing**
 - V2 Cognitive Guardian + AlertThrottleEngine: **37/37 passing**
+- V3 Cognitive Reasoning Engine: **27/27 passing**
 
 ## User preferences
 
