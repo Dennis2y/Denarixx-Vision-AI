@@ -1,0 +1,111 @@
+Start Phase 13: Indoor & Outdoor Navigation Engine.
+
+IMPORTANT:
+Do not rewrite V1–V12.
+Keep all previous functionality working.
+Claude Code has already built earlier phases and pushed the project to GitHub, so extend the current GitHub/Replit codebase cleanly.
+
+Goal:
+Build the navigation intelligence layer for Denarixx Vision AI so blind and low-vision users can receive safer indoor and outdoor guidance.
+
+Create:
+- src/engines/navigationIntelligenceEngine.ts
+- src/engines/indoorNavigationEngine.ts
+- src/engines/outdoorNavigationEngine.ts
+- src/engines/routeSafetyEngine.ts
+- src/engines/landmarkGuidanceEngine.ts
+- src/engines/crossingDecisionEngine.ts
+- src/types/navigation.ts
+- tests/navigationEngine.test.ts
+- docs/V13_INDOOR_OUTDOOR_NAVIGATION_ENGINE.md
+
+Outdoor navigation:
+- GPS-based walking guidance
+- compass heading support
+- landmark-based guidance
+- road/crossing awareness
+- traffic-side awareness
+- route deviation detection
+- safe rerouting placeholder
+- unsafe-crossing warning
+- integration with Spatial Intelligence Engine
+- integration with Phone Sensor Integration
+
+Indoor navigation:
+- room-to-room guidance
+- hallway/corridor detection placeholder
+- stairs/elevator/escalator landmarks
+- doorway detection placeholder
+- indoor route memory
+- saved landmark navigation
+- supermarket/station/office modes
+- integration with Memory Engine and World Model Engine
+
+Navigation behaviour:
+- Do not overload the user with speech.
+- Speak only when direction or safety changes.
+- Use short guidance:
+  “Continue straight.”
+  “Turn slightly right.”
+  “Stop before the crossing.”
+  “Doorway ahead on your left.”
+  “Stairs ahead. Slow down.”
+- Never say “safe to cross” with certainty.
+- Use safer wording:
+  “The crossing appears clear, but please check carefully.”
+
+UI:
+Create or improve the Navigation page with:
+- indoor/outdoor mode switch
+- current route state
+- heading
+- distance to next landmark
+- next action
+- risk level
+- route memory
+- crossing decision panel
+- simulated map/route view
+- spoken guidance queue
+
+API:
+Add or improve:
+- GET /api/navigation
+- POST /api/navigation/start
+- POST /api/navigation/update
+- POST /api/navigation/end
+- POST /api/navigation/landmark
+- POST /api/navigation/crossing-decision
+
+Privacy:
+- Do not store precise location by default.
+- Save route memory only after explicit user consent.
+- Add location privacy notes to settings/docs.
+
+Testing:
+Add tests for:
+- route state transitions
+- indoor navigation
+- outdoor navigation
+- crossing decision logic
+- landmark guidance
+- route safety warnings
+- privacy defaults
+
+Documentation:
+Update:
+- README.md
+- replit.md
+- docs/V13_INDOOR_OUTDOOR_NAVIGATION_ENGINE.md
+
+Quality:
+Run:
+npm run type-check
+npm test
+npx tsx tests/cognitiveGuardian.test.ts
+npm run build
+
+Fix all errors until everything passes.
+
+After implementation:
+- Push all changes to GitHub.
+- Clearly summarize what was added, what is simulated, and what remains for real-world navigation.

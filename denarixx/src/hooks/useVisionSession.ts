@@ -7,9 +7,12 @@ import type { CameraStatus } from './useCameraCapture';
 import { AlertThrottleEngine } from '@/engines/alertThrottleEngine';
 import { GuidancePersonalityEngine } from '@/engines/guidancePersonalityEngine';
 import type { PersonalityRiskLevel } from '@/engines/guidancePersonalityEngine';
+import { MobilityEngine } from '@/engines/mobilityEngine';
+import { WorldModelEngine } from '@/engines/worldModelEngine';
 import { useLastGuidance } from './useLastGuidance';
 import { loadSettings } from '@/lib/settingsStore';
 import type { Detection, HazardAlert, SceneDescription, SafetyDecision } from '@/types';
+import type { WorldModelSnapshot } from '@/types/spatial';
 
 export type { CameraStatus };
 
@@ -41,6 +44,8 @@ export interface SessionState {
   completedSteps: boolean[];
   audioCount: number;
   report: SessionReport | null;
+  // V6: live spatial intelligence snapshot
+  spatialData: WorldModelSnapshot | null;
 }
 
 const FRAME_INTERVAL_MS = 3000;
@@ -68,14 +73,17 @@ export function useVisionSession() {
   const currentSceneRef = useRef<SceneDescription | null>(null);
   const prevSceneSummaryRef = useRef<string | null>(null);
   const lastAlertTimeRef = useRef<number | null>(null);
+  const prevSpatialInstructionRef = useRef<string | undefined>(undefined);
 
-  // Alert throttle — prevents same alert repeating within cooldown window
+  // Core alert throttle
   const alertThrottleRef = useRef(new AlertThrottleEngine());
-
-  // Personality engine — shapes message tone per user preference
+  // V5: personality engine
   const personalityEngineRef = useRef(new GuidancePersonalityEngine());
+  // V6: spatial / world model engines
+  const mobilityEngineRef = useRef(new MobilityEngine());
+  const worldModelEngineRef = useRef(new WorldModelEngine());
 
-  // Settings snapshot taken at session start; stable for session duration
+  // Settings snapshot taken at session start
   const sessionSettingsRef = useRef(loadSettings());
 
   // Camera refs to avoid stale closures inside setInterval
@@ -100,6 +108,7 @@ export function useVisionSession() {
     completedSteps: [...BLANK_STEPS],
     audioCount: 0,
     report: null,
+    spatialData: null,
   });
 
   const addLog = useCallback((msg: string) => {
@@ -138,6 +147,15 @@ export function useVisionSession() {
         return { ...s, frameCount: newCount, cameraFrames: camCount, completedSteps: steps };
       });
       if (imageData) cameraFramesRef.current += 1;
+
+      // V6: Spatial analysis — runs from detections immediately after vision
+      const currentFrame = worldModelEngineRef.current.getFrameCount();
+      const rawSpatial = mobilityEngineRef.current.analyze(
+        { detections, frameIndex: currentFrame, source },
+        currentFrame
+      );
+      const enrichedSpatial = worldModelEngineRef.current.update(rawSpatial);
+      setState((s) => ({ ...s, spatialData: enrichedSpatial }));
 
       // 2. Describe scene
       const sceneRes = await fetch('/api/scene/describe', {
@@ -212,7 +230,6 @@ export function useVisionSession() {
           });
 
           if (throttleResult.shouldSpeak) {
-            // Personality gate — minimal/balanced may silence low-risk alerts
             if (!personalityEngine.shouldSpeak(riskLevel, personality)) {
               silencedAlertsRef.current += 1;
               setState((s) => ({ ...s, silencedAlerts: s.silencedAlerts + 1 }));
@@ -227,18 +244,13 @@ export function useVisionSession() {
               );
 
               speak(formattedMessage, priority, decision.interruptNarration);
-
               alertThrottleRef.current.record(
-                topAlert.type,
-                topAlert.severity,
-                topAlert.confidence,
-                formattedMessage
+                topAlert.type, topAlert.severity, topAlert.confidence, formattedMessage
               );
 
               lastAlertTimeRef.current = Date.now();
               audioCountRef.current += 1;
 
-              // Track last guidance for repeat command
               setGuidance({
                 text: formattedMessage,
                 riskLevel: decision.urgency,
@@ -261,9 +273,7 @@ export function useVisionSession() {
             addLog(`[quiet] ${topAlert.type} · ${throttleResult.reason}`);
           }
         } else {
-          const priority =
-            decision.urgency === 'critical' ? 'critical' :
-            decision.urgency === 'high' ? 'high' : 'normal';
+          const priority = decision.urgency === 'critical' ? 'critical' : decision.urgency === 'high' ? 'high' : 'normal';
           speak(decision.message, priority, decision.interruptNarration);
           audioCountRef.current += 1;
           setGuidance({
@@ -282,7 +292,7 @@ export function useVisionSession() {
           addLog(`ALERT [${decision.urgency}]: ${decision.message}`);
         }
       } else {
-        // No alert — scene narration or companion reassurance
+        // No hazard alert — V6 spatial guidance or companion reassurance
         const secondsSinceAlert = lastAlertTimeRef.current
           ? (Date.now() - lastAlertTimeRef.current) / 1000
           : 999;
@@ -290,13 +300,24 @@ export function useVisionSession() {
         if (personalityEngine.shouldReassure(personality, secondsSinceAlert)) {
           const reassurance = personalityEngine.getReassurance(personality);
           speak(reassurance, 'low');
-          lastAlertTimeRef.current = Date.now(); // reset so reassurance doesn't loop
+          lastAlertTimeRef.current = Date.now();
           addLog(`[companion] ${reassurance}`);
-        } else if (!scene.isUncertain && sceneChanged) {
-          speak(scene.summary, 'low');
-        } else if (scene.uncertaintyMessage && sceneChanged) {
-          speak(scene.uncertaintyMessage, 'normal');
-          addLog(`Uncertainty: ${scene.uncertaintyMessage}`);
+        } else {
+          // V6 spatial mobility guidance (advisory only)
+          const spatialGuidance = mobilityEngineRef.current.generateGuidance(
+            enrichedSpatial,
+            prevSpatialInstructionRef.current
+          );
+          if (spatialGuidance) {
+            prevSpatialInstructionRef.current = enrichedSpatial.recommendation.instruction;
+            speak(spatialGuidance, 'low');
+            addLog(`[spatial] ${spatialGuidance}`);
+          } else if (!scene.isUncertain && sceneChanged) {
+            speak(scene.summary, 'low');
+          } else if (scene.uncertaintyMessage && sceneChanged) {
+            speak(scene.uncertaintyMessage, 'normal');
+            addLog(`Uncertainty: ${scene.uncertaintyMessage}`);
+          }
         }
       }
 
@@ -324,7 +345,6 @@ export function useVisionSession() {
   const startSession = useCallback(async () => {
     setState((s) => ({ ...s, isLoading: true, error: null }));
     try {
-      // Snapshot current settings for the session
       const settings = loadSettings();
       sessionSettingsRef.current = settings;
       updateSettings({ rate: settings.speechRate, volume: settings.speechVolume, voiceName: settings.voiceName });
@@ -340,8 +360,10 @@ export function useVisionSession() {
       currentSceneRef.current = null;
       prevSceneSummaryRef.current = null;
       lastAlertTimeRef.current = null;
+      prevSpatialInstructionRef.current = undefined;
       alertThrottleRef.current.reset();
       personalityEngineRef.current.reset();
+      worldModelEngineRef.current.reset();
 
       setState((s) => ({
         ...s,
@@ -359,6 +381,7 @@ export function useVisionSession() {
         currentDecision: null,
         completedSteps: [true, false, false, false, false, false, false],
         report: null,
+        spatialData: null,
       }));
 
       const mode = cameraStatusRef.current === 'active' ? 'camera mode' : 'simulation mode';
@@ -456,7 +479,7 @@ export function useVisionSession() {
     saveMemoryEvent,
     startCamera: camera.requestCamera,
     stopCamera: camera.stopCamera,
-    // V5: last guidance and voice actions
+    // V5
     lastGuidance,
     repeatLastGuidance: () => repeatGuidance(speak),
     speak,

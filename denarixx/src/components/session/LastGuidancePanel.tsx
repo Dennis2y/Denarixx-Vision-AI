@@ -65,7 +65,7 @@ export function LastGuidancePanel({ guidance, onRepeat, isActive }: LastGuidance
             className="text-sm text-white leading-relaxed border-l-2 border-yellow-500 pl-3"
             aria-label={`Last spoken guidance: ${guidance.text}`}
           >
-            "{guidance.text}"
+            &ldquo;{guidance.text}&rdquo;
           </blockquote>
 
           {/* Meta row */}

@@ -15,6 +15,7 @@ import { SessionReportPanel } from '@/components/session/SessionReport';
 import { OnboardingFlow } from '@/components/session/OnboardingFlow';
 import { VoiceCommandIndicator } from '@/components/session/VoiceCommandIndicator';
 import { LastGuidancePanel } from '@/components/session/LastGuidancePanel';
+import { SpatialMapPanel } from '@/components/session/SpatialMapPanel';
 
 export default function SessionPage() {
   const {
@@ -47,7 +48,11 @@ export default function SessionPage() {
           repeatLastGuidance();
           break;
         case 'describe_surroundings':
-          if (state.currentScene) {
+          if (state.spatialData && state.spatialData.objects.length > 0) {
+            const top = state.spatialData.objects.slice(0, 3);
+            const desc = top.map((o) => `${o.label} ${o.distanceMetres.toFixed(0)} metres ${o.direction.replace(/_/g, ' ')}`).join(', ');
+            speak(`I can see: ${desc}.`, 'normal', true);
+          } else if (state.currentScene) {
             speak(state.currentScene.summary, 'normal', true);
           } else {
             speak('No scene data yet — session may not have started.', 'normal', true);
@@ -61,7 +66,9 @@ export default function SessionPage() {
           }
           break;
         case 'what_should_i_do':
-          if (state.currentDecision?.message) {
+          if (state.spatialData) {
+            speak(state.spatialData.recommendation.instruction, 'normal', true);
+          } else if (state.currentDecision?.message) {
             speak(`Recommended action: ${state.currentDecision.message}`, 'normal', true);
           } else {
             speak('No current recommendation — session may not have started.', 'normal', true);
@@ -204,18 +211,14 @@ export default function SessionPage() {
 
           <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
 
-          {/* Privacy notice */}
           <div className="flex items-start gap-2.5 bg-blue-950/40 border border-blue-800/50 rounded-lg p-3 mb-3 text-xs text-blue-300">
             <span className="text-blue-400 mt-px shrink-0" aria-hidden="true">ℹ</span>
             <span>
               <strong>Privacy:</strong> Camera frames are processed for assistive analysis only.
-              Phase 4 does not store video — no frames are saved to disk. When a real AI provider is
-              configured, frames are sent to that provider and subject to its privacy policy.
-              Face recognition is disabled.
+              No frames are saved to disk. Face recognition is disabled.
             </span>
           </div>
 
-          {/* Camera controls */}
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={startCamera}
@@ -283,24 +286,25 @@ export default function SessionPage() {
           />
         </div>
 
-        {/* ── Main panels ────────────────────────────────────────────────── */}
+        {/* ── V6 Spatial Map + Hazard panel ──────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          <SpatialMapPanel snapshot={state.spatialData} isActive={state.isActive} />
           <HazardPanel alerts={state.currentAlerts} decision={state.currentDecision} />
-          <ScenePanel scene={state.currentScene} />
         </div>
 
-        {/* ── Last guidance + audio log ──────────────────────────────────── */}
+        {/* ── Scene + Last Guidance ──────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          <ScenePanel scene={state.currentScene} />
           <LastGuidancePanel
             guidance={lastGuidance}
             onRepeat={repeatLastGuidance}
             isActive={state.isActive}
           />
-          <AudioLog log={state.log} />
         </div>
 
-        {/* ── Conversation ───────────────────────────────────────────────── */}
-        <div className="mb-4">
+        {/* ── Audio log + Conversation ───────────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          <AudioLog log={state.log} />
           <ConversationBox scene={state.currentScene} sessionId={state.sessionId} />
         </div>
 
@@ -311,7 +315,7 @@ export default function SessionPage() {
             <p className="text-white font-bold mb-1">Ready to start</p>
             <p className="text-gray-500 text-sm">
               Click <strong className="text-yellow-400">Start Vision Session</strong> above, or say{' '}
-              <strong className="text-purple-400">"start session"</strong> to begin hands-free.{' '}
+              <strong className="text-purple-400">&ldquo;start session&rdquo;</strong> to begin hands-free.{' '}
               {cameraStatus === 'active'
                 ? 'Live camera frames will be sent for analysis.'
                 : 'Start Camera first to use your device camera, or run in simulation mode.'}
@@ -333,34 +337,10 @@ function CameraStatusBadge({
   compact?: boolean;
 }) {
   const configs: Record<CameraStatus, { label: string; dot: string; text: string; bg: string; border: string }> = {
-    inactive: {
-      label: compact ? 'Inactive' : 'Camera Inactive',
-      dot: 'bg-gray-500',
-      text: 'text-gray-400',
-      bg: 'bg-gray-800/60',
-      border: 'border-gray-700',
-    },
-    requesting: {
-      label: compact ? 'Requesting…' : 'Requesting Permission…',
-      dot: 'bg-yellow-400 animate-pulse',
-      text: 'text-yellow-300',
-      bg: 'bg-yellow-950/40',
-      border: 'border-yellow-700/50',
-    },
-    active: {
-      label: compact ? 'Live' : 'Camera Active',
-      dot: 'bg-green-400 animate-pulse',
-      text: 'text-green-300',
-      bg: 'bg-green-950/40',
-      border: 'border-green-700/50',
-    },
-    denied: {
-      label: compact ? 'Denied — Sim' : 'Permission Denied · Simulation Fallback',
-      dot: 'bg-amber-500',
-      text: 'text-amber-300',
-      bg: 'bg-amber-950/40',
-      border: 'border-amber-700/50',
-    },
+    inactive: { label: compact ? 'Inactive' : 'Camera Inactive', dot: 'bg-gray-500', text: 'text-gray-400', bg: 'bg-gray-800/60', border: 'border-gray-700' },
+    requesting: { label: compact ? 'Requesting…' : 'Requesting Permission…', dot: 'bg-yellow-400 animate-pulse', text: 'text-yellow-300', bg: 'bg-yellow-950/40', border: 'border-yellow-700/50' },
+    active: { label: compact ? 'Live' : 'Camera Active', dot: 'bg-green-400 animate-pulse', text: 'text-green-300', bg: 'bg-green-950/40', border: 'border-green-700/50' },
+    denied: { label: compact ? 'Denied — Sim' : 'Permission Denied · Simulation Fallback', dot: 'bg-amber-500', text: 'text-amber-300', bg: 'bg-amber-950/40', border: 'border-amber-700/50' },
   };
 
   const c = configs[status];

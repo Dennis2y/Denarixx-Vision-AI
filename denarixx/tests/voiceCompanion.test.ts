@@ -61,50 +61,54 @@ function describe(label: string, fn: () => void) {
 describe('VoiceCommandEngine — start/stop commands', () => {
   const engine = new VoiceCommandEngine();
 
-  expect(engine.parse('start session').command).toBe<VoiceCommandType>('start_session', 'parses "start session"');
-  expect(engine.parse('begin session').command).toBe<VoiceCommandType>('start_session', 'parses "begin session"');
-  expect(engine.parse('start vision').command).toBe<VoiceCommandType>('start_session', 'parses "start vision"');
-  expect(engine.parse('start').command).toBe<VoiceCommandType>('start_session', 'parses bare "start"');
-  expect(engine.parse('stop session').command).toBe<VoiceCommandType>('stop_session', 'parses "stop session"');
-  expect(engine.parse('end session').command).toBe<VoiceCommandType>('stop_session', 'parses "end session"');
-  expect(engine.parse('finish session').command).toBe<VoiceCommandType>('stop_session', 'parses "finish session"');
+  const cmd = (s: string) => engine.parse(s).command as VoiceCommandType;
+
+  expect(cmd('start session')).toBe('start_session' as VoiceCommandType, 'parses "start session"');
+  expect(cmd('begin session')).toBe('start_session' as VoiceCommandType, 'parses "begin session"');
+  expect(cmd('start vision')).toBe('start_session' as VoiceCommandType, 'parses "start vision"');
+  expect(cmd('start')).toBe('start_session' as VoiceCommandType, 'parses bare "start"');
+  expect(cmd('stop session')).toBe('stop_session' as VoiceCommandType, 'parses "stop session"');
+  expect(cmd('end session')).toBe('stop_session' as VoiceCommandType, 'parses "end session"');
+  expect(cmd('finish session')).toBe('stop_session' as VoiceCommandType, 'parses "finish session"');
 });
 
 describe('VoiceCommandEngine — navigation commands', () => {
   const engine = new VoiceCommandEngine();
+  const cmd = (s: string) => engine.parse(s).command as VoiceCommandType;
 
-  expect(engine.parse('describe surroundings').command).toBe<VoiceCommandType>('describe_surroundings', 'parses "describe surroundings"');
-  expect(engine.parse('what is around me').command).toBe<VoiceCommandType>('describe_surroundings', 'parses "what is around me"');
-  expect(engine.parse('look around').command).toBe<VoiceCommandType>('describe_surroundings', 'parses "look around"');
-  expect(engine.parse('where am i').command).toBe<VoiceCommandType>('where_am_i', 'parses "where am i"');
-  expect(engine.parse('where are we').command).toBe<VoiceCommandType>('where_am_i', 'parses "where are we"');
-  expect(engine.parse('what is this place').command).toBe<VoiceCommandType>('where_am_i', 'parses "what is this place"');
-  expect(engine.parse('what should i do').command).toBe<VoiceCommandType>('what_should_i_do', 'parses "what should i do"');
-  expect(engine.parse('help').command).toBe<VoiceCommandType>('what_should_i_do', 'parses "help"');
-  expect(engine.parse('guide me').command).toBe<VoiceCommandType>('what_should_i_do', 'parses "guide me"');
+  expect(cmd('describe surroundings')).toBe('describe_surroundings' as VoiceCommandType, 'parses "describe surroundings"');
+  expect(cmd('what is around me')).toBe('describe_surroundings' as VoiceCommandType, 'parses "what is around me"');
+  expect(cmd('look around')).toBe('describe_surroundings' as VoiceCommandType, 'parses "look around"');
+  expect(cmd('where am i')).toBe('where_am_i' as VoiceCommandType, 'parses "where am i"');
+  expect(cmd('where are we')).toBe('where_am_i' as VoiceCommandType, 'parses "where are we"');
+  expect(cmd('what is this place')).toBe('where_am_i' as VoiceCommandType, 'parses "what is this place"');
+  expect(cmd('what should i do')).toBe('what_should_i_do' as VoiceCommandType, 'parses "what should i do"');
+  expect(cmd('help')).toBe('what_should_i_do' as VoiceCommandType, 'parses "help"');
+  expect(cmd('guide me')).toBe('what_should_i_do' as VoiceCommandType, 'parses "guide me"');
 });
 
 describe('VoiceCommandEngine — repeat + save + emergency', () => {
   const engine = new VoiceCommandEngine();
+  const cmd = (s: string) => engine.parse(s).command as VoiceCommandType;
 
-  expect(engine.parse('repeat').command).toBe<VoiceCommandType>('repeat_last', 'parses "repeat"');
-  expect(engine.parse('repeat that').command).toBe<VoiceCommandType>('repeat_last', 'parses "repeat that"');
-  expect(engine.parse('say that again').command).toBe<VoiceCommandType>('repeat_last', 'parses "say that again"');
-  expect(engine.parse('what did you say').command).toBe<VoiceCommandType>('repeat_last', 'parses "what did you say"');
-  expect(engine.parse('save this place').command).toBe<VoiceCommandType>('save_this_place', 'parses "save this place"');
-  expect(engine.parse('remember this').command).toBe<VoiceCommandType>('save_this_place', 'parses "remember this"');
-  expect(engine.parse('bookmark this').command).toBe<VoiceCommandType>('save_this_place', 'parses "bookmark this"');
-  expect(engine.parse('emergency').command).toBe<VoiceCommandType>('emergency_stop', 'parses "emergency"');
-  expect(engine.parse('danger').command).toBe<VoiceCommandType>('emergency_stop', 'parses "danger"');
-  expect(engine.parse('abort').command).toBe<VoiceCommandType>('emergency_stop', 'parses "abort"');
+  expect(cmd('repeat')).toBe('repeat_last' as VoiceCommandType, 'parses "repeat"');
+  expect(cmd('repeat that')).toBe('repeat_last' as VoiceCommandType, 'parses "repeat that"');
+  expect(cmd('say that again')).toBe('repeat_last' as VoiceCommandType, 'parses "say that again"');
+  expect(cmd('what did you say')).toBe('repeat_last' as VoiceCommandType, 'parses "what did you say"');
+  expect(cmd('save this place')).toBe('save_this_place' as VoiceCommandType, 'parses "save this place"');
+  expect(cmd('remember this')).toBe('save_this_place' as VoiceCommandType, 'parses "remember this"');
+  expect(cmd('bookmark this')).toBe('save_this_place' as VoiceCommandType, 'parses "bookmark this"');
+  expect(cmd('emergency')).toBe('emergency_stop' as VoiceCommandType, 'parses "emergency"');
+  expect(cmd('danger')).toBe('emergency_stop' as VoiceCommandType, 'parses "danger"');
+  expect(cmd('abort')).toBe('emergency_stop' as VoiceCommandType, 'parses "abort"');
 });
 
 describe('VoiceCommandEngine — unknown + confidence', () => {
   const engine = new VoiceCommandEngine();
 
-  expect(engine.parse('hello world').command).toBe<VoiceCommandType>('unknown', 'unrecognized → unknown');
-  expect(engine.parse('').command).toBe<VoiceCommandType>('unknown', 'empty string → unknown');
-  expect(engine.parse('   ').command).toBe<VoiceCommandType>('unknown', 'whitespace only → unknown');
+  expect(engine.parse('hello world').command as VoiceCommandType).toBe('unknown' as VoiceCommandType, 'unrecognized → unknown');
+  expect(engine.parse('').command as VoiceCommandType).toBe('unknown' as VoiceCommandType, 'empty string → unknown');
+  expect(engine.parse('   ').command as VoiceCommandType).toBe('unknown' as VoiceCommandType, 'whitespace only → unknown');
   expect(engine.parse('start session').confidence > 0).toBeTrue('start_session has confidence > 0');
   expect(engine.parse('emergency').confidence > 0.9).toBeTrue('emergency has confidence > 0.9');
   expect(engine.parse('unknown xyz').confidence).toBe(0, 'unknown has confidence 0');
@@ -112,11 +116,12 @@ describe('VoiceCommandEngine — unknown + confidence', () => {
 
 describe('VoiceCommandEngine — case + punctuation insensitive', () => {
   const engine = new VoiceCommandEngine();
+  const cmd = (s: string) => engine.parse(s).command as VoiceCommandType;
 
-  expect(engine.parse('START SESSION').command).toBe<VoiceCommandType>('start_session', 'uppercase "START SESSION"');
-  expect(engine.parse('Stop Session!').command).toBe<VoiceCommandType>('stop_session', 'mixed-case "Stop Session!"');
-  expect(engine.parse('Where am I?').command).toBe<VoiceCommandType>('where_am_i', '"Where am I?" with punctuation');
-  expect(engine.parse('  repeat  ').command).toBe<VoiceCommandType>('repeat_last', 'leading/trailing spaces');
+  expect(cmd('START SESSION')).toBe('start_session' as VoiceCommandType, 'uppercase "START SESSION"');
+  expect(cmd('Stop Session!')).toBe('stop_session' as VoiceCommandType, 'mixed-case "Stop Session!"');
+  expect(cmd('Where am I?')).toBe('where_am_i' as VoiceCommandType, '"Where am I?" with punctuation');
+  expect(cmd('  repeat  ')).toBe('repeat_last' as VoiceCommandType, 'leading/trailing spaces');
 });
 
 describe('VoiceCommandEngine — label()', () => {
@@ -179,7 +184,6 @@ describe('GuidancePersonalityEngine — formatMessage minimal', () => {
 
   const result = engine.formatMessage(msg, p, 'critical');
   expect(result).toContain('Stop immediately', 'minimal keeps first sentence');
-  // Should not contain the second sentence
   const hasBothSentences = result.includes('A vehicle is approaching');
   expect(!hasBothSentences).toBeTrue('minimal strips second sentence');
 });
@@ -214,7 +218,6 @@ describe('GuidancePersonalityEngine — getReassurance', () => {
   expect(r1.length > 0).toBeTrue('companion returns non-empty reassurance');
 
   const r2 = engine.getReassurance('companion');
-  // Rotation — second call may differ
   expect(typeof r2).toBe('string', 'second call also returns string');
 
   const rMin = engine.getReassurance('minimal');
@@ -233,12 +236,11 @@ describe('GuidancePersonalityEngine — shouldReassure', () => {
 
 describe('GuidancePersonalityEngine — reset clears reassurance rotation', () => {
   const engine = new GuidancePersonalityEngine();
-  engine.getReassurance('companion'); // advance
-  engine.getReassurance('companion'); // advance
+  engine.getReassurance('companion');
+  engine.getReassurance('companion');
   engine.reset();
   const r1 = engine.getReassurance('companion');
   const r2 = engine.getReassurance('companion');
-  // r1 should be the first reassurance again; r2 the second
   expect(r1 !== r2).toBeTrue('rotation advances after reset');
 });
 

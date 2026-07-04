@@ -7,9 +7,8 @@
  * through VoiceCommandEngine. Falls back gracefully when the API is
  * unavailable (Firefox, Safari, non-HTTPS).
  *
- * Usage:
- *   const { isListening, startListening, stopListening, lastCommand, isSupported } =
- *     useVoiceCommands((cmd) => { ... });
+ * Minimal browser types are declared inline so this file compiles
+ * regardless of whether lib.dom includes the Speech Recognition API.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -18,8 +17,52 @@ import type { ParsedVoiceCommand, VoiceCommandType } from '@/engines/voiceComman
 
 export type { ParsedVoiceCommand, VoiceCommandType };
 
-// Browser speech recognition API with vendor prefix support
-type SpeechRecognitionCtor = new () => SpeechRecognition;
+// ─── Inline Web Speech API type declarations ──────────────────────────────────
+// These aren't in all TypeScript DOM builds, so we declare them locally.
+
+interface ISpeechRecognitionAlternative {
+  readonly transcript: string;
+  readonly confidence: number;
+}
+
+interface ISpeechRecognitionResult {
+  readonly isFinal: boolean;
+  readonly length: number;
+  item(index: number): ISpeechRecognitionAlternative;
+  readonly [index: number]: ISpeechRecognitionAlternative;
+}
+
+interface ISpeechRecognitionResultList {
+  readonly length: number;
+  item(index: number): ISpeechRecognitionResult;
+  readonly [index: number]: ISpeechRecognitionResult;
+}
+
+interface ISpeechRecognitionEvent extends Event {
+  readonly resultIndex: number;
+  readonly results: ISpeechRecognitionResultList;
+}
+
+interface ISpeechRecognitionErrorEvent extends Event {
+  readonly error: string;
+}
+
+interface ISpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives: number;
+  start(): void;
+  stop(): void;
+  abort(): void;
+  onresult: ((event: ISpeechRecognitionEvent) => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: ISpeechRecognitionErrorEvent) => void) | null;
+}
+
+type SpeechRecognitionCtor = new () => ISpeechRecognition;
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
   if (typeof window === 'undefined') return null;
@@ -47,7 +90,7 @@ export function useVoiceCommands(
   const [lastTranscript, setLastTranscript] = useState('');
   const [lastCommand, setLastCommand] = useState<ParsedVoiceCommand | null>(null);
 
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<ISpeechRecognition | null>(null);
   const engineRef = useRef(new VoiceCommandEngine());
   const onCommandRef = useRef(onCommand);
   const shouldRestartRef = useRef(false);
@@ -57,7 +100,7 @@ export function useVoiceCommands(
     setIsSupported(getSpeechRecognitionCtor() !== null);
   }, []);
 
-  const createRecognition = useCallback((): SpeechRecognition | null => {
+  const createRecognition = useCallback((): ISpeechRecognition | null => {
     const Ctor = getSpeechRecognitionCtor();
     if (!Ctor) return null;
 
@@ -67,7 +110,7 @@ export function useVoiceCommands(
     recognition.lang = 'en-US';
     recognition.maxAlternatives = 1;
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onresult = (event: ISpeechRecognitionEvent) => {
       let transcript = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
@@ -86,17 +129,12 @@ export function useVoiceCommands(
     };
 
     recognition.onend = () => {
-      // Auto-restart continuous listening if we're supposed to be active
       if (shouldRestartRef.current && recognitionRef.current) {
-        try {
-          recognitionRef.current.start();
-        } catch {
-          // AbortError / InvalidStateError — already started or stopped
-        }
+        try { recognitionRef.current.start(); } catch { /* ignore */ }
       }
     };
 
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    recognition.onerror = (event: ISpeechRecognitionErrorEvent) => {
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
         shouldRestartRef.current = false;
         recognitionRef.current = null;
@@ -133,7 +171,6 @@ export function useVoiceCommands(
     setLastTranscript('');
   }, []);
 
-  // Clean up on unmount
   useEffect(() => {
     return () => {
       shouldRestartRef.current = false;
