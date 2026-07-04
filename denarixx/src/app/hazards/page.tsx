@@ -57,10 +57,10 @@ export default function HazardsPage() {
     }
   }
 
-  const severityBadge = (s: string) =>
-    (['critical', 'high', 'medium', 'low'] as const).includes(s as never)
-      ? (s as 'critical' | 'high' | 'medium' | 'low')
-      : 'muted';
+  const SEVERITY_LEVELS: readonly string[] = ['critical', 'high', 'medium', 'low'];
+  type SeverityLevel = 'critical' | 'high' | 'medium' | 'low';
+  const severityBadge = (s: string): SeverityLevel | 'muted' =>
+    SEVERITY_LEVELS.includes(s) ? (s as SeverityLevel) : 'muted';
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">

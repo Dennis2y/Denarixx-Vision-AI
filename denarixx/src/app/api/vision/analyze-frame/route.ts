@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ok, handleError } from '@/lib/api';
 import { getVisionEngine } from '@/engines/VisionEngine';
-import { updateSession } from '@/lib/sessionStore';
+import { getSession, updateSession } from '@/lib/sessionStore';
 import type { VisionFrame } from '@/types';
 
 const schema = z.object({
@@ -25,10 +25,13 @@ export async function POST(req: Request) {
     const detections = await engine.analyzeFrame(frame);
     const latencyMs = Date.now() - start;
 
-    updateSession(body.sessionId, {
-      frameCount: (s?: number) => (s ?? 0) + 1,
-      latencyMs: [],
-    } as never);
+    const session = getSession(body.sessionId);
+    if (session) {
+      updateSession(body.sessionId, {
+        frameCount: session.frameCount + 1,
+        latencyMs: [...session.latencyMs, latencyMs],
+      });
+    }
 
     return ok({
       sessionId: body.sessionId,
