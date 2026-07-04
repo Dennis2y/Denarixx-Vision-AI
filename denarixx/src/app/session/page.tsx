@@ -124,7 +124,8 @@ export default function SessionPage() {
           <span className="text-blue-400 mt-px shrink-0" aria-hidden="true">ℹ</span>
           <span>
             <strong>Privacy:</strong> Camera frames are processed for assistive analysis only.
-            Phase 2 does not store video. No frames are saved to disk or transmitted off-device.
+            Phase 4 does not store video — no frames are saved to disk. When a real AI provider is
+            configured, frames are sent to that provider and subject to its privacy policy.
             Face recognition is disabled.
           </span>
         </div>

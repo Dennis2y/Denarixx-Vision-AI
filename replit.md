@@ -29,6 +29,9 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V2 types:** `denarixx/src/types/cognitive.ts`
 - **V3 engines:** `denarixx/src/engines/` — environmentUnderstandingEngine, cognitiveReasoningEngine, riskPredictionEngine, actionDecisionEngine, humanGuideEngine
 - **V3 types:** `denarixx/src/types/reasoning.ts`
+- **V4 provider system:** `denarixx/src/engines/visionProviderFactory.ts` — factory reads `VISION_PROVIDER` env var
+- **V4 providers:** `denarixx/src/engines/providers/` — SimulationVisionProvider, OpenAIVisionProvider, GeminiVisionProvider, LocalVisionProvider
+- **V4 types:** `denarixx/src/types/vision.ts` — VisionAnalysisV4, VisionAnalysisProvider
 - **V1 tests:** `denarixx/tests/engines.test.ts` (24 tests)
 - **V2 tests:** `denarixx/tests/cognitiveGuardian.test.ts` (37 tests — includes AlertThrottleEngine suite)
 - **V3 tests:** `denarixx/tests/v3reasoning.test.ts` (27 tests)
@@ -38,6 +41,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **UI components:** `denarixx/src/components/` — Card, Badge, Button, DemoFlow, SessionReport, HazardPanel, etc.
 - **API routes:** `denarixx/src/app/api/` — 13 routes (health, sessions, sessions/start, sessions/end, vision/analyze-frame, hazards/evaluate, safety/decide, scene/describe, conversation/ask, audio/speak, memory, memory/save, navigation)
 - **V2 roadmap:** `denarixx/docs/V2_COGNITIVE_GUARDIAN_ROADMAP.md`
+- **V4 docs:** `denarixx/docs/V4_REAL_VISION_PROVIDER.md`
 
 ## Architecture decisions
 
@@ -51,7 +55,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 
 ## Product
 
-Denarixx Vision AI is a Phase 2 MVP of an assistive AI perception platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as an automatic fallback. All vision analysis remains simulated — real model inference is Phase 3.
+Denarixx Vision AI is a Phase 4 platform of an assistive AI perception platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
 
 **11 pages:**
 - **Homepage (`/`)** — Investor-grade landing with 7-step demo flow, AI pipeline diagram, roadmap

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ok, handleError } from '@/lib/api';
-import { getVisionEngine } from '@/engines/VisionEngine';
+import { getVisionAnalysisProvider } from '@/engines/visionProviderFactory';
 import { getSession, updateSession } from '@/lib/sessionStore';
 import type { VisionFrame } from '@/types';
 
@@ -21,8 +21,8 @@ export async function POST(req: Request) {
       source: body.source,
     };
 
-    const engine = getVisionEngine();
-    const detections = await engine.analyzeFrame(frame);
+    const provider = getVisionAnalysisProvider();
+    const analysis = await provider.analyzeFrameV4(frame, body.imageData ?? null);
     const latencyMs = Date.now() - start;
 
     const session = getSession(body.sessionId);
@@ -35,8 +35,13 @@ export async function POST(req: Request) {
 
     return ok({
       sessionId: body.sessionId,
-      detections,
-      provider: engine.getProvider().name,
+      // Legacy field — kept for backward compatibility with useVisionSession and downstream engines
+      detections: analysis.objects,
+      // V4 rich analysis — environment, hazards, recommendedAction, reasoning, etc.
+      visionAnalysis: analysis,
+      provider: analysis.provider,
+      isRealAI: analysis.isRealAI,
+      usedFallback: analysis.usedFallback,
       latencyMs,
       timestamp: frame.timestamp,
       mode: body.imageData ? 'camera' : 'simulation',

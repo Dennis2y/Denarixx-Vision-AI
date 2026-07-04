@@ -1,3 +1,4 @@
 - [Phase 2 camera integration](camera-integration.md) — useCameraCapture hook + session hook ref pattern avoids stale closures in setInterval; simulation is automatic fallback.
 - [Alert Throttle Design](alert-throttle.md) — per-severity cooldowns in AlertThrottleEngine; lives in useVisionSession hook (not CognitiveGuardianEngine) to avoid disrupting existing tests.
 - [V3 Reasoning Pipeline](v3-reasoning-pipeline.md) — 5-stage client-side reasoning pipeline; engines are imported directly on the /reasoning page (no API routes needed — pure TS computation).
+- [V4 Vision Provider System](v4-vision-providers.md) — provider system uses VisionAnalysisProvider interface (not VisionProvider); factory in visionProviderFactory.ts; analyzeFrame route imports factory, not VisionEngine.
