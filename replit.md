@@ -19,6 +19,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/pilotTesting.test.ts` — V11 Pilot Testing tests (117/117)
 - `cd denarixx && npx tsx tests/visionPipeline.test.ts` — V12 Real-Time AI Vision tests (148/148)
 - `cd denarixx && npx tsx tests/navigationEngine.test.ts` — V13 Indoor & Outdoor Navigation tests (151/151)
+- `cd denarixx && npx tsx tests/multiCameraSupport.test.ts` — V14 Multi-Camera Smart Glasses tests (164/164)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
@@ -100,6 +101,11 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V9 tests:** `denarixx/tests/humanBehaviour.test.ts` (134 tests)
 - **V10 tests:** `denarixx/tests/mobileReadiness.test.ts` (47 tests)
 - **V11 tests:** `denarixx/tests/pilotTesting.test.ts` (117 tests)
+- **V14 types:** `denarixx/src/types/glasses.ts` — GlassesCameraPosition, CameraHealthStatus, FovZone, CameraFeed, GlassesState, FusedDetection, FusedFrame, WearableSensorFrame, MultiCameraConfig, CAMERA_PRIVACY, VISION_UNAVAILABLE_MESSAGE
+- **V14 engines:** `glassesCameraEngine.ts` — state, connect/disconnect, feed simulation; `cameraHealthEngine.ts` — health, fallback, battery; `fieldOfViewEngine.ts` — FOV zone classification, directional speech; `multiCameraFusionEngine.ts` — detection fusion, dedup, priority; `wearableSensorFusionEngine.ts` — IMU/compass/thermal/battery
+- **V14 component:** `denarixx/src/components/devices/MultiCameraPanel.tsx` — live multi-camera panel (live simulation, embedded in /devices)
+- **V14 tests:** `denarixx/tests/multiCameraSupport.test.ts` (164 tests)
+- **V14 docs:** `denarixx/docs/V14_MULTI_CAMERA_SMART_GLASSES_SUPPORT.md`
 - **Camera hook:** `denarixx/src/hooks/useCameraCapture.ts` — getUserMedia, stream lifecycle, frame capture (JPEG base64), 4-state status machine
 - **Alert throttle engine:** `denarixx/src/engines/alertThrottleEngine.ts` — per-severity cooldowns, shouldSpeak() decision, confidence-escalation override, speak-count tracking
 - **Session hook:** `denarixx/src/hooks/useVisionSession.ts` — 7-step demo flow, camera integration, spatial intelligence, completedSteps tracking, session report generation
@@ -135,17 +141,22 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V13 route memory privacy:** `canSaveRouteMemory()` requires `locationConsentGiven === true`. Default is false. Precise GPS is never stored by default (`noPreciseLocation: true`).
 - **V13 simulation tick:** `processNavigationTick` runs at 500ms intervals in the UI — ~1.2m distance per tick (walking pace). Auto-advances segments when 90% of distance traveled. Deviation of 45°+ triggers rerouting state.
 - **V13 speech cooldown:** 4-second cooldown between navigation guidance messages. Critical risk bypasses cooldown (always immediate).
+- **V14 types separation:** `src/types/glasses.ts` is separate from `src/types/hardware.ts` (V8) — both define camera-related types but for different abstraction layers; never merge them.
+- **V14 fallback chain:** glassesCameraEngine `disconnectCamera` does NOT set `fallbackActive`; only `cameraHealthEngine.applyPhoneFallback()` sets it. `shouldFallbackToPhone` returns false when `fallbackActive` is already true (already on phone).
+- **V14 camera priority:** front → external → right → left → phone. Phone is always the ultimate fallback (`fallbackToPhoneOnAllFail: true` in DEFAULT_MULTICAMERA_CONFIG).
+- **V14 VISION_UNAVAILABLE_MESSAGE:** Used when ALL cameras fail — must say "stop" and "check carefully". This exact string is tested and must not be changed.
+- **V14 simulation tick:** MultiCameraPanel runs at 800ms intervals. Feed latency drifts via sin-wave jitter. Battery drains 0.005% per tick.
 
 ## Product
 
-Denarixx Vision AI is a Phase 13 platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
+Denarixx Vision AI is a Phase 14 platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
 
 **14 pages:**
 - **Homepage (`/`)** — Investor-grade landing with 7-step demo flow, AI pipeline diagram, roadmap
 - **Vision Session (`/session`)** — Interactive 7-step guided demo with live DemoFlow tracker, SpatialMapPanel, SensorStatusPanel, and SessionReport
 - **Live AI Vision (`/vision`)** — V12 real-time perception pipeline: camera preview, tracked objects (IoU), scene understanding, performance metrics, speech guidance, provider + battery mode selectors
 - **Pilot Testing (`/pilot`)** — V11 4-phase supervised pilot testing: consent screen, 7 test scenarios, live feedback collection, session report with privacy guarantees and delete option
-- **Devices (`/devices`)** — V8 Smart Glasses Integration Layer: device cards, connect/disconnect, Active Sources selectors, Browser Capabilities, Safety Rules
+- **Devices (`/devices`)** — V8 + V14: Smart Glasses Integration Layer + Multi-Camera System panel (live simulation, camera health, fallback, FOV, fused detections, wearable sensors, glasses SVG preview)
 - **Cognitive Guardian (`/guardian`)** — V2 pipeline debugger: pick a scenario, run the full AI decision pipeline, see live timings per stage
 - **Cognitive Reasoning (`/reasoning`)** — V3 live pipeline debugger: 6-panel view showing environment understanding, internal reasoning, risk prediction, action decision, and human guide message
 - **Hazards (`/hazards`)** — Standalone HazardDetectionEngine tester with 4 example scenarios
@@ -166,6 +177,7 @@ Denarixx Vision AI is a Phase 13 platform for blind and visually impaired users.
 - V11 Pilot Testing: **117/117 passing**
 - V12 Real-Time AI Vision Engine: **148/148 passing**
 - V13 Indoor & Outdoor Navigation Engine: **151/151 passing**
+- V14 Multi-Camera Smart Glasses: **164/164 passing**
 
 ## User preferences
 
@@ -197,3 +209,4 @@ Denarixx Vision AI is a Phase 13 platform for blind and visually impaired users.
 - V11 docs: `denarixx/docs/V11_REAL_WORLD_PILOT_TESTING.md`
 - V12 docs: `denarixx/docs/V12_REAL_TIME_AI_VISION.md`
 - V13 docs: `denarixx/docs/V13_INDOOR_OUTDOOR_NAVIGATION_ENGINE.md`
+- V14 docs: `denarixx/docs/V14_MULTI_CAMERA_SMART_GLASSES_SUPPORT.md`

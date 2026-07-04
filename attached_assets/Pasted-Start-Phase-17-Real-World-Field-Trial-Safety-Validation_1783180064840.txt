@@ -1,0 +1,111 @@
+Start Phase 17: Real-World Field Trial & Safety Validation System.
+
+IMPORTANT:
+Do not rewrite V1–V16.
+Keep all previous functionality working.
+Claude Code has already built earlier phases and pushed the project to GitHub, so extend the current GitHub/Replit codebase cleanly.
+
+Goal:
+Prepare Denarixx Vision AI for controlled real-world testing with blind and low-vision users in Germany.
+
+This phase is about validation, feedback, safety logs, and supervised pilot testing.
+
+Create:
+- src/engines/fieldTrialEngine.ts
+- src/engines/safetyValidationEngine.ts
+- src/engines/userFeedbackEngine.ts
+- src/engines/trialReportEngine.ts
+- src/types/fieldTrial.ts
+- src/app/field-trials/page.tsx
+- src/app/api/field-trials/session/route.ts
+- src/app/api/field-trials/feedback/route.ts
+- src/app/api/field-trials/report/route.ts
+- tests/fieldTrial.test.ts
+- docs/V17_REAL_WORLD_FIELD_TRIALS.md
+- docs/FIELD_TRIAL_SAFETY_PROTOCOL.md
+
+Field trial mode:
+1. Consent required before starting
+2. Human supervisor required checkbox
+3. “Assistive support only” disclaimer
+4. Emergency stop button
+5. No face recognition
+6. No emergency livestreaming
+7. No video storage
+8. Location storage disabled by default
+9. Manual incident report option
+10. End-session safety report
+
+Trial scenarios:
+- indoor hallway
+- stairs
+- doorway
+- obstacle path
+- supermarket aisle
+- outdoor pavement
+- road crossing simulation
+- public transport station simulation
+- crowded area simulation
+
+Collect feedback:
+- Was the alert useful?
+- Was the alert too late?
+- Was the alert too frequent?
+- Was the wording clear?
+- Did the user feel overwhelmed?
+- Did the user feel safer?
+- What should the AI say differently?
+- Did the supervisor observe a missed hazard?
+
+Safety validation metrics:
+- alert usefulness
+- missed hazard placeholder
+- false alert placeholder
+- reaction time
+- user confidence score
+- supervisor safety score
+- guidance clarity score
+- alert fatigue score
+
+Reports:
+Generate a Field Trial Report showing:
+- session duration
+- trial scenario
+- alerts triggered
+- silence decisions
+- cognitive guardian decisions
+- user feedback
+- supervisor notes
+- incidents
+- recommendations
+
+Privacy:
+- Store reports only after explicit consent
+- Add delete report option
+- Export report as JSON placeholder
+- No biometric storage
+- No raw video storage
+
+Documentation:
+FIELD_TRIAL_SAFETY_PROTOCOL.md should include:
+- who can test
+- where to test
+- how to supervise
+- what not to test yet
+- emergency stop rules
+- consent checklist
+- privacy checklist
+- Germany pilot testing notes
+
+Quality:
+Run:
+npm run type-check
+npm test
+npx tsx tests/cognitiveGuardian.test.ts
+npm run build
+
+Fix all errors until everything passes.
+
+After implementation:
+- Push all changes to GitHub.
+- Clearly summarize what was added, what remains simulated, and what is required before testing with real blind or low-vision users.

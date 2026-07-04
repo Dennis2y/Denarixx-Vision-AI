@@ -5,6 +5,7 @@ import { DeviceCapabilityEngine } from '@/engines/deviceCapabilityEngine';
 import { HardwareBridgeEngine } from '@/engines/hardwareBridgeEngine';
 import { HARDWARE_DEFAULTS } from '@/types/hardware';
 import type { CameraSource, AudioOutput, HapticOutput, ConnectedDevice } from '@/types/hardware';
+import { MultiCameraPanel } from '@/components/devices/MultiCameraPanel';
 
 const capEngine = new DeviceCapabilityEngine();
 const bridgeEngine = new HardwareBridgeEngine(HARDWARE_DEFAULTS);
@@ -417,6 +418,11 @@ export default function DevicesPage() {
               All device connections are simulated. Real Bluetooth, WebUSB, and WebRTC
               integration will activate when hardware becomes available.
             </p>
+          </div>
+
+          {/* V14 Multi-Camera System */}
+          <div className="rounded-xl border border-gray-700 bg-gray-900/40 p-5">
+            <MultiCameraPanel />
           </div>
         </div>
       </div>

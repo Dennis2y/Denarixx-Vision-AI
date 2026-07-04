@@ -1,0 +1,93 @@
+Start Phase 18: Manufacturing Readiness & Product Certification Layer.
+
+IMPORTANT:
+Do not rewrite V1–V17.
+Keep all previous functionality working.
+Claude Code has already built earlier phases and pushed the project to GitHub, so extend the current GitHub/Replit codebase cleanly.
+
+Goal:
+Prepare Denarixx Vision AI for future hardware manufacturing, compliance planning, and investor/product-readiness documentation.
+
+This phase does NOT manufacture hardware yet.
+It creates the software, documentation, and planning layer needed before speaking with hardware manufacturers, regulators, investors, or pilot partners.
+
+Create:
+- src/engines/manufacturingReadinessEngine.ts
+- src/engines/compliancePlanningEngine.ts
+- src/engines/productRiskEngine.ts
+- src/engines/certificationRoadmapEngine.ts
+- src/types/manufacturing.ts
+- src/app/manufacturing/page.tsx
+- src/app/api/manufacturing/readiness/route.ts
+- src/app/api/manufacturing/risk/route.ts
+- src/app/api/manufacturing/certification/route.ts
+- tests/manufacturingReadiness.test.ts
+- docs/V18_MANUFACTURING_READINESS.md
+- docs/CERTIFICATION_AND_COMPLIANCE_ROADMAP.md
+- docs/MANUFACTURER_REQUIREMENTS_BRIEF.md
+
+Manufacturing readiness:
+1. Hardware component checklist
+2. Camera module requirements
+3. Battery requirements
+4. Audio/bone-conduction requirements
+5. Haptic motor requirements
+6. Compute module requirements
+7. Connectivity requirements
+8. Thermal safety requirements
+9. Durability requirements
+10. Repairability requirements
+
+Compliance planning:
+Include planning placeholders for:
+- GDPR
+- EU Accessibility Act
+- CE marking
+- Product safety
+- Battery safety
+- Wireless/Bluetooth compliance
+- Data protection impact assessment
+- Biometric data restrictions
+- Medical-device boundary warnings
+
+Important:
+Do not claim the product is certified.
+Do not claim medical-device approval.
+Clearly mark all certification items as roadmap/planning only.
+
+UI:
+Create Manufacturing Readiness page showing:
+- readiness score
+- missing hardware items
+- compliance checklist
+- certification roadmap
+- manufacturing risks
+- recommended next actions
+- Europe manufacturing option
+- China manufacturing option
+- hybrid prototype path
+
+Manufacturer brief:
+MANUFACTURER_REQUIREMENTS_BRIEF.md should explain:
+- what Denarixx Vision AI is
+- what the glasses must do
+- camera placement requirements
+- battery target
+- audio/haptic needs
+- privacy requirements
+- no video storage by default
+- prototype assumptions
+- questions to ask manufacturers
+
+Quality:
+Run:
+npm run type-check
+npm test
+npx tsx tests/cognitiveGuardian.test.ts
+npm run build
+
+Fix all errors until everything passes.
+
+After implementation:
+- Push all changes to GitHub.
+- Clearly summarize what was added, what remains simulated, and what is required before real manufacturing talks.
