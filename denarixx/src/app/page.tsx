@@ -158,6 +158,36 @@ export default function LandingPage() {
         </p>
       </section>
 
+      {/* Video — See It In Action */}
+      <section className="mb-16" aria-labelledby="video-heading">
+        <h2 id="video-heading" className="text-2xl font-bold text-white text-center mb-2">
+          See It In Action
+        </h2>
+        <p className="text-gray-500 text-sm text-center mb-6">
+          A visually impaired person navigating a busy city with Denarixx Vision AI active
+        </p>
+        <div className="relative rounded-2xl overflow-hidden border border-gray-700 bg-black shadow-2xl">
+          <video
+            src="/videos/denarixx-demo.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            controls
+            className="w-full aspect-video object-cover"
+            aria-label="Demo video: blind person walking in a busy city with Denarixx Vision AI assistive overlays"
+          />
+          {/* Overlay badge */}
+          <div className="absolute top-3 left-3 flex items-center gap-2 bg-black/70 border border-yellow-600/60 rounded-full px-3 py-1">
+            <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" aria-hidden="true" />
+            <span className="text-yellow-400 text-xs font-semibold">Denarixx Vision AI · Live Demo</span>
+          </div>
+        </div>
+        <p className="text-gray-600 text-xs text-center mt-3">
+          Simulation concept video · Phase 1 MVP · Not real camera footage
+        </p>
+      </section>
+
       {/* 7-Step Demo Flow */}
       <section className="mb-16" aria-labelledby="demo-heading">
         <h2 id="demo-heading" className="text-2xl font-bold text-white text-center mb-2">
