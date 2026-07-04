@@ -41,6 +41,7 @@ const NAV_LINKS = [
   ['/hazards', 'Hazards'],
   ['/memory', 'Memory'],
   ['/navigation', 'Navigation'],
+  ['/performance', 'Performance'],
   ['/settings', 'Settings'],
   ['/privacy', 'Privacy'],
   ['/admin', 'Admin'],

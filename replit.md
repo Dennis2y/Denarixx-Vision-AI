@@ -20,6 +20,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/visionPipeline.test.ts` — V12 Real-Time AI Vision tests (148/148)
 - `cd denarixx && npx tsx tests/navigationEngine.test.ts` — V13 Indoor & Outdoor Navigation tests (151/151)
 - `cd denarixx && npx tsx tests/multiCameraSupport.test.ts` — V14 Multi-Camera Smart Glasses tests (164/164)
+- `cd denarixx && npx tsx tests/onDeviceAI.test.ts` — V15 On-Device AI Optimization tests (170/170)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
@@ -106,6 +107,11 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V14 component:** `denarixx/src/components/devices/MultiCameraPanel.tsx` — live multi-camera panel (live simulation, embedded in /devices)
 - **V14 tests:** `denarixx/tests/multiCameraSupport.test.ts` (164 tests)
 - **V14 docs:** `denarixx/docs/V14_MULTI_CAMERA_SMART_GLASSES_SUPPORT.md`
+- **V15 types:** `denarixx/src/types/onDeviceAI.ts` — `ModelRuntime` (6 runtimes), `BatteryMode` (4 modes), `LatencyBudget`, `LatencyRecord`, `PerformanceDashboard`, `OnDeviceConfig`, `BatteryOptimizationProfile`, `OfflineSafetyPath`, `OFFLINE_SAFETY_MESSAGE`, `DEFAULT_LATENCY_BUDGET` (criticalTargetMs: 500)
+- **V15 engines:** `onDeviceAIEngine.ts` — runtime registry, offline-first safety path, cloud status, processing mode selection; `modelOptimizationEngine.ts` — 7-model registry, quantization strategy, latency grades; `edgeInferenceEngine.ts` — frame pipeline, skip logic, inference simulation, performance dashboard; `latencyBudgetEngine.ts` — budget, recording, critical alert timing (≤500ms), report; `batteryOptimizationEngine.ts` — battery mode classification, adaptive profiles, thermal adjustment
+- **V15 page:** `denarixx/src/app/performance/page.tsx` — live performance dashboard: battery slider, cloud status toggle, runtime registry table, latency report, edge detections
+- **V15 tests:** `denarixx/tests/onDeviceAI.test.ts` (170 tests)
+- **V15 docs:** `denarixx/docs/V15_ON_DEVICE_AI_OPTIMIZATION.md`
 - **Camera hook:** `denarixx/src/hooks/useCameraCapture.ts` — getUserMedia, stream lifecycle, frame capture (JPEG base64), 4-state status machine
 - **Alert throttle engine:** `denarixx/src/engines/alertThrottleEngine.ts` — per-severity cooldowns, shouldSpeak() decision, confidence-escalation override, speak-count tracking
 - **Session hook:** `denarixx/src/hooks/useVisionSession.ts` — 7-step demo flow, camera integration, spatial intelligence, completedSteps tracking, session report generation
@@ -146,10 +152,15 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V14 camera priority:** front → external → right → left → phone. Phone is always the ultimate fallback (`fallbackToPhoneOnAllFail: true` in DEFAULT_MULTICAMERA_CONFIG).
 - **V14 VISION_UNAVAILABLE_MESSAGE:** Used when ALL cameras fail — must say "stop" and "check carefully". This exact string is tested and must not be changed.
 - **V14 simulation tick:** MultiCameraPanel runs at 800ms intervals. Feed latency drifts via sin-wave jitter. Battery drains 0.005% per tick.
+- **V15 types separation:** `src/types/onDeviceAI.ts` is separate from all other type files — `ModelRuntime`, `BatteryMode`, and `LatencyBudget` live here only.
+- **V15 critical latency:** `DEFAULT_LATENCY_BUDGET.criticalTargetMs = 500`. This is a hard cap — never raise it. `adjustBudgetForBattery` scales other components but never relaxes criticalTargetMs.
+- **V15 offline safety:** `OFFLINE_SAFETY_MESSAGE` must contain "Online AI" and "local safety mode" — tested by the suite. Never change this string. `initOfflineSafetyPath` activates when cloud is offline OR degraded.
+- **V15 runtime selection:** In power_saver/critical battery modes, `selectRuntime` prefers `powerEfficient: true` runtimes. Browser JS is the only `available` runtime; all others are `placeholder` pending SDK integration.
+- **V15 processing mode:** Critical alerts ALWAYS route to `local` when `criticalAlertsLocal: true` (default). Offline → `local`. Degraded → `edge`. Normal → `hybrid`.
 
 ## Product
 
-Denarixx Vision AI is a Phase 14 platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
+Denarixx Vision AI is a Phase 15 platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
 
 **14 pages:**
 - **Homepage (`/`)** — Investor-grade landing with 7-step demo flow, AI pipeline diagram, roadmap
@@ -157,6 +168,7 @@ Denarixx Vision AI is a Phase 14 platform for blind and visually impaired users.
 - **Live AI Vision (`/vision`)** — V12 real-time perception pipeline: camera preview, tracked objects (IoU), scene understanding, performance metrics, speech guidance, provider + battery mode selectors
 - **Pilot Testing (`/pilot`)** — V11 4-phase supervised pilot testing: consent screen, 7 test scenarios, live feedback collection, session report with privacy guarantees and delete option
 - **Devices (`/devices`)** — V8 + V14: Smart Glasses Integration Layer + Multi-Camera System panel (live simulation, camera health, fallback, FOV, fused detections, wearable sensors, glasses SVG preview)
+- **Performance (`/performance`)** — V15 On-Device AI dashboard: battery slider, cloud status, runtime registry, latency budget, edge detections, processing mode selector
 - **Cognitive Guardian (`/guardian`)** — V2 pipeline debugger: pick a scenario, run the full AI decision pipeline, see live timings per stage
 - **Cognitive Reasoning (`/reasoning`)** — V3 live pipeline debugger: 6-panel view showing environment understanding, internal reasoning, risk prediction, action decision, and human guide message
 - **Hazards (`/hazards`)** — Standalone HazardDetectionEngine tester with 4 example scenarios
@@ -178,6 +190,7 @@ Denarixx Vision AI is a Phase 14 platform for blind and visually impaired users.
 - V12 Real-Time AI Vision Engine: **148/148 passing**
 - V13 Indoor & Outdoor Navigation Engine: **151/151 passing**
 - V14 Multi-Camera Smart Glasses: **164/164 passing**
+- V15 On-Device AI Optimization: **170/170 passing**
 
 ## User preferences
 
@@ -210,3 +223,4 @@ Denarixx Vision AI is a Phase 14 platform for blind and visually impaired users.
 - V12 docs: `denarixx/docs/V12_REAL_TIME_AI_VISION.md`
 - V13 docs: `denarixx/docs/V13_INDOOR_OUTDOOR_NAVIGATION_ENGINE.md`
 - V14 docs: `denarixx/docs/V14_MULTI_CAMERA_SMART_GLASSES_SUPPORT.md`
+- V15 docs: `denarixx/docs/V15_ON_DEVICE_AI_OPTIMIZATION.md`
