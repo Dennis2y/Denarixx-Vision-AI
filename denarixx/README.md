@@ -51,7 +51,7 @@ npx tsx tests/cognitiveGuardian.test.ts
 
 | Suite | Result |
 |---|---|
-| V1 Core Engines | 19 / 19 passed |
+| V1 Core Engines | 24 / 24 passed |
 | V2 Cognitive Guardian | 27 / 27 passed |
 | **Total** | **46 / 46 passed** |
 
@@ -62,8 +62,8 @@ npx tsx tests/cognitiveGuardian.test.ts
 | Feature | Status |
 |---|---|
 | All 10 pages | Working |
-| All 12 API routes | Working |
-| V1 engine tests | 19 / 19 passing |
+| All 13 API routes | Working |
+| V1 engine tests | 24 / 24 passing |
 | V2 Cognitive Guardian tests | 27 / 27 passing |
 | Audio guidance (Web Speech API) | Working |
 | Priority-queued speech output | Working |

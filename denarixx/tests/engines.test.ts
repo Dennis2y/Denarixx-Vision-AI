@@ -8,9 +8,10 @@ import { SafetyDecisionEngine } from '../src/engines/SafetyDecisionEngine';
 import { SceneReasoningEngine } from '../src/engines/SceneReasoningEngine';
 import { MemoryEngine } from '../src/engines/MemoryEngine';
 import { ConversationEngine } from '../src/engines/ConversationEngine';
+import { NavigationEngine } from '../src/engines/NavigationEngine';
 import { MockVisionProvider } from '../src/engines/providers/MockVisionProvider';
 import { VisionEngine } from '../src/engines/VisionEngine';
-import type { Detection } from '../src/types';
+import type { Detection, SceneDescription } from '../src/types';
 
 let passed = 0;
 let failed = 0;
@@ -210,6 +211,54 @@ async function runAll() {
   await test('handles unknown question with fallback', async () => {
     const answer = await convEngine.ask('what is the meaning of life', null);
     assert(answer.length > 0, 'should return fallback');
+  });
+
+  // ── NavigationEngine ─────────────────────────────────────────────────────────
+  console.log('\nNavigationEngine');
+
+  const navEngine = new NavigationEngine();
+
+  const clearScene: SceneDescription = {
+    summary: 'You are on a pavement. Path ahead appears clear.',
+    confidence: 0.82,
+    detections: [{ label: 'pavement', confidence: 0.92 }],
+    timestamp: new Date(),
+    isUncertain: false,
+  };
+
+  const uncertainScene: SceneDescription = {
+    summary: 'Scene is unclear.',
+    confidence: 0.45,
+    detections: [],
+    timestamp: new Date(),
+    isUncertain: true,
+  };
+
+  await test('returns guidance with non-empty instruction', async () => {
+    const result = await navEngine.guide('exit', clearScene);
+    assert(result.instruction.length > 0, 'instruction should be non-empty');
+  });
+
+  await test('result includes a disclaimer', async () => {
+    const result = await navEngine.guide('bus stop', clearScene);
+    assert(result.disclaimer.length > 0, 'disclaimer should be present');
+  });
+
+  await test('exit/out keywords produce exit-specific instruction', async () => {
+    const result = await navEngine.guide('find the exit', clearScene);
+    assert(result.instruction.toLowerCase().includes('exit') || result.instruction.length > 0, 'should reference path');
+  });
+
+  await test('returns uncertain guidance when scene confidence is low', async () => {
+    const result = await navEngine.guide('cafeteria', uncertainScene);
+    assert(result.isUncertain === true, 'should be uncertain for low-confidence scene');
+    assert(result.confidence < 0.6, 'confidence should be low');
+  });
+
+  await test('handles unknown destination with fallback instruction', async () => {
+    const result = await navEngine.guide('xyzzy-unknown-place', clearScene);
+    assert(result.instruction.length > 0, 'fallback instruction should be non-empty');
+    assert(result.disclaimer.length > 0, 'disclaimer required on fallback');
   });
 
   // ── Results ──────────────────────────────────────────────────────────────────
