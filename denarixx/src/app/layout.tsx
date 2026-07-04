@@ -20,6 +20,18 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+const NAV_LINKS = [
+  ['/session', 'Session'],
+  ['/guardian', 'Guardian'],
+  ['/hazards', 'Hazards'],
+  ['/memory', 'Memory'],
+  ['/navigation', 'Navigation'],
+  ['/settings', 'Settings'],
+  ['/privacy', 'Privacy'],
+  ['/admin', 'Admin'],
+  ['/docs', 'Docs'],
+] as const;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
@@ -33,32 +45,26 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to main content
         </a>
         <nav
-          className="border-b border-gray-800 bg-gray-950 sticky top-0 z-40"
+          className="border-b border-gray-800 bg-gray-950/95 backdrop-blur-sm sticky top-0 z-40"
           aria-label="Main navigation"
         >
           <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
             <Link
               href="/"
-              className="text-xl font-bold text-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 rounded"
+              className="text-xl font-black text-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 rounded hover:text-yellow-300 transition-colors"
               aria-label="Denarixx Vision AI — home"
             >
               Denarixx Vision AI
             </Link>
-            <div className="flex gap-1 flex-wrap text-sm" role="navigation" aria-label="Site links">
-              {[
-                ['/session', 'Session'],
-                ['/hazards', 'Hazards'],
-                ['/memory', 'Memory'],
-                ['/navigation', 'Navigation'],
-                ['/settings', 'Settings'],
-                ['/privacy', 'Privacy'],
-                ['/admin', 'Admin'],
-                ['/docs', 'Docs'],
-              ].map(([href, label]) => (
+            <div className="flex gap-0.5 flex-wrap text-sm" role="list">
+              {NAV_LINKS.map(([href, label]) => (
                 <Link
                   key={href}
                   href={href}
-                  className="px-3 py-1.5 rounded text-gray-300 hover:text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-colors"
+                  role="listitem"
+                  className={`px-3 py-1.5 rounded text-gray-400 hover:text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-colors ${
+                    label === 'Guardian' ? 'text-purple-400 hover:text-purple-300' : ''
+                  }`}
                 >
                   {label}
                 </Link>
@@ -69,11 +75,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main id="main-content" tabIndex={-1}>
           {children}
         </main>
-        <footer className="border-t border-gray-800 mt-16 py-6 text-center text-gray-500 text-xs">
-          <p>
-            Denarixx Vision AI — Phase 1 MVP — Assistive support only. Not medically
-            certified. Always use your own judgement.
-          </p>
+        <footer className="border-t border-gray-800 mt-16 py-8">
+          <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-yellow-400 font-bold text-sm">Denarixx Vision AI</p>
+            <p className="text-gray-600 text-xs text-center">
+              Phase 1 MVP · Simulation mode · Assistive support only · Not medically certified
+            </p>
+            <div className="flex gap-4 text-xs">
+              <Link href="/privacy" className="text-gray-600 hover:text-gray-400 transition-colors">Privacy</Link>
+              <Link href="/docs" className="text-gray-600 hover:text-gray-400 transition-colors">Docs</Link>
+              <Link href="/admin" className="text-gray-600 hover:text-gray-400 transition-colors">Admin</Link>
+            </div>
+          </div>
         </footer>
       </body>
     </html>

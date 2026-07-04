@@ -22,15 +22,30 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- **Next.js app:** `denarixx/` — all pages and API routes
+- **Express proxy:** `artifacts/api-server/src/app.ts` — routes `/api/*` to Express, everything else proxies to Next.js at port 3000
+- **AI engines:** `denarixx/src/engines/` — VisionEngine, HazardDetectionEngine, SafetyDecisionEngine, SceneReasoningEngine, etc.
+- **Session hook:** `denarixx/src/hooks/useVisionSession.ts` — 7-step demo flow, completedSteps tracking, session report generation
+- **UI components:** `denarixx/src/components/` — Card, Badge, Button, DemoFlow, SessionReport, HazardPanel, etc.
+- **API routes:** `denarixx/src/app/api/` — 13 routes (health, sessions/start, sessions/end, vision/analyze-frame, hazards/evaluate, safety/decide, scene/describe, conversation/ask, audio/speak, memory, memory/save)
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- **Express proxy pattern:** The api-server artifact (port 8080) is the single entry point. `/api/*` hits Express directly; all other paths proxy to Next.js. `x-forwarded-host` is stripped to avoid Next.js host blocking.
+- **In-memory session store:** Phase 1 uses a `Map<string, LiveSession>` in `src/lib/sessionStore.ts`. Prisma + Postgres are installed but not wired. Store resets on server restart or Next.js hot-reload.
+- **Simulation mode:** All AI engines return deterministic/random synthetic data. No real camera or model inference in Phase 1.
+- **Stale closure pattern:** `useVisionSession` uses refs (`audioCountRef`, `peakUrgencyRef`, `startTimeRef`) for values that must be read at session-stop time, not state.
+- **`npm run build` destroys dev cache:** After any prod build, delete `denarixx/.next` and restart "Start application" workflow.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Denarixx Vision AI is a Phase 1 simulation MVP of an assistive AI perception platform for blind and visually impaired users. Key pages:
+
+- **Homepage (`/`)** — Investor-grade landing with 7-step demo flow, AI pipeline diagram, roadmap
+- **Vision Session (`/session`)** — Interactive 7-step guided demo with live DemoFlow tracker and SessionReport
+- **Cognitive Guardian (`/guardian`)** — V2 pipeline debugger: pick a scenario, run the full AI decision pipeline, see live timings per stage
+- **Hazards (`/hazards`)** — Standalone HazardDetectionEngine tester with 4 example scenarios
+- **Memory (`/memory`)** — AI memory store with seed demo data, stats bar, add/view items
 
 ## User preferences
 

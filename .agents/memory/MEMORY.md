@@ -1,0 +1,3 @@
+- [Next.js dev cache](nextjs-dev-cache.md) — `npm run build` corrupts `.next`; always delete it and restart dev workflow after any build run.
+- [Sessions hot-reload race](sessions-hot-reload.md) — in-memory sessionStore clears on Next.js module hot-reload; sessions/end returns 404 if competing page compilations happen between start and end.
+- [Stale closures in stopSession](stale-closures-stop.md) — mutable values needed at stop time (audioCount, peakUrgency, startTime) must use refs, not state, to avoid stale closure issues.

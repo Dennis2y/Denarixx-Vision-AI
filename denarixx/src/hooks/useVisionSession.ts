@@ -4,6 +4,16 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAudioGuidance } from './useAudioGuidance';
 import type { Detection, HazardAlert, SceneDescription, SafetyDecision } from '@/types';
 
+export interface SessionReport {
+  sessionId: string;
+  durationSeconds: number;
+  frameCount: number;
+  alertCount: number;
+  audioCount: number;
+  peakUrgency: string;
+  completedSteps: boolean[];
+}
+
 export interface SessionState {
   sessionId: string | null;
   isActive: boolean;
@@ -15,14 +25,22 @@ export interface SessionState {
   currentDecision: SafetyDecision | null;
   log: string[];
   error: string | null;
+  completedSteps: boolean[];
+  audioCount: number;
+  report: SessionReport | null;
 }
 
 const SIMULATION_INTERVAL_MS = 3000;
+const BLANK_STEPS = [false, false, false, false, false, false, false];
 
 export function useVisionSession() {
   const { speak, stop: stopAudio } = useAudioGuidance();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const audioCountRef = useRef(0);
+  const peakUrgencyRef = useRef<string>('none');
+  const currentSceneRef = useRef<SceneDescription | null>(null);
 
   const [state, setState] = useState<SessionState>({
     sessionId: null,
@@ -35,6 +53,9 @@ export function useVisionSession() {
     currentDecision: null,
     log: [],
     error: null,
+    completedSteps: [...BLANK_STEPS],
+    audioCount: 0,
+    report: null,
   });
 
   const addLog = useCallback((msg: string) => {
@@ -58,7 +79,12 @@ export function useVisionSession() {
       const { data: visionData } = await visionRes.json();
       const detections: Detection[] = visionData.detections ?? [];
 
-      setState((s) => ({ ...s, frameCount: s.frameCount + 1 }));
+      setState((s) => {
+        const newCount = s.frameCount + 1;
+        const steps = [...s.completedSteps];
+        if (newCount >= 2) steps[1] = true; // Step 2: walking
+        return { ...s, frameCount: newCount, completedSteps: steps };
+      });
 
       // 2. Describe scene
       const sceneRes = await fetch('/api/scene/describe', {
@@ -68,6 +94,7 @@ export function useVisionSession() {
       });
       const { data: sceneData } = await sceneRes.json();
       const scene: SceneDescription = sceneData.scene;
+      currentSceneRef.current = scene;
 
       setState((s) => ({ ...s, currentScene: scene }));
       addLog(`Scene: ${scene.summary}`);
@@ -90,14 +117,28 @@ export function useVisionSession() {
       const { data: safetyData } = await safetyRes.json();
       const decision: SafetyDecision = safetyData.decision;
 
-      setState((s) => ({
-        ...s,
-        currentAlerts: alerts,
-        currentDecision: decision,
-        alertCount: s.alertCount + alerts.length,
-      }));
+      // Track peak urgency
+      if (decision.urgency !== 'none') {
+        const rank = { critical: 4, high: 3, medium: 2, low: 1, none: 0 } as const;
+        const cur = rank[peakUrgencyRef.current as keyof typeof rank] ?? 0;
+        const inc = rank[decision.urgency as keyof typeof rank] ?? 0;
+        if (inc > cur) peakUrgencyRef.current = decision.urgency;
+      }
 
-      // 5. Audio output — speak alerts first, then scene
+      setState((s) => {
+        const steps = [...s.completedSteps];
+        if (alerts.length > 0) steps[2] = true; // Step 3: alert
+        if (decision.shouldAlert) steps[3] = true; // Step 4: guardian
+        return {
+          ...s,
+          currentAlerts: alerts,
+          currentDecision: decision,
+          alertCount: s.alertCount + alerts.length,
+          completedSteps: steps,
+        };
+      });
+
+      // 5. Audio output
       if (decision.shouldAlert && decision.message) {
         const priority =
           decision.urgency === 'critical'
@@ -106,6 +147,12 @@ export function useVisionSession() {
             ? 'high'
             : 'normal';
         speak(decision.message, priority, decision.interruptNarration);
+        audioCountRef.current += 1;
+        setState((s) => {
+          const steps = [...s.completedSteps];
+          steps[4] = true; // Step 5: audio spoken
+          return { ...s, audioCount: s.audioCount + 1, completedSteps: steps };
+        });
         addLog(`ALERT [${decision.urgency}]: ${decision.message}`);
       } else if (!scene.isUncertain) {
         speak(scene.summary, 'low');
@@ -141,6 +188,10 @@ export function useVisionSession() {
       const res = await fetch('/api/sessions/start', { method: 'POST' });
       const { data } = await res.json();
       sessionIdRef.current = data.sessionId;
+      startTimeRef.current = Date.now();
+      audioCountRef.current = 0;
+      peakUrgencyRef.current = 'none';
+      currentSceneRef.current = null;
       setState((s) => ({
         ...s,
         sessionId: data.sessionId,
@@ -148,10 +199,13 @@ export function useVisionSession() {
         isLoading: false,
         frameCount: 0,
         alertCount: 0,
+        audioCount: 0,
         log: [],
         currentAlerts: [],
         currentScene: null,
         currentDecision: null,
+        completedSteps: [true, false, false, false, false, false, false],
+        report: null,
       }));
       speak('Vision session started. Scanning your surroundings.', 'high', true);
       addLog('Session started');
@@ -166,6 +220,32 @@ export function useVisionSession() {
     }
   }, [speak, addLog, runFrame]);
 
+  const saveMemoryEvent = useCallback(async () => {
+    const scene = currentSceneRef.current;
+    const label = `Session location — ${new Date().toLocaleTimeString()}`;
+    const description = scene ? scene.summary : 'Location saved during vision session';
+    try {
+      await fetch('/api/memory/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'location',
+          label,
+          description,
+          metadata: { savedFromSession: true },
+        }),
+      });
+      setState((s) => {
+        const steps = [...s.completedSteps];
+        steps[5] = true; // Step 6: memory saved
+        return { ...s, completedSteps: steps };
+      });
+      addLog(`Memory saved: ${label}`);
+    } catch {
+      addLog('Error: could not save memory event');
+    }
+  }, [addLog]);
+
   const stopSession = useCallback(async () => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -173,6 +253,10 @@ export function useVisionSession() {
     }
     stopAudio();
     const sid = sessionIdRef.current;
+    const durationSeconds = startTimeRef.current
+      ? Math.round((Date.now() - startTimeRef.current) / 1000)
+      : 0;
+
     if (sid) {
       await fetch('/api/sessions/end', {
         method: 'POST',
@@ -181,7 +265,21 @@ export function useVisionSession() {
       }).catch(() => {});
     }
     sessionIdRef.current = null;
-    setState((s) => ({ ...s, isActive: false, sessionId: null }));
+
+    setState((s) => {
+      const steps = [...s.completedSteps];
+      steps[6] = true; // Step 7: report
+      const report: SessionReport = {
+        sessionId: sid ?? 'unknown',
+        durationSeconds,
+        frameCount: s.frameCount,
+        alertCount: s.alertCount,
+        audioCount: audioCountRef.current,
+        peakUrgency: peakUrgencyRef.current,
+        completedSteps: steps,
+      };
+      return { ...s, isActive: false, sessionId: null, completedSteps: steps, report };
+    });
     addLog('Session ended');
   }, [stopAudio, addLog]);
 
@@ -191,5 +289,5 @@ export function useVisionSession() {
     };
   }, []);
 
-  return { state, startSession, stopSession };
+  return { state, startSession, stopSession, saveMemoryEvent };
 }
