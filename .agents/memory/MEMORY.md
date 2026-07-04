@@ -4,3 +4,4 @@
 - [V4 Vision Provider System](v4-vision-providers.md) — provider system uses VisionAnalysisProvider interface (not VisionProvider); factory in visionProviderFactory.ts; analyzeFrame route imports factory, not VisionEngine.
 - [useAudioGuidance return shape](audio-guidance-shape.md) — returns `stop` not `stopAudio`; `CameraStatus` values are `inactive|requesting|active|denied` (not `idle`).
 - [Sensor float grid test](sensor-float-test.md) — modulo for 0.01° grid snap fails due to float precision; use round-trip diff check instead.
+- [V8 HAL import placement](v8-hal-imports.md) — HARDWARE_DEFAULTS lives in `@/types/hardware`, NOT in the engine files; SAFETY_RULES lives in hardwareBridgeEngine; keep them separate.
