@@ -4,15 +4,18 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAudioGuidance } from './useAudioGuidance';
 import { useCameraCapture } from './useCameraCapture';
 import type { CameraStatus } from './useCameraCapture';
+import { useDeviceSensors } from './useDeviceSensors';
 import { AlertThrottleEngine } from '@/engines/alertThrottleEngine';
 import { GuidancePersonalityEngine } from '@/engines/guidancePersonalityEngine';
 import type { PersonalityRiskLevel } from '@/engines/guidancePersonalityEngine';
 import { MobilityEngine } from '@/engines/mobilityEngine';
 import { WorldModelEngine } from '@/engines/worldModelEngine';
+import { SensorFusionEngine } from '@/engines/sensorFusionEngine';
 import { useLastGuidance } from './useLastGuidance';
 import { loadSettings } from '@/lib/settingsStore';
 import type { Detection, HazardAlert, SceneDescription, SafetyDecision } from '@/types';
 import type { WorldModelSnapshot } from '@/types/spatial';
+import type { SensorContext, VibrationPattern } from '@/types/sensors';
 
 export type { CameraStatus };
 
@@ -46,6 +49,8 @@ export interface SessionState {
   report: SessionReport | null;
   // V6: live spatial intelligence snapshot
   spatialData: WorldModelSnapshot | null;
+  // V7: live sensor context
+  sensorContext: SensorContext | null;
 }
 
 const FRAME_INTERVAL_MS = 3000;
@@ -63,34 +68,55 @@ export function useVisionSession() {
   const camera = useCameraCapture();
   const { lastGuidance, setGuidance, repeatGuidance } = useLastGuidance();
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const sessionIdRef = useRef<string | null>(null);
-  const startTimeRef = useRef<number | null>(null);
-  const audioCountRef = useRef(0);
-  const cameraFramesRef = useRef(0);
-  const silencedAlertsRef = useRef(0);
-  const peakUrgencyRef = useRef<string>('none');
-  const currentSceneRef = useRef<SceneDescription | null>(null);
-  const prevSceneSummaryRef = useRef<string | null>(null);
-  const lastAlertTimeRef = useRef<number | null>(null);
-  const prevSpatialInstructionRef = useRef<string | undefined>(undefined);
+  // ── V7: Sensor integration ─────────────────────────────────────────────────
+  const {
+    sensorContext,
+    requestGPS,
+    requestMotionSensors,
+    stopGPS,
+    vibrate: vibrateRaw,
+    isGPSSupported,
+    isMotionSupported,
+  } = useDeviceSensors(true);
 
-  // Core alert throttle
+  // Stable refs for closures
+  const sensorContextRef = useRef<SensorContext | null>(null);
+  const sensorFusionEngineRef = useRef(new SensorFusionEngine());
+
+  // Keep ref in sync with hook state
+  useEffect(() => {
+    sensorContextRef.current = sensorContext;
+  }, [sensorContext]);
+
+  // Engine refs
   const alertThrottleRef = useRef(new AlertThrottleEngine());
-  // V5: personality engine
   const personalityEngineRef = useRef(new GuidancePersonalityEngine());
-  // V6: spatial / world model engines
   const mobilityEngineRef = useRef(new MobilityEngine());
   const worldModelEngineRef = useRef(new WorldModelEngine());
 
-  // Settings snapshot taken at session start
+  // Session refs (stale-closure proof)
+  const sessionIdRef = useRef<string | null>(null);
   const sessionSettingsRef = useRef(loadSettings());
-
-  // Camera refs to avoid stale closures inside setInterval
   const cameraStatusRef = useRef<CameraStatus>('inactive');
-  const captureFrameRef = useRef<typeof camera.captureFrame>(camera.captureFrame);
-  cameraStatusRef.current = camera.status;
-  captureFrameRef.current = camera.captureFrame;
+  const captureFrameRef = useRef<() => string | null>(() => null);
+  const audioCountRef = useRef(0);
+  const cameraFramesRef = useRef(0);
+  const silencedAlertsRef = useRef(0);
+  const peakUrgencyRef = useRef('none');
+  const startTimeRef = useRef<number | null>(null);
+  const lastAlertTimeRef = useRef<number | null>(null);
+  const prevSceneSummaryRef = useRef<string | null>(null);
+  const currentSceneRef = useRef<SceneDescription | null>(null);
+  const prevSpatialInstructionRef = useRef<string | undefined>(undefined);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // V7: track last frame time for battery-aware frame skipping
+  const lastFrameTimeRef = useRef<number>(0);
+
+  // Keep camera refs in sync
+  useEffect(() => {
+    cameraStatusRef.current = camera.status;
+    captureFrameRef.current = camera.captureFrame;
+  }, [camera.status, camera.captureFrame]);
 
   const [state, setState] = useState<SessionState>({
     sessionId: null,
@@ -109,6 +135,7 @@ export function useVisionSession() {
     audioCount: 0,
     report: null,
     spatialData: null,
+    sensorContext: null,
   });
 
   const addLog = useCallback((msg: string) => {
@@ -118,9 +145,27 @@ export function useVisionSession() {
     }));
   }, []);
 
+  // Expose vibrate respecting the vibrationEnabled setting
+  const vibrate = useCallback((pattern: VibrationPattern): boolean => {
+    if (!sessionSettingsRef.current.vibrationEnabled) return false;
+    return vibrateRaw(pattern);
+  }, [vibrateRaw]);
+
   const runFrame = useCallback(async () => {
     const sid = sessionIdRef.current;
     if (!sid) return;
+
+    // V7: Battery-aware frame skipping
+    const sensorCtx = sensorContextRef.current;
+    const recommended = sensorFusionEngineRef.current.recommendedFrameInterval(
+      sensorCtx?.motionState ?? 'unknown',
+      sensorCtx?.isLowPowerMode ?? false
+    );
+    const now = Date.now();
+    if (now - lastFrameTimeRef.current < recommended && lastFrameTimeRef.current > 0) {
+      return; // skip this tick — too soon based on motion/battery state
+    }
+    lastFrameTimeRef.current = now;
 
     const isCamera = cameraStatusRef.current === 'active';
     const imageData = isCamera ? captureFrameRef.current() : null;
@@ -148,14 +193,25 @@ export function useVisionSession() {
       });
       if (imageData) cameraFramesRef.current += 1;
 
-      // V6: Spatial analysis — runs from detections immediately after vision
+      // V6 + V7: Spatial analysis — runs from detections immediately after vision
       const currentFrame = worldModelEngineRef.current.getFrameCount();
       const rawSpatial = mobilityEngineRef.current.analyze(
-        { detections, frameIndex: currentFrame, source },
+        {
+          detections,
+          frameIndex: currentFrame,
+          source,
+          sensorContext: sensorContextRef.current ?? undefined,
+        },
         currentFrame
       );
       const enrichedSpatial = worldModelEngineRef.current.update(rawSpatial);
-      setState((s) => ({ ...s, spatialData: enrichedSpatial }));
+
+      // Expose both spatial + sensor context in state
+      setState((s) => ({
+        ...s,
+        spatialData: enrichedSpatial,
+        sensorContext: sensorContextRef.current,
+      }));
 
       // 2. Describe scene
       const sceneRes = await fetch('/api/scene/describe', {
@@ -244,6 +300,12 @@ export function useVisionSession() {
               );
 
               speak(formattedMessage, priority, decision.interruptNarration);
+
+              // V7: haptic feedback for high/critical alerts
+              if (decision.urgency === 'critical') vibrate('critical');
+              else if (decision.urgency === 'high') vibrate('high');
+              else if (decision.urgency === 'medium') vibrate('medium');
+
               alertThrottleRef.current.record(
                 topAlert.type, topAlert.severity, topAlert.confidence, formattedMessage
               );
@@ -275,6 +337,11 @@ export function useVisionSession() {
         } else {
           const priority = decision.urgency === 'critical' ? 'critical' : decision.urgency === 'high' ? 'high' : 'normal';
           speak(decision.message, priority, decision.interruptNarration);
+
+          // V7: haptic for no-top-alert path too
+          if (decision.urgency === 'critical') vibrate('critical');
+          else if (decision.urgency === 'high') vibrate('high');
+
           audioCountRef.current += 1;
           setGuidance({
             text: decision.message,
@@ -304,14 +371,22 @@ export function useVisionSession() {
           addLog(`[companion] ${reassurance}`);
         } else {
           // V6 spatial mobility guidance (advisory only)
+          // V7: prepend motion note when relevant
+          const motionNote = sensorCtx
+            ? sensorFusionEngineRef.current.motionNote(sensorCtx.motionState)
+            : null;
+
           const spatialGuidance = mobilityEngineRef.current.generateGuidance(
             enrichedSpatial,
             prevSpatialInstructionRef.current
           );
           if (spatialGuidance) {
             prevSpatialInstructionRef.current = enrichedSpatial.recommendation.instruction;
-            speak(spatialGuidance, 'low');
-            addLog(`[spatial] ${spatialGuidance}`);
+            const fullGuidance = motionNote
+              ? `${motionNote} ${spatialGuidance}`
+              : spatialGuidance;
+            speak(fullGuidance, 'low');
+            addLog(`[spatial] ${fullGuidance}`);
           } else if (!scene.isUncertain && sceneChanged) {
             speak(scene.summary, 'low');
           } else if (scene.uncertaintyMessage && sceneChanged) {
@@ -340,7 +415,7 @@ export function useVisionSession() {
       addLog(`Error: ${msg}`);
       setState((s) => ({ ...s, error: msg }));
     }
-  }, [speak, addLog, setGuidance]);
+  }, [speak, addLog, setGuidance, vibrate]);
 
   const startSession = useCallback(async () => {
     setState((s) => ({ ...s, isLoading: true, error: null }));
@@ -348,6 +423,10 @@ export function useVisionSession() {
       const settings = loadSettings();
       sessionSettingsRef.current = settings;
       updateSettings({ rate: settings.speechRate, volume: settings.speechVolume, voiceName: settings.voiceName });
+
+      // V7: start sensors if enabled
+      if (settings.locationEnabled) requestGPS();
+      if (settings.motionEnabled) requestMotionSensors();
 
       const res = await fetch('/api/sessions/start', { method: 'POST' });
       const { data } = await res.json();
@@ -361,9 +440,11 @@ export function useVisionSession() {
       prevSceneSummaryRef.current = null;
       lastAlertTimeRef.current = null;
       prevSpatialInstructionRef.current = undefined;
+      lastFrameTimeRef.current = 0;
       alertThrottleRef.current.reset();
       personalityEngineRef.current.reset();
       worldModelEngineRef.current.reset();
+      sensorFusionEngineRef.current.reset();
 
       setState((s) => ({
         ...s,
@@ -382,6 +463,7 @@ export function useVisionSession() {
         completedSteps: [true, false, false, false, false, false, false],
         report: null,
         spatialData: null,
+        sensorContext: sensorContextRef.current,
       }));
 
       const mode = cameraStatusRef.current === 'active' ? 'camera mode' : 'simulation mode';
@@ -396,7 +478,7 @@ export function useVisionSession() {
         error: err instanceof Error ? err.message : 'Failed to start',
       }));
     }
-  }, [speak, addLog, runFrame, updateSettings]);
+  }, [speak, addLog, runFrame, updateSettings, requestGPS, requestMotionSensors]);
 
   const saveMemoryEvent = useCallback(async () => {
     const scene = currentSceneRef.current;
@@ -413,6 +495,8 @@ export function useVisionSession() {
           metadata: { savedFromSession: true },
         }),
       });
+      // V7: waypoint haptic
+      vibrate('waypoint');
       setState((s) => {
         const steps = [...s.completedSteps];
         steps[5] = true;
@@ -422,7 +506,7 @@ export function useVisionSession() {
     } catch {
       addLog('Error: could not save memory event');
     }
-  }, [addLog]);
+  }, [addLog, vibrate]);
 
   const stopSession = useCallback(async () => {
     if (intervalRef.current) {
@@ -483,5 +567,13 @@ export function useVisionSession() {
     lastGuidance,
     repeatLastGuidance: () => repeatGuidance(speak),
     speak,
+    // V7: sensor controls
+    sensorContext,
+    requestGPS,
+    requestMotionSensors,
+    stopGPS,
+    vibrate,
+    isGPSSupported,
+    isMotionSupported,
   };
 }

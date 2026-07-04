@@ -3,9 +3,12 @@
  *
  * Server-safe: all operations guard against SSR (typeof window === 'undefined').
  * Used by the Settings page and the session hook.
+ *
+ * V7: adds SensorSettings fields to AppSettings.
  */
 
 import type { GuidancePersonality } from '@/engines/guidancePersonalityEngine';
+import type { LocationPrivacyLevel } from '@/types/sensors';
 
 export type { GuidancePersonality };
 
@@ -26,6 +29,19 @@ export interface AppSettings {
   hazardSensitivity: 'low' | 'medium' | 'high';
   /** Auto-repeat critical alerts after 10 s if still active */
   repeatCriticalAlerts: boolean;
+  // ── V7: Sensor & Privacy settings ───────────────────────────────────────
+  /** Whether to request GPS at all */
+  locationEnabled: boolean;
+  /** GPS coordinate precision */
+  locationPrecision: LocationPrivacyLevel;
+  /** Whether to store locations to AI memory */
+  locationMemoryEnabled: boolean;
+  /** Whether to request DeviceMotion / DeviceOrientation */
+  motionEnabled: boolean;
+  /** Whether to use navigator.vibrate for haptic alerts */
+  vibrationEnabled: boolean;
+  /** Reduce frame rate + audio when battery < 20% */
+  batteryAwareMode: boolean;
 }
 
 const DEFAULTS: AppSettings = {
@@ -37,6 +53,13 @@ const DEFAULTS: AppSettings = {
   alertVerbosity: 'standard',
   hazardSensitivity: 'medium',
   repeatCriticalAlerts: true,
+  // V7 sensor defaults
+  locationEnabled: false,
+  locationPrecision: 'fuzzy',
+  locationMemoryEnabled: false,
+  motionEnabled: true,
+  vibrationEnabled: true,
+  batteryAwareMode: true,
 };
 
 const STORAGE_KEY = 'denarixx_settings';

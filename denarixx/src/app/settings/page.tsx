@@ -300,6 +300,183 @@ export default function SettingsPage() {
         </Card>
       </section>
 
+      {/* ── Sensors & Privacy (V7) ──────────────────────────────────────── */}
+      <section className="mb-8 space-y-4" aria-labelledby="sensors-heading">
+        <h2 id="sensors-heading" className="text-lg font-bold text-white">📡 Sensors &amp; Privacy</h2>
+        <p className="text-gray-500 text-xs -mt-2">
+          Sensor data stays on your device. Location is approximate by default.
+        </p>
+
+        {/* Location Enable */}
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white font-semibold mb-0.5">Enable GPS Location</p>
+              <p className="text-gray-400 text-xs">
+                Use device GPS to enrich navigation. Off by default.
+              </p>
+            </div>
+            <button
+              role="switch"
+              aria-checked={settings.locationEnabled}
+              onClick={() => update('locationEnabled', !settings.locationEnabled)}
+              className={`relative w-12 h-6 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 shrink-0 ${
+                settings.locationEnabled
+                  ? 'bg-yellow-500 border-yellow-600'
+                  : 'bg-gray-700 border-gray-600'
+              }`}
+              aria-label="Toggle GPS location"
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  settings.locationEnabled ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </Card>
+
+        {/* Location Precision — only shown when GPS enabled */}
+        {settings.locationEnabled && (
+          <Card>
+            <label htmlFor="locationPrecision" className="block text-white font-semibold mb-1">
+              Location Precision
+            </label>
+            <p className="text-gray-400 text-xs mb-2">
+              Fuzzy snaps coordinates to a ~1 km grid. Precise uses exact GPS.
+            </p>
+            <select
+              id="locationPrecision"
+              value={settings.locationPrecision}
+              onChange={(e) => update('locationPrecision', e.target.value as AppSettings['locationPrecision'])}
+              className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            >
+              <option value="none">None — GPS not used</option>
+              <option value="fuzzy">Fuzzy — ~1 km grid (recommended)</option>
+              <option value="precise">Precise — exact coordinates</option>
+            </select>
+          </Card>
+        )}
+
+        {/* Location Memory — only shown when GPS enabled */}
+        {settings.locationEnabled && (
+          <Card>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-white font-semibold mb-0.5">Save Locations to Memory</p>
+                <p className="text-gray-400 text-xs">
+                  Allow session locations to be stored in AI memory. Requires GPS to be enabled.
+                </p>
+              </div>
+              <button
+                role="switch"
+                aria-checked={settings.locationMemoryEnabled}
+                onClick={() => update('locationMemoryEnabled', !settings.locationMemoryEnabled)}
+                className={`relative w-12 h-6 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 shrink-0 ${
+                  settings.locationMemoryEnabled
+                    ? 'bg-yellow-500 border-yellow-600'
+                    : 'bg-gray-700 border-gray-600'
+                }`}
+                aria-label="Toggle location memory"
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                    settings.locationMemoryEnabled ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </Card>
+        )}
+
+        {/* Motion */}
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white font-semibold mb-0.5">Motion Sensors</p>
+              <p className="text-gray-400 text-xs">
+                Use accelerometer and compass to detect walking, turning, and speed.
+              </p>
+            </div>
+            <button
+              role="switch"
+              aria-checked={settings.motionEnabled}
+              onClick={() => update('motionEnabled', !settings.motionEnabled)}
+              className={`relative w-12 h-6 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 shrink-0 ${
+                settings.motionEnabled
+                  ? 'bg-yellow-500 border-yellow-600'
+                  : 'bg-gray-700 border-gray-600'
+              }`}
+              aria-label="Toggle motion sensors"
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  settings.motionEnabled ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </Card>
+
+        {/* Vibration */}
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white font-semibold mb-0.5">Haptic Alerts</p>
+              <p className="text-gray-400 text-xs">
+                Vibrate the device for critical and high-urgency alerts.
+              </p>
+            </div>
+            <button
+              role="switch"
+              aria-checked={settings.vibrationEnabled}
+              onClick={() => update('vibrationEnabled', !settings.vibrationEnabled)}
+              className={`relative w-12 h-6 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 shrink-0 ${
+                settings.vibrationEnabled
+                  ? 'bg-yellow-500 border-yellow-600'
+                  : 'bg-gray-700 border-gray-600'
+              }`}
+              aria-label="Toggle haptic alerts"
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  settings.vibrationEnabled ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </Card>
+
+        {/* Battery-aware */}
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white font-semibold mb-0.5">Battery-Aware Mode</p>
+              <p className="text-gray-400 text-xs">
+                Reduce scan frequency and audio when battery drops below 20%.
+              </p>
+            </div>
+            <button
+              role="switch"
+              aria-checked={settings.batteryAwareMode}
+              onClick={() => update('batteryAwareMode', !settings.batteryAwareMode)}
+              className={`relative w-12 h-6 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 shrink-0 ${
+                settings.batteryAwareMode
+                  ? 'bg-yellow-500 border-yellow-600'
+                  : 'bg-gray-700 border-gray-600'
+              }`}
+              aria-label="Toggle battery-aware mode"
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  settings.batteryAwareMode ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </Card>
+      </section>
+
       {/* ── Actions ─────────────────────────────────────────────────────── */}
       <div className="flex gap-3 mb-6">
         <Button onClick={handleSave} size="lg" className="flex-1">

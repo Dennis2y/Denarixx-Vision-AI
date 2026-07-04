@@ -16,6 +16,8 @@ import { OnboardingFlow } from '@/components/session/OnboardingFlow';
 import { VoiceCommandIndicator } from '@/components/session/VoiceCommandIndicator';
 import { LastGuidancePanel } from '@/components/session/LastGuidancePanel';
 import { SpatialMapPanel } from '@/components/session/SpatialMapPanel';
+import { SensorStatusPanel } from '@/components/session/SensorStatusPanel';
+import { loadSettings } from '@/lib/settingsStore';
 
 export default function SessionPage() {
   const {
@@ -31,7 +33,13 @@ export default function SessionPage() {
     lastGuidance,
     repeatLastGuidance,
     speak,
+    sensorContext,
+    requestGPS,
+    requestMotionSensors,
+    stopGPS,
   } = useVisionSession();
+
+  const locationPrecision = loadSettings().locationPrecision;
 
   // ── Voice command handler ──────────────────────────────────────────────────
 
@@ -285,6 +293,20 @@ export default function SessionPage() {
             onStop={stopSession}
           />
         </div>
+
+        {/* ── V7 Sensor Status ───────────────────────────────────────────── */}
+        {sensorContext && (
+          <div className="mb-4">
+            <SensorStatusPanel
+              sensorContext={sensorContext}
+              locationPrecision={locationPrecision}
+              onRequestGPS={requestGPS}
+              onRequestMotion={requestMotionSensors}
+              onStopGPS={stopGPS}
+              isActive={state.isActive}
+            />
+          </div>
+        )}
 
         {/* ── V6 Spatial Map + Hazard panel ──────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">

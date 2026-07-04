@@ -169,4 +169,9 @@ export interface SpatialInput {
   frameIndex: number;
   /** Source for logging */
   source: 'camera' | 'simulation';
+  /**
+   * V7: Fused sensor context (GPS, compass, motion, battery).
+   * Optional — engines fall back gracefully when absent.
+   */
+  sensorContext?: import('./sensors').SensorContext;
 }
