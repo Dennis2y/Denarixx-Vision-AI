@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useVisionSession } from '@/hooks/useVisionSession';
 import type { CameraStatus } from '@/hooks/useVisionSession';
+import { isSimulationMode, getCameraModeLabel, canStartCamera, getCameraStatusAnnouncement } from '@/engines/cameraStateEngine';
 import { useVoiceCommands } from '@/hooks/useVoiceCommands';
 import type { ParsedVoiceCommand } from '@/hooks/useVoiceCommands';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
@@ -179,13 +180,8 @@ export default function SessionPage() {
     );
   }
 
-  const isSimulation = cameraStatus === 'inactive' || cameraStatus === 'denied';
-  const modeLabel =
-    cameraStatus === 'active'
-      ? 'Camera mode — live frames'
-      : cameraStatus === 'denied'
-      ? 'Camera denied — simulation fallback active'
-      : 'Simulation mode — click Start Camera to use your device camera';
+  const isSimulation = isSimulationMode(cameraStatus);
+  const modeLabel = getCameraModeLabel(cameraStatus);
 
   return (
     <>
@@ -341,18 +337,22 @@ export default function SessionPage() {
             <div className="rounded-lg bg-gray-800 border border-gray-700 aspect-video flex items-center justify-center mb-3">
               <div className="text-center px-6">
                 <p className="text-4xl mb-3" aria-hidden="true">
-                  {cameraStatus === 'denied' ? '🚫' : cameraStatus === 'requesting' ? '⏳' : '📷'}
+                  {cameraStatus === 'denied' ? '🚫' : cameraStatus === 'requesting' ? '⏳' : cameraStatus === 'fallback' ? '⚠️' : '📷'}
                 </p>
                 <p className="text-gray-400 text-sm font-semibold mb-1">
                   {cameraStatus === 'requesting'
                     ? 'Waiting for camera permission…'
                     : cameraStatus === 'denied'
                     ? 'Camera access denied'
+                    : cameraStatus === 'fallback'
+                    ? 'Camera connection lost'
                     : 'Camera not started'}
                 </p>
                 <p className="text-gray-600 text-xs">
                   {cameraStatus === 'denied'
                     ? 'Session is running in simulation mode. No real camera data is used.'
+                    : cameraStatus === 'fallback'
+                    ? 'Camera stream was interrupted. Session continues in simulation mode. Click Retry Camera below.'
                     : 'Session will run in simulation mode until camera is started.'}
                 </p>
               </div>
@@ -371,18 +371,25 @@ export default function SessionPage() {
 
           <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={startCamera}
-              disabled={cameraStatus === 'active' || cameraStatus === 'requesting'}
+              onClick={() => {
+                if (state.isActive && cameraStatus === 'fallback') {
+                  speak(getCameraStatusAnnouncement('requesting'), 'normal');
+                }
+                startCamera();
+              }}
+              disabled={!canStartCamera(cameraStatus)}
               className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold border transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400
                 disabled:opacity-50 disabled:cursor-not-allowed
                 ${cameraStatus === 'active'
                   ? 'bg-green-900/40 border-green-700 text-green-300'
+                  : cameraStatus === 'fallback'
+                  ? 'bg-amber-900/40 border-amber-600 text-amber-200 hover:bg-amber-900/60'
                   : 'bg-gray-800 border-gray-600 text-white hover:border-yellow-600 hover:bg-gray-700'
                 }`}
-              aria-label="Request camera access and start live video"
+              aria-label={cameraStatus === 'fallback' ? 'Retry camera after connection loss' : 'Request camera access and start live video'}
             >
-              <span aria-hidden="true">📷</span>
-              {cameraStatus === 'requesting' ? 'Requesting…' : 'Start Camera'}
+              <span aria-hidden="true">{cameraStatus === 'fallback' ? '🔄' : '📷'}</span>
+              {cameraStatus === 'requesting' ? 'Requesting…' : cameraStatus === 'fallback' ? 'Retry Camera' : 'Start Camera'}
             </button>
             <button
               onClick={stopCamera}
@@ -398,6 +405,8 @@ export default function SessionPage() {
               <span className="text-gray-600 text-xs ml-1">
                 {cameraStatus === 'denied'
                   ? '⚠ Permission denied — simulation active'
+                  : cameraStatus === 'fallback'
+                  ? '⚠ Camera lost — simulation active'
                   : '● Simulation active'}
               </span>
             )}
@@ -527,10 +536,11 @@ function CameraStatusBadge({
   compact?: boolean;
 }) {
   const configs: Record<CameraStatus, { label: string; dot: string; text: string; bg: string; border: string }> = {
-    inactive: { label: compact ? 'Inactive' : 'Camera Inactive', dot: 'bg-gray-500', text: 'text-gray-400', bg: 'bg-gray-800/60', border: 'border-gray-700' },
-    requesting: { label: compact ? 'Requesting…' : 'Requesting Permission…', dot: 'bg-yellow-400 animate-pulse', text: 'text-yellow-300', bg: 'bg-yellow-950/40', border: 'border-yellow-700/50' },
-    active: { label: compact ? 'Live' : 'Camera Active', dot: 'bg-green-400 animate-pulse', text: 'text-green-300', bg: 'bg-green-950/40', border: 'border-green-700/50' },
-    denied: { label: compact ? 'Denied — Sim' : 'Permission Denied · Simulation Fallback', dot: 'bg-amber-500', text: 'text-amber-300', bg: 'bg-amber-950/40', border: 'border-amber-700/50' },
+    inactive:   { label: compact ? 'Inactive'       : 'Camera Inactive',                         dot: 'bg-gray-500',                  text: 'text-gray-400',   bg: 'bg-gray-800/60',    border: 'border-gray-700'        },
+    requesting: { label: compact ? 'Requesting…'    : 'Requesting Permission…',                   dot: 'bg-yellow-400 animate-pulse',  text: 'text-yellow-300', bg: 'bg-yellow-950/40',  border: 'border-yellow-700/50'   },
+    active:     { label: compact ? 'Live'           : 'Camera Active',                            dot: 'bg-green-400 animate-pulse',   text: 'text-green-300',  bg: 'bg-green-950/40',   border: 'border-green-700/50'    },
+    denied:     { label: compact ? 'Denied — Sim'   : 'Permission Denied · Simulation Fallback',  dot: 'bg-amber-500',                 text: 'text-amber-300',  bg: 'bg-amber-950/40',   border: 'border-amber-700/50'    },
+    fallback:   { label: compact ? 'Fallback — Sim' : 'Camera Lost · Simulation Fallback',        dot: 'bg-orange-500',                text: 'text-orange-300', bg: 'bg-orange-950/40',  border: 'border-orange-700/50'   },
   };
 
   const c = configs[status];

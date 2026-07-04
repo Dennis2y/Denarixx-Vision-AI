@@ -1,13 +1,10 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import type { CameraStatus } from '@/engines/cameraStateEngine';
 
-// CameraStatus drives the UI state machine:
-//   inactive    → camera not started; session will use simulation
-//   requesting  → permission prompt shown to user
-//   active      → stream live, frames are being captured
-//   denied      → browser denied permission; session falls back to simulation
-export type CameraStatus = 'inactive' | 'requesting' | 'active' | 'denied';
+// Re-export so existing importers (useVisionSession, session/page) need no changes
+export type { CameraStatus };
 
 export function useCameraCapture() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -31,6 +28,16 @@ export function useCameraCapture() {
         audio: false,
       });
       streamRef.current = stream;
+
+      // Detect mid-session camera loss (browser revokes permission, device disconnects, etc.)
+      // Transition to 'fallback' so the session continues in simulation mode automatically.
+      stream.getTracks().forEach((track) => {
+        track.addEventListener('ended', () => {
+          setStatus('fallback');
+          streamRef.current = null;
+          if (videoRef.current) videoRef.current.srcObject = null;
+        });
+      });
 
       await new Promise<void>((resolve) => {
         const video = videoRef.current;
