@@ -1,0 +1,306 @@
+Start Phase 12: Real-Time AI Vision Engine.
+
+IMPORTANT
+
+Do NOT rewrite V1–V11.
+
+Keep all previous functionality working.
+
+Maintain backward compatibility.
+
+====================================================
+
+MISSION
+
+Replace simulation with real computer vision.
+
+Denarixx Vision AI must now understand the real world through a live camera.
+
+This is the beginning of true AI perception.
+
+====================================================
+
+SUPPORTED AI MODELS
+
+Design the architecture so providers can be swapped.
+
+Implement adapters for:
+
+• OpenAI Vision
+• Google Gemini Vision
+• Local ONNX models
+• Future YOLO models
+• Future RT-DETR models
+• Future SAM segmentation models
+
+The architecture must allow switching providers without changing UI code.
+
+====================================================
+
+NEW ENGINES
+
+Create:
+
+visionInferenceEngine.ts
+
+sceneUnderstandingEngine.ts
+
+objectTrackingEngine.ts
+
+depthReasoningEngine.ts
+
+cameraPipelineEngine.ts
+
+modelManagerEngine.ts
+
+====================================================
+
+LIVE CAMERA
+
+Use real camera frames.
+
+Capture continuously.
+
+Throttle intelligently.
+
+Adaptive FPS depending on battery.
+
+Low latency.
+
+====================================================
+
+OBJECT DETECTION
+
+Detect:
+
+people
+
+chairs
+
+tables
+
+cars
+
+bikes
+
+stairs
+
+doors
+
+traffic lights
+
+crosswalks
+
+dogs
+
+bags
+
+trees
+
+signs
+
+shopping carts
+
+wheelchairs
+
+construction barriers
+
+====================================================
+
+TRACKING
+
+Track objects over time.
+
+Maintain object IDs.
+
+Estimate movement.
+
+Estimate speed.
+
+Estimate future position.
+
+====================================================
+
+SCENE UNDERSTANDING
+
+Understand:
+
+indoor
+
+office
+
+restaurant
+
+supermarket
+
+park
+
+street
+
+station
+
+airport
+
+shopping mall
+
+corridor
+
+room
+
+====================================================
+
+DEPTH ESTIMATION
+
+Estimate:
+
+near
+
+medium
+
+far
+
+walking distance
+
+collision distance
+
+====================================================
+
+OBJECT PRIORITY
+
+Rank importance.
+
+Critical
+
+High
+
+Medium
+
+Low
+
+Ignore
+
+====================================================
+
+SMART SPEECH
+
+Never narrate everything.
+
+Only speak when useful.
+
+Example:
+
+"Door ahead."
+
+"Vehicle approaching."
+
+"Person crossing."
+
+"Clear path."
+
+Remain quiet otherwise.
+
+====================================================
+
+PRIVACY
+
+No cloud storage.
+
+No recording.
+
+No face recognition.
+
+No identity recognition.
+
+Process only what is necessary.
+
+====================================================
+
+PERFORMANCE
+
+Target:
+
+<500ms perception cycle.
+
+Adaptive frame skipping.
+
+GPU acceleration when available.
+
+====================================================
+
+UI
+
+Create:
+
+Live AI Vision page.
+
+Show:
+
+Camera preview
+
+Detected objects
+
+Confidence
+
+Distance
+
+Risk
+
+Tracking IDs
+
+Frame latency
+
+Inference latency
+
+FPS
+
+====================================================
+
+TESTS
+
+Create comprehensive tests.
+
+Vision pipeline.
+
+Tracking.
+
+Priority engine.
+
+Scene understanding.
+
+Latency.
+
+====================================================
+
+DOCUMENTATION
+
+Create:
+
+docs/V12_REAL_TIME_AI_VISION.md
+
+Include:
+
+Architecture
+
+Inference pipeline
+
+Model abstraction
+
+Performance
+
+Privacy
+
+Future optimization
+
+====================================================
+
+QUALITY
+
+Run:
+
+npm run type-check
+
+npm test
+
+npm run build
+
+Fix every error until everything passes.

@@ -5,6 +5,10 @@ import { useAudioGuidance } from './useAudioGuidance';
 import { useCameraCapture } from './useCameraCapture';
 import type { CameraStatus } from './useCameraCapture';
 import { AlertThrottleEngine } from '@/engines/alertThrottleEngine';
+import { GuidancePersonalityEngine } from '@/engines/guidancePersonalityEngine';
+import type { PersonalityRiskLevel } from '@/engines/guidancePersonalityEngine';
+import { useLastGuidance } from './useLastGuidance';
+import { loadSettings } from '@/lib/settingsStore';
 import type { Detection, HazardAlert, SceneDescription, SafetyDecision } from '@/types';
 
 export type { CameraStatus };
@@ -41,10 +45,18 @@ export interface SessionState {
 
 const FRAME_INTERVAL_MS = 3000;
 const BLANK_STEPS = [false, false, false, false, false, false, false];
+const VALID_RISK_LEVELS = new Set<PersonalityRiskLevel>(['critical','high','medium','low','none']);
+
+function toPersonalityRisk(urgency: string): PersonalityRiskLevel {
+  return VALID_RISK_LEVELS.has(urgency as PersonalityRiskLevel)
+    ? (urgency as PersonalityRiskLevel)
+    : 'none';
+}
 
 export function useVisionSession() {
-  const { speak, stop: stopAudio } = useAudioGuidance();
+  const { speak, stop: stopAudio, updateSettings } = useAudioGuidance();
   const camera = useCameraCapture();
+  const { lastGuidance, setGuidance, repeatGuidance } = useLastGuidance();
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionIdRef = useRef<string | null>(null);
@@ -55,9 +67,16 @@ export function useVisionSession() {
   const peakUrgencyRef = useRef<string>('none');
   const currentSceneRef = useRef<SceneDescription | null>(null);
   const prevSceneSummaryRef = useRef<string | null>(null);
+  const lastAlertTimeRef = useRef<number | null>(null);
 
-  // Alert throttle — prevents the same alert from repeating within cooldown window
+  // Alert throttle — prevents same alert repeating within cooldown window
   const alertThrottleRef = useRef(new AlertThrottleEngine());
+
+  // Personality engine — shapes message tone per user preference
+  const personalityEngineRef = useRef(new GuidancePersonalityEngine());
+
+  // Settings snapshot taken at session start; stable for session duration
+  const sessionSettingsRef = useRef(loadSettings());
 
   // Camera refs to avoid stale closures inside setInterval
   const cameraStatusRef = useRef<CameraStatus>('inactive');
@@ -94,10 +113,12 @@ export function useVisionSession() {
     const sid = sessionIdRef.current;
     if (!sid) return;
 
-    // Capture real camera frame if available; fall back to simulation
     const isCamera = cameraStatusRef.current === 'active';
     const imageData = isCamera ? captureFrameRef.current() : null;
     const source = imageData ? 'camera' : 'simulation';
+
+    const personality = sessionSettingsRef.current.guidancePersonality;
+    const personalityEngine = personalityEngineRef.current;
 
     try {
       // 1. Analyze frame
@@ -128,13 +149,10 @@ export function useVisionSession() {
       const scene: SceneDescription = sceneData.scene;
       currentSceneRef.current = scene;
 
-      // Track whether the scene changed vs the previous frame
       const sceneChanged = prevSceneSummaryRef.current !== scene.summary;
       prevSceneSummaryRef.current = scene.summary;
-
       setState((s) => ({ ...s, currentScene: scene }));
 
-      // Log scene to UI (quiet indicator when unchanged)
       if (sceneChanged) {
         addLog(`Scene [${source}]: ${scene.summary}`);
       } else {
@@ -180,12 +198,12 @@ export function useVisionSession() {
         };
       });
 
-      // 5. Audio output — throttle-aware
+      // 5. Audio output — throttle + personality aware
       if (decision.shouldAlert && decision.message) {
-        const topAlert = alerts[0]; // already sorted by severity, then confidence
+        const topAlert = alerts[0];
+        const riskLevel = toPersonalityRisk(decision.urgency);
 
         if (topAlert) {
-          // Ask the throttle engine whether to speak this alert
           const throttleResult = alertThrottleRef.current.shouldSpeak({
             hazardType: topAlert.type,
             severity: topAlert.severity,
@@ -194,42 +212,68 @@ export function useVisionSession() {
           });
 
           if (throttleResult.shouldSpeak) {
-            // Speak the alert
-            const priority =
-              decision.urgency === 'critical'
-                ? 'critical'
-                : decision.urgency === 'high'
-                ? 'high'
-                : 'normal';
-            speak(decision.message, priority, decision.interruptNarration);
+            // Personality gate — minimal/balanced may silence low-risk alerts
+            if (!personalityEngine.shouldSpeak(riskLevel, personality)) {
+              silencedAlertsRef.current += 1;
+              setState((s) => ({ ...s, silencedAlerts: s.silencedAlerts + 1 }));
+              addLog(`[${personality}] Silenced: ${personalityEngine.getSilenceReason(riskLevel, personality)}`);
+            } else {
+              const priority =
+                decision.urgency === 'critical' ? 'critical' :
+                decision.urgency === 'high' ? 'high' : 'normal';
 
-            // Record it in the throttle engine
-            alertThrottleRef.current.record(
-              topAlert.type,
-              topAlert.severity,
-              topAlert.confidence,
-              decision.message
-            );
+              const formattedMessage = personalityEngine.formatMessage(
+                decision.message, personality, riskLevel
+              );
 
-            audioCountRef.current += 1;
-            setState((s) => {
-              const steps = [...s.completedSteps];
-              steps[4] = true;
-              return { ...s, audioCount: s.audioCount + 1, completedSteps: steps };
-            });
-            addLog(`ALERT [${decision.urgency}]: ${decision.message}`);
+              speak(formattedMessage, priority, decision.interruptNarration);
+
+              alertThrottleRef.current.record(
+                topAlert.type,
+                topAlert.severity,
+                topAlert.confidence,
+                formattedMessage
+              );
+
+              lastAlertTimeRef.current = Date.now();
+              audioCountRef.current += 1;
+
+              // Track last guidance for repeat command
+              setGuidance({
+                text: formattedMessage,
+                riskLevel: decision.urgency,
+                confidence: topAlert.confidence,
+                reason: `${topAlert.type} hazard detected`,
+                priority,
+                timestamp: new Date(),
+              });
+
+              setState((s) => {
+                const steps = [...s.completedSteps];
+                steps[4] = true;
+                return { ...s, audioCount: s.audioCount + 1, completedSteps: steps };
+              });
+              addLog(`ALERT [${decision.urgency}]: ${formattedMessage}`);
+            }
           } else {
-            // Throttled — log silently, do not speak
             silencedAlertsRef.current += 1;
             setState((s) => ({ ...s, silencedAlerts: s.silencedAlerts + 1 }));
             addLog(`[quiet] ${topAlert.type} · ${throttleResult.reason}`);
           }
         } else {
-          // No hazard alert object but decision says speak — unusual, speak it
           const priority =
-            decision.urgency === 'critical' ? 'critical' : decision.urgency === 'high' ? 'high' : 'normal';
+            decision.urgency === 'critical' ? 'critical' :
+            decision.urgency === 'high' ? 'high' : 'normal';
           speak(decision.message, priority, decision.interruptNarration);
           audioCountRef.current += 1;
+          setGuidance({
+            text: decision.message,
+            riskLevel: decision.urgency,
+            confidence: 0.7,
+            reason: 'Safety decision triggered',
+            priority,
+            timestamp: new Date(),
+          });
           setState((s) => {
             const steps = [...s.completedSteps];
             steps[4] = true;
@@ -237,14 +281,20 @@ export function useVisionSession() {
           });
           addLog(`ALERT [${decision.urgency}]: ${decision.message}`);
         }
-      } else if (!scene.isUncertain) {
-        // Scene narration — only speak if scene changed
-        if (sceneChanged) {
+      } else {
+        // No alert — scene narration or companion reassurance
+        const secondsSinceAlert = lastAlertTimeRef.current
+          ? (Date.now() - lastAlertTimeRef.current) / 1000
+          : 999;
+
+        if (personalityEngine.shouldReassure(personality, secondsSinceAlert)) {
+          const reassurance = personalityEngine.getReassurance(personality);
+          speak(reassurance, 'low');
+          lastAlertTimeRef.current = Date.now(); // reset so reassurance doesn't loop
+          addLog(`[companion] ${reassurance}`);
+        } else if (!scene.isUncertain && sceneChanged) {
           speak(scene.summary, 'low');
-        }
-      } else if (scene.uncertaintyMessage) {
-        // Only speak uncertainty if scene also changed
-        if (sceneChanged) {
+        } else if (scene.uncertaintyMessage && sceneChanged) {
           speak(scene.uncertaintyMessage, 'normal');
           addLog(`Uncertainty: ${scene.uncertaintyMessage}`);
         }
@@ -269,11 +319,16 @@ export function useVisionSession() {
       addLog(`Error: ${msg}`);
       setState((s) => ({ ...s, error: msg }));
     }
-  }, [speak, addLog]);
+  }, [speak, addLog, setGuidance]);
 
   const startSession = useCallback(async () => {
     setState((s) => ({ ...s, isLoading: true, error: null }));
     try {
+      // Snapshot current settings for the session
+      const settings = loadSettings();
+      sessionSettingsRef.current = settings;
+      updateSettings({ rate: settings.speechRate, volume: settings.speechVolume, voiceName: settings.voiceName });
+
       const res = await fetch('/api/sessions/start', { method: 'POST' });
       const { data } = await res.json();
       sessionIdRef.current = data.sessionId;
@@ -284,7 +339,9 @@ export function useVisionSession() {
       peakUrgencyRef.current = 'none';
       currentSceneRef.current = null;
       prevSceneSummaryRef.current = null;
+      lastAlertTimeRef.current = null;
       alertThrottleRef.current.reset();
+      personalityEngineRef.current.reset();
 
       setState((s) => ({
         ...s,
@@ -306,7 +363,7 @@ export function useVisionSession() {
 
       const mode = cameraStatusRef.current === 'active' ? 'camera mode' : 'simulation mode';
       speak(`Vision session started in ${mode}. Scanning your surroundings.`, 'high', true);
-      addLog(`Session started · ${mode}`);
+      addLog(`Session started · ${mode} · personality: ${settings.guidancePersonality}`);
       intervalRef.current = setInterval(runFrame, FRAME_INTERVAL_MS);
       runFrame();
     } catch (err) {
@@ -316,7 +373,7 @@ export function useVisionSession() {
         error: err instanceof Error ? err.message : 'Failed to start',
       }));
     }
-  }, [speak, addLog, runFrame]);
+  }, [speak, addLog, runFrame, updateSettings]);
 
   const saveMemoryEvent = useCallback(async () => {
     const scene = currentSceneRef.current;
@@ -399,5 +456,9 @@ export function useVisionSession() {
     saveMemoryEvent,
     startCamera: camera.requestCamera,
     stopCamera: camera.stopCamera,
+    // V5: last guidance and voice actions
+    lastGuidance,
+    repeatLastGuidance: () => repeatGuidance(speak),
+    speak,
   };
 }

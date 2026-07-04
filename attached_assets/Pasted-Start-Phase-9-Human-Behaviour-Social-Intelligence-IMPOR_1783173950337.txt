@@ -1,0 +1,217 @@
+Start Phase 9: Human Behaviour & Social Intelligence.
+
+IMPORTANT
+
+Do not rewrite V1–V8.
+
+Maintain backward compatibility.
+
+Keep all tests passing.
+
+====================================================
+
+GOAL
+
+Enable Denarixx Vision AI to understand human behaviour and social situations.
+
+The AI should understand what people are doing,
+whether they are interacting with the user,
+and whether any human behaviour represents a safety risk.
+
+Never identify unknown people by name.
+
+====================================================
+
+NEW ENGINES
+
+Create:
+
+src/engines/humanBehaviourEngine.ts
+
+src/engines/socialAwarenessEngine.ts
+
+src/engines/interactionPredictionEngine.ts
+
+src/engines/crowdUnderstandingEngine.ts
+
+src/types/social.ts
+
+====================================================
+
+DETECT HUMAN ACTIVITIES
+
+Understand activities such as:
+
+walking
+
+running
+
+standing
+
+sitting
+
+waiting
+
+waving
+
+pointing
+
+approaching
+
+moving away
+
+crossing road
+
+opening door
+
+entering vehicle
+
+leaving vehicle
+
+falling
+
+====================================================
+
+SOCIAL UNDERSTANDING
+
+Recognise situations like:
+
+Someone is approaching.
+
+Someone is waiting nearby.
+
+A queue is forming.
+
+People are crossing.
+
+A crowd is becoming dense.
+
+Someone appears to be speaking to the user.
+
+Someone may be asking for attention.
+
+====================================================
+
+PERSONAL SPACE
+
+Estimate:
+
+distance
+
+approach speed
+
+direction
+
+safe spacing
+
+crowd density
+
+====================================================
+
+INTERACTION PREDICTION
+
+Predict:
+
+Will someone cross the user's path?
+
+Will someone collide?
+
+Will someone likely interact?
+
+Is the area becoming crowded?
+
+====================================================
+
+SOCIAL GUIDANCE
+
+Examples:
+
+"Someone is approaching from your right."
+
+"A small queue is ahead."
+
+"A person appears to be waiting near the entrance."
+
+"The area is becoming crowded."
+
+"There is plenty of space to continue walking."
+
+====================================================
+
+NEVER
+
+Never identify unknown people.
+
+Never infer emotions as facts.
+
+Never guess intentions.
+
+Only describe observable behaviour.
+
+====================================================
+
+UI
+
+Create a Social Awareness panel.
+
+Show:
+
+Nearby people
+
+Movement
+
+Crowd density
+
+Interaction probability
+
+Personal space
+
+Risk level
+
+====================================================
+
+TESTS
+
+Create comprehensive tests.
+
+Behaviour detection.
+
+Crowd reasoning.
+
+Interaction prediction.
+
+Personal-space logic.
+
+====================================================
+
+DOCUMENTATION
+
+Create:
+
+docs/V9_HUMAN_BEHAVIOUR_AND_SOCIAL_INTELLIGENCE.md
+
+Explain:
+
+Architecture
+
+Privacy
+
+Safety
+
+Limitations
+
+====================================================
+
+QUALITY
+
+Run:
+
+npm run type-check
+
+npm test
+
+npx tsx tests/cognitiveGuardian.test.ts
+
+npm run build
+
+Fix every error until everything passes.

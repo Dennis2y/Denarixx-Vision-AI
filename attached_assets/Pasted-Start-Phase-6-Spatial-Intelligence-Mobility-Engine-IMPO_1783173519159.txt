@@ -1,0 +1,245 @@
+Start Phase 6: Spatial Intelligence & Mobility Engine.
+
+IMPORTANT
+
+Do not rewrite previous phases.
+
+Keep V1–V5 fully working.
+
+Keep all tests passing.
+
+================================================
+
+GOAL
+
+Transform Denarixx Vision AI into an AI that understands space like a human mobility guide.
+
+The AI should no longer only detect objects.
+
+It should understand:
+
+• distance
+• direction
+• movement
+• safe path
+• user position
+• obstacle position
+• free walking corridor
+
+================================================
+
+NEW ENGINES
+
+Create:
+
+src/engines/spatialReasoningEngine.ts
+
+src/engines/pathPlanningEngine.ts
+
+src/engines/mobilityEngine.ts
+
+src/engines/worldModelEngine.ts
+
+src/types/spatial.ts
+
+================================================
+
+SPATIAL REASONING
+
+Maintain a live internal world model.
+
+Examples:
+
+There is a bench
+2 metres ahead
+slightly left.
+
+Vehicle
+
+15 metres ahead
+
+moving right to left.
+
+Person
+
+behind the user
+
+walking faster.
+
+================================================
+
+FREE WALKING CORRIDOR
+
+Instead of:
+
+"Obstacle detected"
+
+Compute:
+
+Safe corridor.
+
+Suggested path.
+
+Walking width.
+
+Clearance.
+
+================================================
+
+PATH PLANNING
+
+Recommend:
+
+Continue.
+
+Turn slightly left.
+
+Turn slightly right.
+
+Move around obstacle.
+
+Stop.
+
+Wait.
+
+Cross.
+
+================================================
+
+MOVEMENT PREDICTION
+
+Estimate movement.
+
+Predict:
+
+person movement
+
+vehicle movement
+
+bike movement
+
+dog movement
+
+crowd flow
+
+================================================
+
+WORLD MODEL
+
+Maintain memory of surroundings.
+
+Current hazards.
+
+Temporary hazards.
+
+Permanent landmarks.
+
+Safe areas.
+
+================================================
+
+LANDMARK MEMORY
+
+Remember:
+
+doors
+
+stairs
+
+elevators
+
+shops
+
+bus stops
+
+crosswalks
+
+stations
+
+================================================
+
+AUDIO GUIDANCE
+
+Speak naturally.
+
+Example:
+
+"The path ahead is clear."
+
+"Walk slightly to your right."
+
+"Keep straight for another five metres."
+
+"The crossing is now directly ahead."
+
+================================================
+
+VISUAL DEMO
+
+Create a live spatial map panel.
+
+Display:
+
+User
+
+Obstacles
+
+Safe corridor
+
+Walking direction
+
+Risk zones
+
+Predicted movement
+
+================================================
+
+TESTS
+
+Create comprehensive tests.
+
+Spatial reasoning.
+
+Path planning.
+
+Mobility.
+
+World model.
+
+Prediction.
+
+================================================
+
+DOCUMENTATION
+
+Create:
+
+docs/V6_SPATIAL_INTELLIGENCE.md
+
+Explain:
+
+Architecture
+
+Spatial model
+
+World model
+
+Future smart-glasses integration
+
+================================================
+
+QUALITY
+
+Run:
+
+npm run type-check
+
+npm test
+
+npx tsx tests/cognitiveGuardian.test.ts
+
+npm run build
+
+Fix every error.
+
+Maintain backward compatibility.
