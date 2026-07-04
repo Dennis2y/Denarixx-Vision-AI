@@ -1,0 +1,100 @@
+Start Phase 16: Denarixx Vision Glasses Hardware Prototype Layer.
+
+IMPORTANT:
+Do not rewrite V1–V15.
+Keep all previous functionality working.
+Claude Code has already built earlier phases and pushed the project to GitHub, so extend the current GitHub/Replit codebase cleanly.
+
+Goal:
+Prepare Denarixx Vision AI for a real Denarixx Vision Glasses prototype.
+
+This phase is not physical manufacturing yet.
+It creates the software-side hardware prototype specification and simulated hardware control layer.
+
+Create:
+- src/engines/denarixxGlassesEngine.ts
+- src/engines/hardwarePrototypeEngine.ts
+- src/engines/powerManagementEngine.ts
+- src/engines/audioWearableEngine.ts
+- src/engines/hapticWearableEngine.ts
+- src/types/denarixxGlasses.ts
+- tests/denarixxGlassesPrototype.test.ts
+- docs/V16_DENARIXX_VISION_GLASSES_PROTOTYPE.md
+- docs/HARDWARE_PROTOTYPE_SPEC.md
+
+Prototype capabilities:
+1. Simulated Denarixx Vision Glasses device profile
+2. Camera module configuration
+3. Microphone configuration
+4. Bone-conduction audio output
+5. Haptic feedback output
+6. Battery and thermal status
+7. Bluetooth/Wi-Fi connection placeholders
+8. Firmware version placeholder
+9. Emergency fallback state
+10. Phone companion connection state
+
+Hardware modes:
+- phone-only mode
+- glasses-assisted mode
+- glasses-primary mode
+- degraded safety mode
+- offline safety mode
+
+Safety behavior:
+- If glasses disconnect:
+  “Vision glasses disconnected. Please stop and check carefully.”
+- If battery is critically low:
+  “Glasses battery is critically low. Switch to phone mode.”
+- If camera fails:
+  “Camera input failed. Local safety guidance may be limited.”
+- If audio fails:
+  trigger haptic fallback.
+
+UI:
+Add or improve hardware prototype panel showing:
+- device mode
+- camera status
+- audio status
+- haptic status
+- battery status
+- thermal status
+- firmware placeholder
+- phone companion status
+- connection health
+- fallback mode
+
+Integration:
+Connect prototype status to:
+- Hardware Bridge Engine
+- Multi-Camera Fusion Engine
+- On-Device AI Engine
+- Cognitive Guardian Engine
+- Audio Guidance Engine
+- Haptic alert system
+
+Documentation:
+HARDWARE_PROTOTYPE_SPEC.md should include:
+- recommended MVP hardware components
+- camera requirements
+- battery requirements
+- audio requirements
+- haptic requirements
+- compute requirements
+- smart-glasses integration plan
+- Germany prototype path
+- China/Europe manufacturing later path
+- what is simulated vs real
+
+Quality:
+Run:
+npm run type-check
+npm test
+npx tsx tests/cognitiveGuardian.test.ts
+npm run build
+
+Fix all errors until everything passes.
+
+After implementation:
+- Push all changes to GitHub.
+- Clearly summarize what is implemented, what is simulated, and what physical hardware is still needed.

@@ -18,6 +18,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/mobileReadiness.test.ts` — V10 Mobile Deployment Readiness tests (47/47)
 - `cd denarixx && npx tsx tests/pilotTesting.test.ts` — V11 Pilot Testing tests (117/117)
 - `cd denarixx && npx tsx tests/visionPipeline.test.ts` — V12 Real-Time AI Vision tests (148/148)
+- `cd denarixx && npx tsx tests/navigationEngine.test.ts` — V13 Indoor & Outdoor Navigation tests (151/151)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
@@ -30,7 +31,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 
 ## Where things live
 
-- **Next.js app:** `denarixx/` — all 11 pages and 13 API routes
+- **Next.js app:** `denarixx/` — all 14 pages and 18 API routes
 - **Express proxy:** `artifacts/api-server/src/app.ts` — single entry point on port 8080
 - **V1 engines:** `denarixx/src/engines/` — VisionEngine, HazardDetectionEngine, SafetyDecisionEngine, SceneReasoningEngine, MemoryEngine, ConversationEngine
 - **V2 engines:** `denarixx/src/engines/` — cognitiveGuardianEngine, proactiveAlertEngine, silenceDecisionEngine, predictiveRiskEngine, companionContextEngine, routineLearningEngine
@@ -82,6 +83,13 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V12 page:** `denarixx/src/app/vision/page.tsx` — Live AI Vision: camera preview, tracked objects, scene panel, performance metrics, speech guidance, provider selector, battery mode selector
 - **V12 tests:** `denarixx/tests/visionPipeline.test.ts` (148 tests)
 - **V12 docs:** `denarixx/docs/V12_REAL_TIME_AI_VISION.md`
+- **V13 types:** `denarixx/src/types/navigation.ts` — NavigationSession, RouteSegment, GuidanceLine, CrossingDecision, Landmark, RouteMemory, NavigationSettings, NAVIGATION_PRIVACY (separate from index.ts)
+- **V13 engines:** `denarixx/src/engines/navigationIntelligenceEngine.ts` — session lifecycle, tick processing, guidance selection; `indoorNavigationEngine.ts` — zone detection, room-to-room routes, venue modes; `outdoorNavigationEngine.ts` — heading/compass, outdoor routes; `routeSafetyEngine.ts` — risk from detected objects; `landmarkGuidanceEngine.ts` — landmark detection and announcement; `crossingDecisionEngine.ts` — crossing safety (never asserts certainty)
+- **V13 store:** `denarixx/src/lib/navigationStore.ts` — in-memory Map<string, NavigationSession>
+- **V13 page:** `denarixx/src/app/navigation/page.tsx` — full rewrite: indoor/outdoor toggle, venue mode, route status, heading, distance, crossing panel, SVG route map, guidance queue, privacy notes
+- **V13 routes:** `denarixx/src/app/api/navigation/start/route.ts` — POST create session; `update/route.ts` — POST update heading/detections; `end/route.ts` — POST end; `landmark/route.ts` — POST add landmark; `crossing-decision/route.ts` — POST evaluate crossing
+- **V13 tests:** `denarixx/tests/navigationEngine.test.ts` (151 tests)
+- **V13 docs:** `denarixx/docs/V13_INDOOR_OUTDOOR_NAVIGATION_ENGINE.md`
 - **V1 tests:** `denarixx/tests/engines.test.ts` (24 tests)
 - **V2 tests:** `denarixx/tests/cognitiveGuardian.test.ts` (37 tests — includes AlertThrottleEngine suite)
 - **V3 tests:** `denarixx/tests/v3reasoning.test.ts` (27 tests)
@@ -122,10 +130,15 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V10 settings:** `highContrastMode`, `reducedMotion`, `fullscreenWalkingMode` in AppSettings. Classes applied to `<html>` by PWASetup on mount and by settings page on Save.
 - **V11 privacy rules:** PILOT_PRIVACY constants — noVideoStorage, noFaceRecognition, noEmergencyStreaming, consentRequired all true. Enforced in engine: `createPilotSession` throws if `validateConsent` fails. `deletePilotData` redacts testerId → `[deleted]`, API returns HTTP 410 on deleted sessions. Report embeds privacy guarantees.
 - **V11 pilot phases:** Consent (disclaimer + 3 checkboxes) → Scenario (7 scenarios with safety notes) → Active (feedback + 72px Emergency Stop) → Report (stats + delete option). Emergency Stop resets to Consent without saving data.
+- **V13 navigation types:** `src/types/navigation.ts` is separate from `src/types/index.ts` (which owns V1 `NavigationGuidance`) — never merge them.
+- **V13 crossing safety:** crossingDecisionEngine.buildCrossingMessage NEVER says "safe to cross" with certainty. Always uses hedged language: "appears clear, but please check carefully." This is a hard requirement, not a style preference.
+- **V13 route memory privacy:** `canSaveRouteMemory()` requires `locationConsentGiven === true`. Default is false. Precise GPS is never stored by default (`noPreciseLocation: true`).
+- **V13 simulation tick:** `processNavigationTick` runs at 500ms intervals in the UI — ~1.2m distance per tick (walking pace). Auto-advances segments when 90% of distance traveled. Deviation of 45°+ triggers rerouting state.
+- **V13 speech cooldown:** 4-second cooldown between navigation guidance messages. Critical risk bypasses cooldown (always immediate).
 
 ## Product
 
-Denarixx Vision AI is a Phase 11 platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
+Denarixx Vision AI is a Phase 13 platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
 
 **14 pages:**
 - **Homepage (`/`)** — Investor-grade landing with 7-step demo flow, AI pipeline diagram, roadmap
@@ -137,7 +150,8 @@ Denarixx Vision AI is a Phase 11 platform for blind and visually impaired users.
 - **Cognitive Reasoning (`/reasoning`)** — V3 live pipeline debugger: 6-panel view showing environment understanding, internal reasoning, risk prediction, action decision, and human guide message
 - **Hazards (`/hazards`)** — Standalone HazardDetectionEngine tester with 4 example scenarios
 - **Memory (`/memory`)** — AI memory store with seed demo data, stats bar, add/view items
-- **Navigation (`/navigation`)**, **Settings (`/settings`)**, **Privacy (`/privacy`)**, **Admin (`/admin`)**, **Docs (`/docs`)**
+- **Navigation (`/navigation`)** — V13 Indoor & Outdoor Navigation: mode toggle, venue modes, route status panel, heading, distance, SVG route map, crossing decision panel, guidance queue, location privacy notes
+- **Settings (`/settings`)**, **Privacy (`/privacy`)**, **Admin (`/admin`)**, **Docs (`/docs`)**
 
 **Test status:**
 - V1 core engines: **24/24 passing**
@@ -151,6 +165,7 @@ Denarixx Vision AI is a Phase 11 platform for blind and visually impaired users.
 - V10 Mobile Deployment Readiness: **47/47 passing**
 - V11 Pilot Testing: **117/117 passing**
 - V12 Real-Time AI Vision Engine: **148/148 passing**
+- V13 Indoor & Outdoor Navigation Engine: **151/151 passing**
 
 ## User preferences
 
@@ -181,3 +196,4 @@ Denarixx Vision AI is a Phase 11 platform for blind and visually impaired users.
 - V10 checklist: `denarixx/docs/MOBILE_TESTING_CHECKLIST.md`
 - V11 docs: `denarixx/docs/V11_REAL_WORLD_PILOT_TESTING.md`
 - V12 docs: `denarixx/docs/V12_REAL_TIME_AI_VISION.md`
+- V13 docs: `denarixx/docs/V13_INDOOR_OUTDOOR_NAVIGATION_ENGINE.md`

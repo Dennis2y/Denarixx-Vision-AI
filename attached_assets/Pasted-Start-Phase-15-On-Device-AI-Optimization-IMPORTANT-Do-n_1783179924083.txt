@@ -1,0 +1,87 @@
+Start Phase 15: On-Device AI Optimization.
+
+IMPORTANT:
+Do not rewrite V1–V14.
+Keep all previous functionality working.
+Claude Code has already built earlier phases and pushed the project to GitHub, so extend the current GitHub/Replit codebase cleanly.
+
+Goal:
+Prepare Denarixx Vision AI to run safety-critical perception locally on phone or smart-glasses hardware with low latency and reduced cloud dependence.
+
+Create:
+- src/engines/onDeviceAIEngine.ts
+- src/engines/modelOptimizationEngine.ts
+- src/engines/edgeInferenceEngine.ts
+- src/engines/latencyBudgetEngine.ts
+- src/engines/batteryOptimizationEngine.ts
+- src/types/onDeviceAI.ts
+- tests/onDeviceAI.test.ts
+- docs/V15_ON_DEVICE_AI_OPTIMIZATION.md
+
+Features:
+1. Add model runtime abstraction:
+   - browser fallback
+   - TensorFlow.js placeholder
+   - ONNX Runtime placeholder
+   - WebGPU placeholder
+   - Apple Neural Engine placeholder
+   - Qualcomm/NPU placeholder
+
+2. Add latency budgeting:
+   - perception latency
+   - reasoning latency
+   - speech latency
+   - total alert latency
+   - critical alert target under 500ms
+
+3. Add adaptive processing:
+   - reduce FPS when battery low
+   - increase frequency near hazards
+   - pause heavy cloud reasoning during critical moments
+   - prioritize local hazard detection
+
+4. Add offline-first safety path:
+   - local hazard detection placeholder
+   - local navigation fallback
+   - local speech fallback
+   - cloud unavailable fallback
+
+5. Add performance dashboard:
+   - FPS
+   - inference time
+   - battery mode
+   - selected runtime
+   - cloud/offline status
+   - local safety status
+
+6. Integrate with:
+   - Vision Inference Engine
+   - Cognitive Guardian Engine
+   - Spatial Reasoning Engine
+   - Navigation Intelligence Engine
+   - Audio Guidance Engine
+
+Safety:
+- Critical alerts must prefer local/edge inference.
+- If cloud AI is unavailable, never fail silently.
+- Say:
+  “Online AI is unavailable. Local safety mode is active.”
+
+Documentation:
+Update:
+- README.md
+- replit.md
+- docs/V15_ON_DEVICE_AI_OPTIMIZATION.md
+
+Quality:
+Run:
+npm run type-check
+npm test
+npx tsx tests/cognitiveGuardian.test.ts
+npm run build
+
+Fix all errors until everything passes.
+
+After implementation:
+- Push all changes to GitHub.
+- Clearly summarize what is implemented, what is simulated, and what requires real device testing.
