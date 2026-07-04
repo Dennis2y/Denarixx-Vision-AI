@@ -23,6 +23,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/onDeviceAI.test.ts` — V15 On-Device AI Optimization tests (170/170)
 - `cd denarixx && npx tsx tests/denarixxGlassesPrototype.test.ts` — V16 Denarixx Vision Glasses Prototype tests (176/176)
 - `cd denarixx && npx tsx tests/fieldTrial.test.ts` — V17 Real-World Field Trial tests (161/161)
+- `cd denarixx && npx tsx tests/manufacturingReadiness.test.ts` — V18 Manufacturing Readiness tests (144/144)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
@@ -126,6 +127,12 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V17 routes:** `denarixx/src/app/api/field-trials/session/route.ts` — POST/GET/PATCH/DELETE; `feedback/route.ts` — POST/GET; `report/route.ts` — POST/GET/DELETE
 - **V17 tests:** `denarixx/tests/fieldTrial.test.ts` (161 tests)
 - **V17 docs:** `denarixx/docs/V17_REAL_WORLD_FIELD_TRIALS.md`, `denarixx/docs/FIELD_TRIAL_SAFETY_PROTOCOL.md`
+- **V18 types:** `denarixx/src/types/manufacturing.ts` — `HardwareComponent` (11), `ReadinessLevel`, `ComplianceStatus`, `RiskLevel`, `ManufacturingRegion`, `CertificationStandard`, `HardwareComponentSpec`, `ComplianceItem` (`isRoadmapOnly: true` always), `ProductRisk`, `ManufacturingOption`, `CertificationMilestone` (`isPlaceholder: true` always), `ReadinessScore`, `ManufacturingReadinessReport`, `MANUFACTURING_DISCLAIMER`
+- **V18 engines:** `manufacturingReadinessEngine.ts` — 11-component registry, readiness scoring, 3 manufacturing options, next actions; `compliancePlanningEngine.ts` — 9 compliance items, GDPR/CE/MDR/EAA planning; `productRiskEngine.ts` — 14 risks across 6 categories, scoring/filtering; `certificationRoadmapEngine.ts` — 10 milestones across 4 phases, Q3 2026–Q3 2027, €79k–€216k budget
+- **V18 page:** `denarixx/src/app/manufacturing/page.tsx` — 6-tab dashboard: Overview, Hardware (11 components), Compliance (9 items), Risks (14), Roadmap (10 milestones), Manufacturing (3 options)
+- **V18 routes:** `api/manufacturing/readiness/route.ts` — GET full report; `risk/route.ts` — GET risks (filterable); `certification/route.ts` — GET milestones + compliance warnings
+- **V18 tests:** `denarixx/tests/manufacturingReadiness.test.ts` (144 tests)
+- **V18 docs:** `denarixx/docs/V18_MANUFACTURING_READINESS.md`, `denarixx/docs/CERTIFICATION_AND_COMPLIANCE_ROADMAP.md`, `denarixx/docs/MANUFACTURER_REQUIREMENTS_BRIEF.md`
 - **Camera hook:** `denarixx/src/hooks/useCameraCapture.ts` — getUserMedia, stream lifecycle, frame capture (JPEG base64), 4-state status machine
 - **Alert throttle engine:** `denarixx/src/engines/alertThrottleEngine.ts` — per-severity cooldowns, shouldSpeak() decision, confidence-escalation override, speak-count tracking
 - **Session hook:** `denarixx/src/hooks/useVisionSession.ts` — 7-step demo flow, camera integration, spatial intelligence, completedSteps tracking, session report generation
@@ -188,16 +195,25 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V17 Emergency Stop:** sets `emergencyStopUsed: true`, transitions to `completed` from any phase. Report embeds this flag. Debrief required before next session.
 - **V17 9 scenarios:** road_crossing and stairs are high-risk, require 2 supervisors, simulation-only in Phase 17. Never with real traffic or live platforms.
 - **V17 feedback questions:** 8 questions covering usefulness, timing, frequency, clarity, overwhelmed, safer, alternative text, supervisor missed hazard.
+- **V18 types separation:** `src/types/manufacturing.ts` is separate from all other type files. `isRoadmapOnly: true` on all `ComplianceItem` — never claim certified. `isPlaceholder: true` on all `CertificationMilestone`.
+- **V18 MANUFACTURING_DISCLAIMER:** must contain "not CE marked", "not a medical device", "planning purposes only". Exact strings tested — never change.
+- **V18 compliance score:** `not_assessed=0, planning=20, in_progress=50, verified=85, certified=100`. Applied per item, averaged.
+- **V18 risk scoring:** lower is better. Weights: critical=40, high=20, medium=10, low=3. Multiplier: open=1.0, mitigated=0.1, accepted=0.2.
+- **V18 critical risks open:** HW-001 (no physical prototype), REG-001 (medical device boundary not assessed). Both must be addressed before any investor/manufacturer meeting.
+- **V18 certification budget:** €79k–€216k total. CE marking target Q1 2027. Pre-prototype tasks (DPIA, DPO, MDR) must start Q3 2026.
+- **V18 medical device warning:** MDR boundary assessment is MANDATORY before any public launch. Never claim Denarixx is a medical device. crossingDecisionEngine already enforces hedged language — do not change.
+- **V18 manufacturing recommended path:** hybrid (EU industrial design + CN assembly). Europe-only for GDPR-first pilot prototypes. China-only for scale >1,000 units.
 
 ## Product
 
-Denarixx Vision AI is a Phase 17 platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
+Denarixx Vision AI is a Phase 18 platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
 
 **14 pages:**
 - **Homepage (`/`)** — Investor-grade landing with 7-step demo flow, AI pipeline diagram, roadmap
 - **Vision Session (`/session`)** — Interactive 7-step guided demo with live DemoFlow tracker, SpatialMapPanel, SensorStatusPanel, and SessionReport
 - **Live AI Vision (`/vision`)** — V12 real-time perception pipeline: camera preview, tracked objects (IoU), scene understanding, performance metrics, speech guidance, provider + battery mode selectors
 - **Pilot Testing (`/pilot`)** — V11 4-phase supervised pilot testing: consent screen, 7 test scenarios, live feedback collection, session report with privacy guarantees and delete option
+- **Manufacturing (`/manufacturing`)** — V18 6-tab dashboard: readiness score (overall/hardware/software/compliance/docs), hardware component registry (11 components with readiness level + blockers), compliance checklist (9 items, roadmap-only), risk registry (14 risks with level/status/mitigation), certification roadmap (10 milestones, Q3 2026–Q3 2027), manufacturing options (3 regions)
 - **Field Trials (`/field-trials`)** — V17 4-phase UI: Consent (5 checkboxes, participant ID, disclaimers) → Scenario (9 scenarios with risk/safety labels) → Active (alert simulation, feedback, supervisor notes, incidents, 72px Emergency Stop) → Report (8 safety metrics, recommendations, privacy guarantees, JSON export, full data delete)
 - **Devices (`/devices`)** — V8 + V14 + V16: Smart Glasses Integration Layer + Multi-Camera System + Denarixx Vision Glasses prototype panel (connect/disconnect sim, mode, battery, thermal, subsystems, haptic preview, camera modules, bridge status, prototype spec)
 - **Performance (`/performance`)** — V15 On-Device AI dashboard: battery slider, cloud status, runtime registry, latency budget, edge detections, processing mode selector
@@ -225,6 +241,7 @@ Denarixx Vision AI is a Phase 17 platform for blind and visually impaired users.
 - V15 On-Device AI Optimization: **170/170 passing**
 - V16 Denarixx Glasses Prototype: **176/176 passing**
 - V17 Real-World Field Trials: **161/161 passing**
+- V18 Manufacturing Readiness: **144/144 passing**
 
 ## User preferences
 
@@ -262,3 +279,6 @@ Denarixx Vision AI is a Phase 17 platform for blind and visually impaired users.
 - V16 spec: `denarixx/docs/HARDWARE_PROTOTYPE_SPEC.md`
 - V17 docs: `denarixx/docs/V17_REAL_WORLD_FIELD_TRIALS.md`
 - V17 protocol: `denarixx/docs/FIELD_TRIAL_SAFETY_PROTOCOL.md`
+- V18 docs: `denarixx/docs/V18_MANUFACTURING_READINESS.md`
+- V18 roadmap: `denarixx/docs/CERTIFICATION_AND_COMPLIANCE_ROADMAP.md`
+- V18 brief: `denarixx/docs/MANUFACTURER_REQUIREMENTS_BRIEF.md`

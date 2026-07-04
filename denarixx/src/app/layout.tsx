@@ -36,6 +36,7 @@ const NAV_LINKS = [
   ['/vision', 'Vision AI'],
   ['/pilot', 'Pilot'],
   ['/field-trials', 'Field Trials'],
+  ['/manufacturing', 'Mfg'],
   ['/devices', 'Devices'],
   ['/guardian', 'Guardian'],
   ['/reasoning', 'Reasoning'],
