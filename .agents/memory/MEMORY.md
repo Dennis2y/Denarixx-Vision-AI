@@ -1,1 +1,11 @@
-- [Sprint history and GitHub push pattern](sprint-history.md) — sprints 1–3 complete; GitHub push via node + GITHUB_PERSONAL_ACCESS_TOKEN env var (bash, not code_execution sandbox)
+- [GitHub push pattern](github-push-pattern.md) — use bash node -e with https.request; code_execution sandbox has no process.env
+- [Next.js dev cache](nextjs-dev-cache.md) — rm -rf denarixx/.next + restart workflow after every npm run build
+- [V4 Vision Provider System](v4-vision-providers.md) — VisionAnalysisProvider interface separate from V1 VisionProvider; factory singleton pattern
+- [Alert throttle engine](alert-throttle.md) — per-severity cooldowns, shouldSpeak(), confidence-escalation override
+- [Audio guidance shape](audio-guidance-shape.md) — speak() priority system and stale closure patterns in useVisionSession
+- [Camera integration](camera-integration.md) — useCameraCapture hook, CameraStatus state machine, track.ended listener
+- [Sensor float test](sensor-float-test.md) — GPS fuzzing, motion classification, battery-aware frame skipping
+- [Sessions hot reload](sessions-hot-reload.md) — in-memory session store resets on Next.js hot-reload
+- [Stale closures stop](stale-closures-stop.md) — useRef pattern for values read at session-stop time
+- [V3 reasoning pipeline](v3-reasoning-pipeline.md) — environmentUnderstandingEngine → cognitiveReasoningEngine → actionDecisionEngine
+- [V8 HAL imports](v8-hal-imports.md) — HardwareBridgeEngine, WearableConnectionEngine, DeviceCapabilityEngine import paths
