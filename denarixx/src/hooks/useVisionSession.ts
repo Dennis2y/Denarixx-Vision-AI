@@ -2,7 +2,11 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAudioGuidance } from './useAudioGuidance';
+import { useCameraCapture } from './useCameraCapture';
+import type { CameraStatus } from './useCameraCapture';
 import type { Detection, HazardAlert, SceneDescription, SafetyDecision } from '@/types';
+
+export type { CameraStatus };
 
 export interface SessionReport {
   sessionId: string;
@@ -12,6 +16,7 @@ export interface SessionReport {
   audioCount: number;
   peakUrgency: string;
   completedSteps: boolean[];
+  cameraFrames: number;
 }
 
 export interface SessionState {
@@ -20,6 +25,7 @@ export interface SessionState {
   isLoading: boolean;
   frameCount: number;
   alertCount: number;
+  cameraFrames: number;
   currentScene: SceneDescription | null;
   currentAlerts: HazardAlert[];
   currentDecision: SafetyDecision | null;
@@ -30,17 +36,26 @@ export interface SessionState {
   report: SessionReport | null;
 }
 
-const SIMULATION_INTERVAL_MS = 3000;
+const FRAME_INTERVAL_MS = 3000;
 const BLANK_STEPS = [false, false, false, false, false, false, false];
 
 export function useVisionSession() {
   const { speak, stop: stopAudio } = useAudioGuidance();
+  const camera = useCameraCapture();
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const audioCountRef = useRef(0);
+  const cameraFramesRef = useRef(0);
   const peakUrgencyRef = useRef<string>('none');
   const currentSceneRef = useRef<SceneDescription | null>(null);
+
+  // Refs for camera access inside the interval callback (avoids stale closures)
+  const cameraStatusRef = useRef<CameraStatus>('inactive');
+  const captureFrameRef = useRef<typeof camera.captureFrame>(camera.captureFrame);
+  cameraStatusRef.current = camera.status;
+  captureFrameRef.current = camera.captureFrame;
 
   const [state, setState] = useState<SessionState>({
     sessionId: null,
@@ -48,6 +63,7 @@ export function useVisionSession() {
     isLoading: false,
     frameCount: 0,
     alertCount: 0,
+    cameraFrames: 0,
     currentScene: null,
     currentAlerts: [],
     currentDecision: null,
@@ -69,35 +85,42 @@ export function useVisionSession() {
     const sid = sessionIdRef.current;
     if (!sid) return;
 
+    // Capture real camera frame if available; fall back to simulation
+    const isCamera = cameraStatusRef.current === 'active';
+    const imageData = isCamera ? captureFrameRef.current() : null;
+    const source = imageData ? 'camera' : 'simulation';
+
     try {
       // 1. Analyze frame
       const visionRes = await fetch('/api/vision/analyze-frame', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: sid, source: 'simulation' }),
+        body: JSON.stringify({ sessionId: sid, source, imageData: imageData ?? undefined }),
       });
       const { data: visionData } = await visionRes.json();
       const detections: Detection[] = visionData.detections ?? [];
 
       setState((s) => {
         const newCount = s.frameCount + 1;
+        const camCount = s.cameraFrames + (imageData ? 1 : 0);
         const steps = [...s.completedSteps];
         if (newCount >= 2) steps[1] = true; // Step 2: walking
-        return { ...s, frameCount: newCount, completedSteps: steps };
+        return { ...s, frameCount: newCount, cameraFrames: camCount, completedSteps: steps };
       });
+      if (imageData) cameraFramesRef.current += 1;
 
       // 2. Describe scene
       const sceneRes = await fetch('/api/scene/describe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: sid, source: 'simulation', detections }),
+        body: JSON.stringify({ sessionId: sid, source, detections }),
       });
       const { data: sceneData } = await sceneRes.json();
       const scene: SceneDescription = sceneData.scene;
       currentSceneRef.current = scene;
 
       setState((s) => ({ ...s, currentScene: scene }));
-      addLog(`Scene: ${scene.summary}`);
+      addLog(`Scene [${source}]: ${scene.summary}`);
 
       // 3. Evaluate hazards
       const hazardRes = await fetch('/api/hazards/evaluate', {
@@ -190,6 +213,7 @@ export function useVisionSession() {
       sessionIdRef.current = data.sessionId;
       startTimeRef.current = Date.now();
       audioCountRef.current = 0;
+      cameraFramesRef.current = 0;
       peakUrgencyRef.current = 'none';
       currentSceneRef.current = null;
       setState((s) => ({
@@ -199,6 +223,7 @@ export function useVisionSession() {
         isLoading: false,
         frameCount: 0,
         alertCount: 0,
+        cameraFrames: 0,
         audioCount: 0,
         log: [],
         currentAlerts: [],
@@ -207,9 +232,11 @@ export function useVisionSession() {
         completedSteps: [true, false, false, false, false, false, false],
         report: null,
       }));
-      speak('Vision session started. Scanning your surroundings.', 'high', true);
-      addLog('Session started');
-      intervalRef.current = setInterval(runFrame, SIMULATION_INTERVAL_MS);
+
+      const mode = cameraStatusRef.current === 'active' ? 'camera mode' : 'simulation mode';
+      speak(`Vision session started in ${mode}. Scanning your surroundings.`, 'high', true);
+      addLog(`Session started · ${mode}`);
+      intervalRef.current = setInterval(runFrame, FRAME_INTERVAL_MS);
       runFrame();
     } catch (err) {
       setState((s) => ({
@@ -277,17 +304,29 @@ export function useVisionSession() {
         audioCount: audioCountRef.current,
         peakUrgency: peakUrgencyRef.current,
         completedSteps: steps,
+        cameraFrames: cameraFramesRef.current,
       };
       return { ...s, isActive: false, sessionId: null, completedSteps: steps, report };
     });
     addLog('Session ended');
   }, [stopAudio, addLog]);
 
+  // Cleanup interval on unmount
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
 
-  return { state, startSession, stopSession, saveMemoryEvent };
+  return {
+    state,
+    cameraStatus: camera.status,
+    videoRef: camera.videoRef,
+    canvasRef: camera.canvasRef,
+    startSession,
+    stopSession,
+    saveMemoryEvent,
+    startCamera: camera.requestCamera,
+    stopCamera: camera.stopCamera,
+  };
 }

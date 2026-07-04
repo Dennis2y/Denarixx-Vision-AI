@@ -1,8 +1,8 @@
-# Denarixx Vision AI — Phase 1 MVP
+# Denarixx Vision AI — Phase 2 MVP
 
 An AI perception platform for blind and visually impaired users. Provides continuous scene understanding, hazard detection, audio guidance, and contextual memory — with a V2 Cognitive Guardian layer for proactive, fatigue-aware alerting.
 
-**This is the Phase 1 simulation MVP.** All vision analysis is currently simulated. Real camera input and trained models are planned for subsequent phases.
+**Phase 2:** The Vision Session page now supports real browser camera input. Camera frames are captured every 3 seconds while a session is active and sent to the analysis pipeline. Simulation mode remains the default and is used as an automatic fallback when camera permission is denied.
 
 > Assistive support only. Not medically certified. Always use your own judgement.
 
@@ -42,7 +42,7 @@ Open http://localhost:3000. No API keys needed — runs in simulation mode by de
 ## Tests
 
 ```bash
-# V1 core engine tests (19 tests)
+# V1 core engine tests (24 tests)
 npm test
 
 # V2 Cognitive Guardian tests (27 tests)

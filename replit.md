@@ -28,7 +28,8 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V2 types:** `denarixx/src/types/cognitive.ts`
 - **V1 tests:** `denarixx/tests/engines.test.ts` (24 tests)
 - **V2 tests:** `denarixx/tests/cognitiveGuardian.test.ts` (27 tests)
-- **Session hook:** `denarixx/src/hooks/useVisionSession.ts` — 7-step demo flow, completedSteps tracking, session report generation
+- **Camera hook:** `denarixx/src/hooks/useCameraCapture.ts` — getUserMedia, stream lifecycle, frame capture (JPEG base64), 4-state status machine
+- **Session hook:** `denarixx/src/hooks/useVisionSession.ts` — 7-step demo flow, camera integration, completedSteps tracking, session report generation
 - **UI components:** `denarixx/src/components/` — Card, Badge, Button, DemoFlow, SessionReport, HazardPanel, etc.
 - **API routes:** `denarixx/src/app/api/` — 13 routes (health, sessions, sessions/start, sessions/end, vision/analyze-frame, hazards/evaluate, safety/decide, scene/describe, conversation/ask, audio/speak, memory, memory/save, navigation)
 - **V2 roadmap:** `denarixx/docs/V2_COGNITIVE_GUARDIAN_ROADMAP.md`
@@ -45,7 +46,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 
 ## Product
 
-Denarixx Vision AI is a Phase 1 simulation MVP of an assistive AI perception platform for blind and visually impaired users.
+Denarixx Vision AI is a Phase 2 MVP of an assistive AI perception platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as an automatic fallback. All vision analysis remains simulated — real model inference is Phase 3.
 
 **10 pages:**
 - **Homepage (`/`)** — Investor-grade landing with 7-step demo flow, AI pipeline diagram, roadmap
@@ -61,7 +62,8 @@ Denarixx Vision AI is a Phase 1 simulation MVP of an assistive AI perception pla
 
 ## User preferences
 
-- Keep Phase 1 simulation MVP intact — do not wire real camera, model inference, or database without explicit instruction.
+- Phase 2 camera integration is live on the Vision Session page — simulation remains the fallback.
+- Do not wire model inference (real CV models) or database without explicit instruction.
 - All V2 engine files must be present in repo (not just passing in Replit) — recreate from working implementation if ever missing.
 
 ## Gotchas

@@ -39,6 +39,8 @@ export async function POST(req: Request) {
       provider: engine.getProvider().name,
       latencyMs,
       timestamp: frame.timestamp,
+      mode: body.imageData ? 'camera' : 'simulation',
+      frameReceived: !!body.imageData,
     });
   } catch (e) {
     return handleError(e);
