@@ -33,6 +33,7 @@ export const viewport: Viewport = {
 
 const NAV_LINKS = [
   ['/session', 'Session'],
+  ['/pilot', 'Pilot'],
   ['/devices', 'Devices'],
   ['/guardian', 'Guardian'],
   ['/reasoning', 'Reasoning'],

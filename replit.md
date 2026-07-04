@@ -16,6 +16,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/hardwareBridge.test.ts` — V8 Smart Glasses HAL tests (97/97)
 - `cd denarixx && npx tsx tests/humanBehaviour.test.ts` — V9 Human Behaviour & Social Intelligence tests (134/134)
 - `cd denarixx && npx tsx tests/mobileReadiness.test.ts` — V10 Mobile Deployment Readiness tests (47/47)
+- `cd denarixx && npx tsx tests/pilotTesting.test.ts` — V11 Pilot Testing tests (117/117)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
@@ -68,6 +69,13 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V10 manifest:** `denarixx/public/manifest.json` — display_override, shortcuts to /session + /settings, portrait lock, start_url=/session
 - **V10 globals:** high-contrast-mode, reduced-motion CSS classes + @media (prefers-contrast/reduced-motion)
 - **V10 docs:** `denarixx/docs/V10_MOBILE_DEPLOYMENT_READINESS.md`, `denarixx/docs/MOBILE_TESTING_CHECKLIST.md`
+- **V11 types:** `denarixx/src/types/pilot.ts` — PilotScenario, TesterConsent, AlertFeedback, PilotSession, PilotReport, FeedbackSummary, ScenarioInfo, PILOT_PRIVACY
+- **V11 engine:** `denarixx/src/engines/pilotTestingEngine.ts` — SCENARIO_REGISTRY (7 scenarios), validateConsent, createPilotSession, endPilotSession, recordAlert, recordSilenceDecision, recordPredictedRisk, addAlertFeedback, buildFeedback, calculateFeedbackSummary, generateReport, deletePilotData, formatDuration
+- **V11 store:** `denarixx/src/lib/pilotStore.ts` — in-memory pilot session store
+- **V11 page:** `denarixx/src/app/pilot/page.tsx` — 4-phase UI: Consent → Scenario → Active (with feedback) → Report; Emergency Stop button; delete session data
+- **V11 routes:** `denarixx/src/app/api/pilot/session/route.ts` — POST/GET/PATCH/DELETE; `denarixx/src/app/api/pilot/feedback/route.ts` — POST/GET
+- **V11 tests:** `denarixx/tests/pilotTesting.test.ts` (117 tests)
+- **V11 docs:** `denarixx/docs/V11_REAL_WORLD_PILOT_TESTING.md`
 - **V1 tests:** `denarixx/tests/engines.test.ts` (24 tests)
 - **V2 tests:** `denarixx/tests/cognitiveGuardian.test.ts` (37 tests — includes AlertThrottleEngine suite)
 - **V3 tests:** `denarixx/tests/v3reasoning.test.ts` (27 tests)
@@ -77,6 +85,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V8 tests:** `denarixx/tests/hardwareBridge.test.ts` (97 tests)
 - **V9 tests:** `denarixx/tests/humanBehaviour.test.ts` (134 tests)
 - **V10 tests:** `denarixx/tests/mobileReadiness.test.ts` (47 tests)
+- **V11 tests:** `denarixx/tests/pilotTesting.test.ts` (117 tests)
 - **Camera hook:** `denarixx/src/hooks/useCameraCapture.ts` — getUserMedia, stream lifecycle, frame capture (JPEG base64), 4-state status machine
 - **Alert throttle engine:** `denarixx/src/engines/alertThrottleEngine.ts` — per-severity cooldowns, shouldSpeak() decision, confidence-escalation override, speak-count tracking
 - **Session hook:** `denarixx/src/hooks/useVisionSession.ts` — 7-step demo flow, camera integration, spatial intelligence, completedSteps tracking, session report generation
@@ -105,14 +114,17 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V9 privacy rules:** No person ever identified or named. Emotions never inferred as facts. Only observable behaviour described. Hedging language enforced ("appears to be", "may be"). All four engines are pure — no async, no I/O.
 - **V10 PWA:** SW cache name `denarixx-v10`. Bump to `denarixx-v11` on next deploy to purge old caches. start_url = `/session`. `isOffline()` guards `typeof navigator.onLine !== 'boolean'` (Node.js has navigator but no onLine). Walking mode overlay is React-level (not native Fullscreen API) so it works on iOS.
 - **V10 settings:** `highContrastMode`, `reducedMotion`, `fullscreenWalkingMode` in AppSettings. Classes applied to `<html>` by PWASetup on mount and by settings page on Save.
+- **V11 privacy rules:** PILOT_PRIVACY constants — noVideoStorage, noFaceRecognition, noEmergencyStreaming, consentRequired all true. Enforced in engine: `createPilotSession` throws if `validateConsent` fails. `deletePilotData` redacts testerId → `[deleted]`, API returns HTTP 410 on deleted sessions. Report embeds privacy guarantees.
+- **V11 pilot phases:** Consent (disclaimer + 3 checkboxes) → Scenario (7 scenarios with safety notes) → Active (feedback + 72px Emergency Stop) → Report (stats + delete option). Emergency Stop resets to Consent without saving data.
 
 ## Product
 
-Denarixx Vision AI is a Phase 10 platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
+Denarixx Vision AI is a Phase 11 platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
 
-**12 pages:**
+**13 pages:**
 - **Homepage (`/`)** — Investor-grade landing with 7-step demo flow, AI pipeline diagram, roadmap
 - **Vision Session (`/session`)** — Interactive 7-step guided demo with live DemoFlow tracker, SpatialMapPanel, SensorStatusPanel, and SessionReport
+- **Pilot Testing (`/pilot`)** — V11 4-phase supervised pilot testing: consent screen, 7 test scenarios, live feedback collection, session report with privacy guarantees and delete option
 - **Devices (`/devices`)** — V8 Smart Glasses Integration Layer: device cards, connect/disconnect, Active Sources selectors, Browser Capabilities, Safety Rules
 - **Cognitive Guardian (`/guardian`)** — V2 pipeline debugger: pick a scenario, run the full AI decision pipeline, see live timings per stage
 - **Cognitive Reasoning (`/reasoning`)** — V3 live pipeline debugger: 6-panel view showing environment understanding, internal reasoning, risk prediction, action decision, and human guide message
@@ -130,6 +142,7 @@ Denarixx Vision AI is a Phase 10 platform for blind and visually impaired users.
 - V8 Smart Glasses HAL: **97/97 passing**
 - V9 Human Behaviour & Social Intelligence: **134/134 passing**
 - V10 Mobile Deployment Readiness: **47/47 passing**
+- V11 Pilot Testing: **117/117 passing**
 
 ## User preferences
 
@@ -158,3 +171,4 @@ Denarixx Vision AI is a Phase 10 platform for blind and visually impaired users.
 - V9 docs: `denarixx/docs/V9_HUMAN_BEHAVIOUR_AND_SOCIAL_INTELLIGENCE.md`
 - V10 docs: `denarixx/docs/V10_MOBILE_DEPLOYMENT_READINESS.md`
 - V10 checklist: `denarixx/docs/MOBILE_TESTING_CHECKLIST.md`
+- V11 docs: `denarixx/docs/V11_REAL_WORLD_PILOT_TESTING.md`
