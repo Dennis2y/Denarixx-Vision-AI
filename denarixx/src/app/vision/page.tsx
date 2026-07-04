@@ -20,7 +20,6 @@ import { createTrackerState, updateTracker, tracksToDetectedObjects } from '@/en
 import { getSceneLabel } from '@/engines/sceneUnderstandingEngine';
 import { getModelDisplayName } from '@/engines/modelManagerEngine';
 import {
-  DEFAULT_PIPELINE_CONFIG,
   EMPTY_METRICS,
   PIPELINE_PRIVACY,
 } from '@/types/vision12';

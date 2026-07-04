@@ -4,7 +4,6 @@
 
 import type {
   HardwareComponentSpec,
-  HardwareComponent,
   ReadinessLevel,
   ReadinessScore,
   ManufacturingOption,

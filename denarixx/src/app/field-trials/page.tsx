@@ -17,8 +17,8 @@ import {
   getSessionDurationMs,
 } from '@/engines/fieldTrialEngine';
 import { calculateSafetyMetrics, formatMetricsGrade } from '@/engines/safetyValidationEngine';
-import { calculateFeedbackSummary, buildFeedbackGuidance, createAlertFeedback } from '@/engines/userFeedbackEngine';
-import { generateTrialReport, formatReportSummary, exportReportAsJSON, deleteReport } from '@/engines/trialReportEngine';
+import { calculateFeedbackSummary, createAlertFeedback } from '@/engines/userFeedbackEngine';
+import { generateTrialReport, exportReportAsJSON, deleteReport } from '@/engines/trialReportEngine';
 import type {
   TrialSession,
   TrialReport,

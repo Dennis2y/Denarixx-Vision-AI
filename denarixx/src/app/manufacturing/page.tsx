@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { getHardwareComponentRegistry, calculateReadinessScore, formatReadinessGrade, buildRecommendedNextActions, getManufacturingOptions, getCriticalPathComponents, getBlockedComponents } from '@/engines/manufacturingReadinessEngine';
-import { getComplianceRegistry, calculateComplianceScore, getComplianceWarnings, formatComplianceStatus, getHighPriorityComplianceItems } from '@/engines/compliancePlanningEngine';
+import { getHardwareComponentRegistry, calculateReadinessScore, formatReadinessGrade, buildRecommendedNextActions, getManufacturingOptions } from '@/engines/manufacturingReadinessEngine';
+import { getComplianceRegistry, calculateComplianceScore, getComplianceWarnings, formatComplianceStatus } from '@/engines/compliancePlanningEngine';
 import { getProductRiskRegistry, getRiskSummary, formatRiskLevel, formatRiskStatus, getCriticalOpenRisks } from '@/engines/productRiskEngine';
 import { getCertificationMilestones, buildRoadmapSummary, formatCertificationPhase, getImmediateMilestones } from '@/engines/certificationRoadmapEngine';
 import { MANUFACTURING_DISCLAIMER } from '@/types/manufacturing';

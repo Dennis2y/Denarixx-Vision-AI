@@ -14,7 +14,6 @@ import type {
 import {
   NAVIGATION_PRIVACY,
   DEFAULT_NAVIGATION_SETTINGS,
-  RISK_ORDER,
 } from '@/types/navigation';
 import { generateIndoorRoute, buildIndoorGuidance } from '@/engines/indoorNavigationEngine';
 import { generateOutdoorRoute, buildOutdoorGuidance, detectRouteDeviation } from '@/engines/outdoorNavigationEngine';

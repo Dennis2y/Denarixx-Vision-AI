@@ -4,32 +4,26 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   createNavigationSession,
   processNavigationTick,
-  selectGuidance,
   currentSegment,
   nextSegment,
   getRouteProgressPct,
   getRouteStateLabel,
-  isRouteActive,
   pauseNavigation,
   resumeNavigation,
   endNavigationSession,
 } from '@/engines/navigationIntelligenceEngine';
 import { evaluateCrossing, buildCrossingGuidanceLine } from '@/engines/crossingDecisionEngine';
-import { assessRouteRisk, getRiskLabel, getRiskColor } from '@/engines/routeSafetyEngine';
-import { formatDistance } from '@/engines/outdoorNavigationEngine';
-import { parseHeading } from '@/engines/outdoorNavigationEngine';
+import { getRiskLabel, getRiskColor } from '@/engines/routeSafetyEngine';
+import { formatDistance, parseHeading } from '@/engines/outdoorNavigationEngine';
 import { getVenueModeIntro } from '@/engines/indoorNavigationEngine';
-import { NAVIGATION_PRIVACY } from '@/types/navigation';
 import type {
   NavigationSession,
   NavigationMode,
   CrossingDecision,
-  GuidanceLine,
   IndoorVenueMode,
 } from '@/types/navigation';
 
 // ─── Simulation scenario labels ───────────────────────────────────────────────
-const OUTDOOR_LABELS = ['person', 'pavement', 'sign'];
 const CROSSING_LABELS = ['car', 'traffic_light', 'crosswalk'];
 const INDOOR_LABELS = ['chair', 'table', 'door'];
 
@@ -56,6 +50,7 @@ export default function NavigationPage() {
   const tickRef = useRef(0);
   const lastSpokenAtRef = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const serverSessionIdRef = useRef<string | null>(null);
 
   const addGuidance = useCallback((text: string) => {
     setGuidanceLog((prev) => [text, ...prev].slice(0, 6));
@@ -112,9 +107,10 @@ export default function NavigationPage() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [running, runTick]); // deliberately omit session to avoid re-subscribing on each state update
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, runTick]); // deliberately omit session to avoid re-subscribing on each tick
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (!destination.trim()) return;
     tickRef.current = 0;
     lastSpokenAtRef.current = 0;
@@ -127,12 +123,34 @@ export default function NavigationPage() {
 
     const intro = mode === 'indoor' ? getVenueModeIntro(venueMode) : `Navigating to ${destination}.`;
     addGuidance(intro);
+
+    // Register session server-side so API routes track state
+    try {
+      const res = await fetch('/api/navigation/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ destination: destination.trim(), mode, locationConsent }),
+      });
+      const json = await res.json() as { data?: { sessionId?: string } };
+      if (json.data?.sessionId) serverSessionIdRef.current = json.data.sessionId;
+    } catch { /* server registration is non-blocking — simulation continues */ }
   };
 
   const handleStop = () => {
     setRunning(false);
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (session) setSession(endNavigationSession(session));
+
+    // End session server-side
+    const sid = serverSessionIdRef.current;
+    if (sid) {
+      fetch('/api/navigation/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: sid }),
+      }).catch(() => {});
+      serverSessionIdRef.current = null;
+    }
   };
 
   const handlePauseResume = () => {
@@ -152,7 +170,6 @@ export default function NavigationPage() {
   const currentSeg = session ? currentSegment(session) : null;
   const nextSeg = session ? nextSegment(session) : null;
   const progress = session ? getRouteProgressPct(session) : 0;
-  const isActive = session ? isRouteActive(session) : false;
 
   return (
     <div className="min-h-screen bg-gray-950 text-white px-4 py-8">

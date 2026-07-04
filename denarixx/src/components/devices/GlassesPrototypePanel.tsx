@@ -29,7 +29,6 @@ import {
   getThermalLabel,
   getThermalGuidance,
   simulateBatteryTick,
-  formatPowerSummary,
 } from '@/engines/powerManagementEngine';
 import {
   assessAudioHealth,
@@ -43,7 +42,6 @@ import {
 } from '@/engines/hapticWearableEngine';
 import type { DenarixxGlassesState } from '@/types/denarixxGlasses';
 import {
-  GLASSES_DISCONNECT_MESSAGE,
   BATTERY_CRITICAL_MESSAGE,
 } from '@/types/denarixxGlasses';
 

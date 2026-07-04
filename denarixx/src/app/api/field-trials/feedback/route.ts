@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { addAlertFeedback } from '@/engines/fieldTrialEngine';
 import { createAlertFeedback, validateFeedbackResponses } from '@/engines/userFeedbackEngine';
-import type { AlertFeedback } from '@/types/fieldTrial';
 import { trialSessionStore } from '@/lib/fieldTrialStore';
 
 // POST — record alert feedback

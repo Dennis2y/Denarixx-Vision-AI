@@ -12,18 +12,6 @@ import type {
 
 // ─── Zone Detection ───────────────────────────────────────────────────────────
 
-const ZONE_INDICATORS: Record<IndoorZone, string[]> = {
-  corridor: ['door', 'person'],
-  stairs: ['stairs'],
-  elevator: ['elevator'],
-  escalator: ['escalator'],
-  doorway: ['door'],
-  entrance: ['door', 'sign'],
-  exit: ['door', 'sign'],
-  room: ['chair', 'table'],
-  unknown: [],
-};
-
 export function detectIndoorZone(detectedLabels: string[]): IndoorZone {
   const labels = new Set(detectedLabels);
 

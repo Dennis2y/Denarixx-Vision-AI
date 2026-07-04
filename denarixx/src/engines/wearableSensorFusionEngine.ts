@@ -108,8 +108,6 @@ export function fuseSensorWithCamera(
   sensorFrame: WearableSensorFrame,
   cameraFrame: FusedFrame,
 ): FusedFrame {
-  // Enrich the fused frame with heading from wearable magnetometer
-  const heading = sensorFrame.magnetometer?.heading;
   const motion = classifyMotionState(sensorFrame);
 
   // If running, add urgency context to guidance

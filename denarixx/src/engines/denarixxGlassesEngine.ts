@@ -5,10 +5,6 @@
 import type {
   DenarixxGlassesState,
   GlassesDeviceProfile,
-  ConnectionState,
-  HardwareMode,
-  PowerProfile,
-  PhoneCompanionState,
   ComponentStatus,
 } from '@/types/denarixxGlasses';
 import {

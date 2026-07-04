@@ -8,7 +8,6 @@ import type {
   SafetyMetrics,
   FeedbackSummary,
 } from '@/types/fieldTrial';
-import { TRIAL_PRIVACY } from '@/types/fieldTrial';
 import { getMetricsGrade, isSafeToPublish } from '@/engines/safetyValidationEngine';
 import { getScenarioInfo, formatDuration, getSessionDurationMs } from '@/engines/fieldTrialEngine';
 

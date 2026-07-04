@@ -7,17 +7,14 @@ import {
   simulateBatteryDrain,
   connectCamera,
   disconnectCamera,
-  getConnectedFeeds,
   formatCameraPosition,
   formatConnectionHealth,
   computeConnectionHealth,
 } from '@/engines/glassesCameraEngine';
 import {
-  assessCameraHealth,
   buildFallbackGuidance,
   getCamerasBatteryWarning,
   computeOverallHealthScore,
-  selectBestCamera,
   shouldFallbackToPhone,
   applyPhoneFallback,
 } from '@/engines/cameraHealthEngine';
@@ -36,7 +33,6 @@ import {
 import {
   formatFovZone,
 } from '@/engines/fieldOfViewEngine';
-import { CAMERA_PRIVACY } from '@/types/glasses';
 import type { GlassesState, GlassesCameraPosition, FusedFrame } from '@/types/glasses';
 
 // ─── Health status badge ──────────────────────────────────────────────────────

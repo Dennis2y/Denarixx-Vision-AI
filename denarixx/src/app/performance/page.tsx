@@ -8,7 +8,6 @@ import {
   isCloudAvailable,
   selectProcessingMode,
   initOfflineSafetyPath,
-  getOfflineSafetyMessage,
   buildDefaultConfig,
 } from '@/engines/onDeviceAIEngine';
 import {
@@ -19,7 +18,6 @@ import {
   estimateMemoryFootprint,
 } from '@/engines/modelOptimizationEngine';
 import {
-  buildPerformanceDashboard,
   formatRuntime,
   formatProcessingMode,
   runSimulatedEdgeFrame,
@@ -91,7 +89,6 @@ export default function PerformancePage() {
   const profile = getBatteryOptimizationProfile(batteryMode);
   const budget = createLatencyBudget();
   const offlinePath = initOfflineSafetyPath(cloudStatus);
-  const dashboard = buildPerformanceDashboard(selectedRuntime, batteryMode, cloudStatus, processingMode, currentInferenceMs);
   const report = buildLatencyReport(latencyRecords);
   const batteryWarning = getBatteryModeWarning(batteryMode);
   const cloudPaused = shouldPauseCloudReasoning(batteryMode, false);
@@ -111,7 +108,8 @@ export default function PerformancePage() {
       if (intervalRef.current) clearInterval(intervalRef.current);
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [running, batteryMode, cloudStatus, selectedRuntime]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, batteryMode, cloudStatus, selectedRuntime]); // budget excluded: createLatencyBudget returns a new object each render
 
   const latencyGrade = getLatencyGrade(currentInferenceMs || optimalModel.estimatedLatencyMs);
   const critOnTime = isCriticalAlertOnTime(currentInferenceMs || optimalModel.estimatedLatencyMs, budget);
