@@ -17,6 +17,7 @@ import { VoiceCommandIndicator } from '@/components/session/VoiceCommandIndicato
 import { LastGuidancePanel } from '@/components/session/LastGuidancePanel';
 import { SpatialMapPanel } from '@/components/session/SpatialMapPanel';
 import { SensorStatusPanel } from '@/components/session/SensorStatusPanel';
+import { SocialAwarenessPanel } from '@/components/session/SocialAwarenessPanel';
 import { loadSettings } from '@/lib/settingsStore';
 
 export default function SessionPage() {
@@ -307,6 +308,11 @@ export default function SessionPage() {
             />
           </div>
         )}
+
+        {/* ── V9 Social Awareness ─────────────────────────────────────────── */}
+        <div className="mb-4">
+          <SocialAwarenessPanel sessionActive={state.isActive} />
+        </div>
 
         {/* ── V6 Spatial Map + Hazard panel ──────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
