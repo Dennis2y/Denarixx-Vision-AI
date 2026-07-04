@@ -6,6 +6,7 @@ import { HardwareBridgeEngine } from '@/engines/hardwareBridgeEngine';
 import { HARDWARE_DEFAULTS } from '@/types/hardware';
 import type { CameraSource, AudioOutput, HapticOutput, ConnectedDevice } from '@/types/hardware';
 import { MultiCameraPanel } from '@/components/devices/MultiCameraPanel';
+import { GlassesPrototypePanel } from '@/components/devices/GlassesPrototypePanel';
 
 const capEngine = new DeviceCapabilityEngine();
 const bridgeEngine = new HardwareBridgeEngine(HARDWARE_DEFAULTS);
@@ -423,6 +424,11 @@ export default function DevicesPage() {
           {/* V14 Multi-Camera System */}
           <div className="rounded-xl border border-gray-700 bg-gray-900/40 p-5">
             <MultiCameraPanel />
+          </div>
+
+          {/* V16 Denarixx Vision Glasses Hardware Prototype */}
+          <div className="rounded-xl border border-gray-700 bg-gray-900/40 p-5">
+            <GlassesPrototypePanel />
           </div>
         </div>
       </div>

@@ -21,6 +21,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/navigationEngine.test.ts` — V13 Indoor & Outdoor Navigation tests (151/151)
 - `cd denarixx && npx tsx tests/multiCameraSupport.test.ts` — V14 Multi-Camera Smart Glasses tests (164/164)
 - `cd denarixx && npx tsx tests/onDeviceAI.test.ts` — V15 On-Device AI Optimization tests (170/170)
+- `cd denarixx && npx tsx tests/denarixxGlassesPrototype.test.ts` — V16 Denarixx Vision Glasses Prototype tests (176/176)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
@@ -112,6 +113,11 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V15 page:** `denarixx/src/app/performance/page.tsx` — live performance dashboard: battery slider, cloud status toggle, runtime registry table, latency report, edge detections
 - **V15 tests:** `denarixx/tests/onDeviceAI.test.ts` (170 tests)
 - **V15 docs:** `denarixx/docs/V15_ON_DEVICE_AI_OPTIMIZATION.md`
+- **V16 types:** `denarixx/src/types/denarixxGlasses.ts` — `HardwareMode` (5 modes), `ComponentStatus`, `ConnectionState`, `ThermalState`, `CameraModuleConfig`, `BoneAudioConfig`, `HapticConfig`, `HapticPattern`, `HapticAlertType` (8 types), `PowerProfile`, `PhoneCompanionState`, `GlassesDeviceProfile`, `DenarixxGlassesState`, `HardwarePrototypeSpec`, safety message constants
+- **V16 engines:** `denarixxGlassesEngine.ts` — device profile factory (4 cameras), connection state machine, health score, simulation tick; `hardwarePrototypeEngine.ts` — mode classification, emergency fallback, subsystem health matrix, bridge status; `powerManagementEngine.ts` — battery/thermal classification, voltage curve, drain simulation; `audioWearableEngine.ts` — bone-conduction config, output routing, haptic fallback; `hapticWearableEngine.ts` — 8-pattern library, alert routing, intensity scaling
+- **V16 component:** `denarixx/src/components/devices/GlassesPrototypePanel.tsx` — live prototype panel: connect/disconnect, mode card, battery/thermal, subsystem status, camera modules grid, haptic pattern preview, hardware bridge status, prototype spec
+- **V16 tests:** `denarixx/tests/denarixxGlassesPrototype.test.ts` (176 tests)
+- **V16 docs:** `denarixx/docs/V16_DENARIXX_VISION_GLASSES_PROTOTYPE.md`, `denarixx/docs/HARDWARE_PROTOTYPE_SPEC.md`
 - **Camera hook:** `denarixx/src/hooks/useCameraCapture.ts` — getUserMedia, stream lifecycle, frame capture (JPEG base64), 4-state status machine
 - **Alert throttle engine:** `denarixx/src/engines/alertThrottleEngine.ts` — per-severity cooldowns, shouldSpeak() decision, confidence-escalation override, speak-count tracking
 - **Session hook:** `denarixx/src/hooks/useVisionSession.ts` — 7-step demo flow, camera integration, spatial intelligence, completedSteps tracking, session report generation
@@ -157,17 +163,26 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V15 offline safety:** `OFFLINE_SAFETY_MESSAGE` must contain "Online AI" and "local safety mode" — tested by the suite. Never change this string. `initOfflineSafetyPath` activates when cloud is offline OR degraded.
 - **V15 runtime selection:** In power_saver/critical battery modes, `selectRuntime` prefers `powerEfficient: true` runtimes. Browser JS is the only `available` runtime; all others are `placeholder` pending SDK integration.
 - **V15 processing mode:** Critical alerts ALWAYS route to `local` when `criticalAlertsLocal: true` (default). Offline → `local`. Degraded → `edge`. Normal → `hybrid`.
+- **V16 types separation:** `src/types/denarixxGlasses.ts` is separate from `src/types/glasses.ts` (V14) and `src/types/hardware.ts` (V8). `DenarixxGlassesState` is named to avoid clash with V14's `GlassesState`.
+- **V16 safety constants:** `GLASSES_DISCONNECT_MESSAGE = 'Vision glasses disconnected. Please stop and check carefully.'`; `BATTERY_CRITICAL_MESSAGE = 'Glasses battery is critically low. Switch to phone mode.'`; `CAMERA_FAIL_MESSAGE = 'Camera input failed. Local safety guidance may be limited.'` — exact strings tested, never change.
+- **V16 audio fallback:** If bone-conduction audio fails → haptic fallback triggers automatically (`shouldUsHapticFallback(status)`). If haptic also fails → audio-only continues. Never silent failure.
+- **V16 hardware modes:** `phone_only` (disconnected), `glasses_assisted` (connected, reduced), `glasses_primary` (connected, all ok), `degraded_safety` (camera failed / battery critical / degraded), `offline_safety` (no cloud + no glasses).
+- **V16 haptic patterns:** 8 patterns in `HAPTIC_PATTERNS` constant — `critical_hazard` (100% intensity, ×3), down to `notification` (40%, ×1). Intensity scales at ≤20%/≤10% battery. Pattern durations computed from pulse+pause arrays.
+- **V16 battery thresholds:** Critical = ≤10%, Low = ≤20%. `BATTERY_CRITICAL_THRESHOLD` and `BATTERY_LOW_THRESHOLD` constants. `estimateRemainingMinutes()` uses mode-specific mAh draw (phone_only 80mA, glasses_primary 220mA).
+- **V16 camera modules:** 4 cameras: front 1920×1080/30fps/80°, left 1280×720/15fps/100°, right 1280×720/15fps/100°, downward 640×480/10fps/120°+depth. No local video storage (privacy rule).
+- **V16 prototype spec:** 42g, 300mAh LiPo, 4h battery, Qualcomm AR2 (placeholder), 2GB RAM, 8GB storage, BT LE primary, €399 target, Q2 2026 Germany prototype.
+- **V16 bridge integration:** `buildHardwareBridgeStatus()` provides visionSource/audioOutput/hapticOutput/processingMode to V8 Hardware Bridge, V14 Multi-Camera, V15 On-Device AI, V2 Cognitive Guardian.
 
 ## Product
 
-Denarixx Vision AI is a Phase 15 platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
+Denarixx Vision AI is a Phase 16 platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
 
 **14 pages:**
 - **Homepage (`/`)** — Investor-grade landing with 7-step demo flow, AI pipeline diagram, roadmap
 - **Vision Session (`/session`)** — Interactive 7-step guided demo with live DemoFlow tracker, SpatialMapPanel, SensorStatusPanel, and SessionReport
 - **Live AI Vision (`/vision`)** — V12 real-time perception pipeline: camera preview, tracked objects (IoU), scene understanding, performance metrics, speech guidance, provider + battery mode selectors
 - **Pilot Testing (`/pilot`)** — V11 4-phase supervised pilot testing: consent screen, 7 test scenarios, live feedback collection, session report with privacy guarantees and delete option
-- **Devices (`/devices`)** — V8 + V14: Smart Glasses Integration Layer + Multi-Camera System panel (live simulation, camera health, fallback, FOV, fused detections, wearable sensors, glasses SVG preview)
+- **Devices (`/devices`)** — V8 + V14 + V16: Smart Glasses Integration Layer + Multi-Camera System + Denarixx Vision Glasses prototype panel (connect/disconnect sim, mode, battery, thermal, subsystems, haptic preview, camera modules, bridge status, prototype spec)
 - **Performance (`/performance`)** — V15 On-Device AI dashboard: battery slider, cloud status, runtime registry, latency budget, edge detections, processing mode selector
 - **Cognitive Guardian (`/guardian`)** — V2 pipeline debugger: pick a scenario, run the full AI decision pipeline, see live timings per stage
 - **Cognitive Reasoning (`/reasoning`)** — V3 live pipeline debugger: 6-panel view showing environment understanding, internal reasoning, risk prediction, action decision, and human guide message
@@ -191,6 +206,7 @@ Denarixx Vision AI is a Phase 15 platform for blind and visually impaired users.
 - V13 Indoor & Outdoor Navigation Engine: **151/151 passing**
 - V14 Multi-Camera Smart Glasses: **164/164 passing**
 - V15 On-Device AI Optimization: **170/170 passing**
+- V16 Denarixx Glasses Prototype: **176/176 passing**
 
 ## User preferences
 
@@ -224,3 +240,5 @@ Denarixx Vision AI is a Phase 15 platform for blind and visually impaired users.
 - V13 docs: `denarixx/docs/V13_INDOOR_OUTDOOR_NAVIGATION_ENGINE.md`
 - V14 docs: `denarixx/docs/V14_MULTI_CAMERA_SMART_GLASSES_SUPPORT.md`
 - V15 docs: `denarixx/docs/V15_ON_DEVICE_AI_OPTIMIZATION.md`
+- V16 docs: `denarixx/docs/V16_DENARIXX_VISION_GLASSES_PROTOTYPE.md`
+- V16 spec: `denarixx/docs/HARDWARE_PROTOTYPE_SPEC.md`
