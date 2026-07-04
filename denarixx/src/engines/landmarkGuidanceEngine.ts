@@ -1,6 +1,7 @@
 // ─── V13 Landmark Guidance Engine ────────────────────────────────────────────
 // Pure functions — no async, no I/O.
 // Creates, stores, and announces landmarks along a navigation route.
+// Sprint 6: adds LandmarkMemoryStore CRUD with consent enforcement.
 
 import type {
   Landmark,
@@ -8,6 +9,8 @@ import type {
   IndoorZone,
   GuidanceLine,
   NavigationSession,
+  SavedLandmark,
+  LandmarkMemoryStore,
 } from '@/types/navigation';
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
@@ -150,4 +153,111 @@ export function buildLandmarksFromDetections(
 
 export function canSaveRouteMemory(session: NavigationSession): boolean {
   return session.locationConsentGiven && session.privacy.routeMemoryOnlyWithConsent;
+}
+
+// ─── Sprint 6: Landmark Memory Store ─────────────────────────────────────────
+
+export const LANDMARK_PRIVACY_WARNING =
+  'Landmark locations are stored only with your consent. ' +
+  'No precise GPS coordinates are saved unless you explicitly agree. ' +
+  'You can delete any saved landmark at any time.';
+
+export const LANDMARK_MEMORY_MAX = 50;
+
+export function createLandmarkMemoryStore(consentGiven = false): LandmarkMemoryStore {
+  return {
+    landmarks: [],
+    consentGiven,
+    maxLandmarks: LANDMARK_MEMORY_MAX,
+  };
+}
+
+/**
+ * Save a landmark to the store.
+ * Requires consentGiven === true.
+ * Returns the updated store, plus an optional error string on failure.
+ */
+export function saveLandmark(
+  store: LandmarkMemoryStore,
+  landmark: Landmark,
+  options: { fuzzyLatitude?: number; fuzzyLongitude?: number } = {},
+): { store: LandmarkMemoryStore; error?: string } {
+  if (!store.consentGiven) {
+    return {
+      store,
+      error: 'Consent required to save landmarks. Enable location memory in settings.',
+    };
+  }
+  if (store.landmarks.length >= store.maxLandmarks) {
+    return {
+      store,
+      error: `Landmark store is full (${store.maxLandmarks} maximum). Delete an existing landmark first.`,
+    };
+  }
+  const alreadyExists = store.landmarks.some((l) => l.id === landmark.id);
+  if (alreadyExists) {
+    return { store, error: `Landmark "${landmark.name}" is already saved.` };
+  }
+  const saved: SavedLandmark = {
+    ...landmark,
+    ...(options.fuzzyLatitude !== undefined ? { fuzzyLatitude: options.fuzzyLatitude } : {}),
+    ...(options.fuzzyLongitude !== undefined ? { fuzzyLongitude: options.fuzzyLongitude } : {}),
+  };
+  return { store: { ...store, landmarks: [...store.landmarks, saved] } };
+}
+
+/**
+ * Delete a saved landmark by id.
+ * Returns updated store and whether a deletion actually occurred.
+ */
+export function deleteSavedLandmark(
+  store: LandmarkMemoryStore,
+  id: string,
+): { store: LandmarkMemoryStore; deleted: boolean } {
+  const before = store.landmarks.length;
+  const landmarks = store.landmarks.filter((l) => l.id !== id);
+  return {
+    store: { ...store, landmarks },
+    deleted: landmarks.length < before,
+  };
+}
+
+/**
+ * Retrieve a saved landmark for navigation by id.
+ * Returns null if not found.
+ */
+export function navigateToLandmark(
+  store: LandmarkMemoryStore,
+  id: string,
+): SavedLandmark | null {
+  return store.landmarks.find((l) => l.id === id) ?? null;
+}
+
+/**
+ * List all saved landmarks, newest first.
+ */
+export function listSavedLandmarks(store: LandmarkMemoryStore): SavedLandmark[] {
+  return [...store.landmarks].sort((a, b) => b.savedAt - a.savedAt);
+}
+
+/**
+ * Find a saved landmark by name (case-insensitive partial match).
+ */
+export function findLandmarkByName(
+  store: LandmarkMemoryStore,
+  query: string,
+): SavedLandmark | null {
+  const q = query.toLowerCase();
+  return store.landmarks.find((l) => l.name.toLowerCase().includes(q)) ?? null;
+}
+
+/**
+ * Update consent status on the store.
+ * Existing landmarks are preserved — caller decides whether to purge them.
+ */
+export function setLandmarkMemoryConsent(
+  store: LandmarkMemoryStore,
+  consentGiven: boolean,
+): LandmarkMemoryStore {
+  return { ...store, consentGiven };
 }

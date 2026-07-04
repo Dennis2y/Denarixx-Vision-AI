@@ -37,8 +37,11 @@ export type IndoorVenueMode =
 
 export type RouteState =
   | 'idle'
+  | 'requesting_location'  // Sprint 6: waiting for geolocation permission
   | 'navigating'
+  | 'off_route'            // Sprint 6: user-friendly name for heading deviation
   | 'paused'
+  | 'ended'                // Sprint 6: explicit session end (alias for arrived)
   | 'arrived'
   | 'rerouting'
   | 'lost';
@@ -193,3 +196,84 @@ export interface NavigationUpdate {
   detectedLabels?: string[];
   crossingAttempt?: boolean;
 }
+
+// ─── Sprint 6: Geolocation Permission ────────────────────────────────────────
+
+export type GeolocationPermission =
+  | 'not_requested'
+  | 'requesting'
+  | 'granted'
+  | 'denied'
+  | 'unavailable';
+
+export interface GeolocationState {
+  permission: GeolocationPermission;
+  /** True if GPS data is available for use */
+  hasGPS: boolean;
+  /** True if compass/IMU heading is available as fallback */
+  hasFallback: boolean;
+  /** Which source is providing heading */
+  headingSource: 'compass' | 'gps' | 'none';
+  /** Human-readable warning text when permission is denied or unavailable */
+  warningText: string | null;
+}
+
+// ─── Sprint 6: Route Guidance Types ──────────────────────────────────────────
+
+export type RouteGuidanceType =
+  | 'continue_straight'
+  | 'turn_slightly_left'
+  | 'turn_slightly_right'
+  | 'turn_left'
+  | 'turn_right'
+  | 'stop'
+  | 'crossing_ahead'
+  | 'landmark_ahead';
+
+// ─── Sprint 6: Landmark Memory ────────────────────────────────────────────────
+
+export interface SavedLandmark extends Landmark {
+  /** Fuzzy latitude stored only with explicit consent */
+  fuzzyLatitude?: number;
+  /** Fuzzy longitude stored only with explicit consent */
+  fuzzyLongitude?: number;
+}
+
+export interface LandmarkMemoryStore {
+  landmarks: SavedLandmark[];
+  /** Consent must be explicitly granted before saving locations */
+  consentGiven: boolean;
+  /** Maximum saved landmarks (default 50) */
+  maxLandmarks: number;
+}
+
+// ─── Sprint 6: Navigation → Guardian Bridge ───────────────────────────────────
+
+export interface NavigationGuardianInput {
+  /** Risk from navigation system */
+  riskLevel: RiskLevel;
+  /** Labels detected by vision that triggered the risk */
+  detectedLabels: string[];
+  /** Current navigation session state */
+  state: RouteState;
+  /** True when a crossing segment is immediately ahead */
+  crossingAhead: boolean;
+  /** True when the user is deviating from the route */
+  offRoute: boolean;
+  /** Human-readable guidance message for Guardian to speak */
+  guidanceMessage: string | null;
+}
+
+// ─── Sprint 6: Privacy ────────────────────────────────────────────────────────
+
+export const LOCATION_PRIVACY_WARNING =
+  'Location is not stored unless you explicitly save a landmark. ' +
+  'Fuzzy mode (default) limits GPS precision to protect your privacy. ' +
+  'Precise location requires your explicit consent.';
+
+export const NAVIGATION_PRIVACY_DEFAULTS = {
+  noPreciseLocationByDefault: true,
+  consentRequiredForLandmarkSaving: true,
+  noThirdPartySharing: true,
+  showPrivacyWarningOnStart: true,
+} as const;

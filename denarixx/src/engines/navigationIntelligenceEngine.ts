@@ -58,7 +58,7 @@ export function createNavigationSession(
 // ─── Session Lifecycle ────────────────────────────────────────────────────────
 
 export function pauseNavigation(session: NavigationSession): NavigationSession {
-  if (session.state === 'arrived') return session;
+  if (session.state === 'arrived' || session.state === 'ended') return session;
   return { ...session, state: 'paused', lastUpdatedAt: Date.now() };
 }
 
@@ -77,6 +77,64 @@ export function markLost(session: NavigationSession): NavigationSession {
 
 export function startRerouting(session: NavigationSession): NavigationSession {
   return { ...session, state: 'rerouting', lastUpdatedAt: Date.now() };
+}
+
+// ─── Sprint 6: New State Transitions ─────────────────────────────────────────
+
+/** Request geolocation permission — transitions to 'requesting_location'. */
+export function requestLocationPermission(session: NavigationSession): NavigationSession {
+  if (session.state !== 'idle') return session;
+  return { ...session, state: 'requesting_location', lastUpdatedAt: Date.now() };
+}
+
+/**
+ * Geolocation permission granted.
+ * Transitions from 'requesting_location' → 'navigating'.
+ * Also updates locationConsentGiven so route memory is available.
+ */
+export function onLocationGranted(session: NavigationSession): NavigationSession {
+  if (session.state !== 'requesting_location') return session;
+  return {
+    ...session,
+    state: 'navigating',
+    locationConsentGiven: true,
+    lastUpdatedAt: Date.now(),
+  };
+}
+
+/**
+ * Geolocation permission denied or unavailable.
+ * Transitions from 'requesting_location' → 'navigating' with compass/IMU fallback.
+ * locationConsentGiven stays false — no route memory allowed.
+ */
+export function onLocationDenied(session: NavigationSession): NavigationSession {
+  if (session.state !== 'requesting_location') return session;
+  return { ...session, state: 'navigating', lastUpdatedAt: Date.now() };
+}
+
+/**
+ * Explicit session end (Sprint 6 alias for arrived).
+ * Use when the user manually stops rather than arriving at a destination.
+ */
+export function endNavigation(session: NavigationSession): NavigationSession {
+  return { ...session, state: 'ended', lastUpdatedAt: Date.now() };
+}
+
+/**
+ * Mark the user as off-route (Sprint 6 user-friendly alias for rerouting).
+ * Use when heading deviation > threshold.
+ */
+export function setOffRoute(session: NavigationSession): NavigationSession {
+  if (session.state === 'arrived' || session.state === 'ended') return session;
+  return { ...session, state: 'off_route', lastUpdatedAt: Date.now() };
+}
+
+/**
+ * Return from off-route back to navigating (heading corrected).
+ */
+export function clearOffRoute(session: NavigationSession): NavigationSession {
+  if (session.state !== 'off_route' && session.state !== 'rerouting') return session;
+  return { ...session, state: 'navigating', lastUpdatedAt: Date.now() };
 }
 
 // ─── Route Advancement ────────────────────────────────────────────────────────
@@ -112,17 +170,18 @@ export function updateNavigationSession(
   session: NavigationSession,
   update: NavigationUpdate,
 ): NavigationSession {
-  if (session.state === 'arrived') return session;
+  if (session.state === 'arrived' || session.state === 'ended') return session;
 
   let updated = { ...session, lastUpdatedAt: Date.now() };
 
   if (update.headingDeg !== undefined) {
     const target = currentSegment(session)?.headingDeg ?? session.currentHeadingDeg;
     const deviated = detectRouteDeviation(target, update.headingDeg);
+    const isActivelyNavigating = session.state === 'navigating';
     updated = {
       ...updated,
       currentHeadingDeg: update.headingDeg,
-      state: deviated && session.state === 'navigating' ? 'rerouting' : updated.state,
+      state: deviated && isActivelyNavigating ? 'rerouting' : updated.state,
     };
   }
 
@@ -160,10 +219,17 @@ export function selectGuidance(
   lastSpokenAt: number,
   nowMs: number = Date.now(),
 ): GuidanceLine | null {
-  if (session.state === 'arrived') {
-    return { text: `You have arrived at ${session.destination}.`, priority: 'high', suppressIfSimilar: false, spokenAt: null };
+  // Terminal states
+  if (session.state === 'arrived' || session.state === 'ended') {
+    const verb = session.state === 'ended' ? 'Navigation ended.' : `You have arrived at ${session.destination}.`;
+    return { text: verb, priority: 'high', suppressIfSimilar: false, spokenAt: null };
   }
+
+  // Waiting states — no movement guidance
   if (session.state === 'idle') return null;
+  if (session.state === 'requesting_location') {
+    return { text: 'Waiting for location permission. Please grant access to enable GPS guidance.', priority: 'normal', suppressIfSimilar: true, spokenAt: null };
+  }
 
   const cooldownElapsed = nowMs - lastSpokenAt >= GUIDANCE_COOLDOWN_MS;
 
@@ -175,8 +241,9 @@ export function selectGuidance(
 
   if (!cooldownElapsed) return null;
 
-  if (session.state === 'rerouting') {
-    return { text: 'Route deviation detected. Turn to correct your heading.', priority: 'high', suppressIfSimilar: false, spokenAt: null };
+  // Sprint 6: 'off_route' is the user-friendly name for heading deviation
+  if (session.state === 'off_route' || session.state === 'rerouting') {
+    return { text: 'You are off your route. Turn to correct your heading.', priority: 'high', suppressIfSimilar: false, spokenAt: null };
   }
 
   if (session.state === 'paused') {
@@ -192,28 +259,36 @@ export function selectGuidance(
 
 // ─── Simulation Tick ──────────────────────────────────────────────────────────
 // Advances the simulation by one tick (for the UI pipeline).
+// Sprint 6: accepts optional sensorUpdate to use real sensor data in place of simulation.
 
 export function processNavigationTick(
   session: NavigationSession,
   tick: number,
   lastSpokenAt: number,
+  sensorUpdate?: NavigationUpdate,
 ): { session: NavigationSession; guidance: GuidanceLine | null } {
-  if (session.state === 'arrived' || session.state === 'idle') {
-    return { session, guidance: null };
+  if (
+    session.state === 'arrived' ||
+    session.state === 'ended' ||
+    session.state === 'idle' ||
+    session.state === 'requesting_location'
+  ) {
+    const guidance = selectGuidance(session, lastSpokenAt, Date.now());
+    return { session, guidance };
   }
 
-  // Simulate heading drift
-  const driftDeg = Math.sin(tick * 0.1) * 8;
-  const simHeading = ((session.currentHeadingDeg + driftDeg) + 360) % 360;
+  let update: NavigationUpdate;
+  if (sensorUpdate !== undefined) {
+    // Use real sensor data when available
+    update = sensorUpdate;
+  } else {
+    // Simulate heading drift and walking distance
+    const driftDeg = Math.sin(tick * 0.1) * 8;
+    const simHeading = ((session.currentHeadingDeg + driftDeg) + 360) % 360;
+    update = { headingDeg: simHeading, distanceTraveledM: 1.2 };
+  }
 
-  // Simulate distance traveled: ~1.2 m per tick (walking pace at 5 fps)
-  const simDistance = 1.2;
-
-  const updated = updateNavigationSession(session, {
-    headingDeg: simHeading,
-    distanceTraveledM: simDistance,
-  });
-
+  const updated = updateNavigationSession(session, update);
   const guidance = selectGuidance(updated, lastSpokenAt, Date.now());
   return { session: updated, guidance };
 }
@@ -229,8 +304,11 @@ export function getRouteProgressPct(session: NavigationSession): number {
 export function getRouteStateLabel(state: RouteState): string {
   const labels: Record<RouteState, string> = {
     idle: 'Idle',
+    requesting_location: '📍 Requesting Location',
     navigating: '🧭 Navigating',
+    off_route: '↩️ Off Route',
     paused: '⏸ Paused',
+    ended: '⏹ Ended',
     arrived: '✅ Arrived',
     rerouting: '🔄 Rerouting',
     lost: '❓ Lost',
@@ -239,5 +317,14 @@ export function getRouteStateLabel(state: RouteState): string {
 }
 
 export function isRouteActive(session: NavigationSession): boolean {
-  return session.state === 'navigating' || session.state === 'rerouting';
+  return (
+    session.state === 'navigating' ||
+    session.state === 'rerouting' ||
+    session.state === 'off_route'
+  );
+}
+
+/** True when the session has definitively finished (arrived or explicitly ended). */
+export function isRouteEnded(session: NavigationSession): boolean {
+  return session.state === 'arrived' || session.state === 'ended';
 }
