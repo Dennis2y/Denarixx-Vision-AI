@@ -1,9 +1,11 @@
 /**
- * VoiceCommandEngine (V5)
+ * VoiceCommandEngine (V5, extended Sprint 7)
  *
  * Parses raw speech-recognition transcript strings into structured
  * VoiceCommandType values. Pure function — no side effects, no I/O.
  * Designed for easy unit testing without a browser environment.
+ *
+ * Sprint 7 adds: start_navigation, stop_navigation
  */
 
 export type VoiceCommandType =
@@ -14,6 +16,8 @@ export type VoiceCommandType =
   | 'where_am_i'
   | 'what_should_i_do'
   | 'save_this_place'
+  | 'start_navigation'
+  | 'stop_navigation'
   | 'emergency_stop'
   | 'unknown';
 
@@ -30,12 +34,42 @@ interface CommandPattern {
   confidence: number;
 }
 
+// NOTE: Order matters — more-specific patterns must appear before bare
+// single-word patterns ('start', 'stop', 'where') that would otherwise
+// swallow multi-word intents.
 const COMMAND_PATTERNS: CommandPattern[] = [
   {
     command: 'emergency_stop',
     patterns: ['emergency', 'danger', 'stop everything', 'abort', 'panic'],
     confidence: 0.97,
   },
+  // ── Navigation commands (before session commands to avoid 'start'/'stop' swallowing) ──
+  {
+    command: 'start_navigation',
+    patterns: [
+      'start navigation',
+      'begin navigation',
+      'start navigating',
+      'begin navigating',
+      'navigate to',
+      'navigate me',
+      'open navigation',
+    ],
+    confidence: 0.92,
+  },
+  {
+    command: 'stop_navigation',
+    patterns: [
+      'stop navigation',
+      'end navigation',
+      'stop navigating',
+      'finish navigation',
+      'cancel navigation',
+      'exit navigation',
+    ],
+    confidence: 0.92,
+  },
+  // ── Session commands ──────────────────────────────────────────────────────────
   {
     command: 'start_session',
     patterns: [
@@ -181,9 +215,27 @@ export class VoiceCommandEngine {
       where_am_i: 'Where Am I',
       what_should_i_do: 'What Should I Do',
       save_this_place: 'Save This Place',
+      start_navigation: 'Start Navigation',
+      stop_navigation: 'Stop Navigation',
       emergency_stop: 'Emergency Stop',
       unknown: 'Unknown',
     };
     return LABELS[command];
+  }
+
+  /** Returns all supported command types (excluding 'unknown') */
+  supportedCommands(): VoiceCommandType[] {
+    return [
+      'start_session',
+      'stop_session',
+      'repeat_last',
+      'describe_surroundings',
+      'where_am_i',
+      'what_should_i_do',
+      'save_this_place',
+      'start_navigation',
+      'stop_navigation',
+      'emergency_stop',
+    ];
   }
 }
