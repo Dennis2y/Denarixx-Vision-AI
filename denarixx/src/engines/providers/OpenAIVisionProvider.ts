@@ -11,11 +11,14 @@
  *
  * If the API call fails for any reason (network, quota, malformed response),
  * the provider falls back to SimulationVisionProvider and sets usedFallback=true.
+ *
+ * Sprint 4: categories field populated via categorizeDetections().
  */
 
 import type { VisionAnalysisProvider, VisionAnalysisV4, VisionHazardResult } from '@/types/vision';
 import type { VisionFrame, Detection, HazardSeverity } from '@/types';
 import { SimulationVisionProvider } from './SimulationVisionProvider';
+import { categorizeDetections } from './categorizeDetections';
 
 const VISION_SYSTEM_PROMPT = `You are a safety-focused AI assistant for blind and visually impaired users.
 Analyze the camera frame and return ONLY a valid JSON object in this exact format:
@@ -48,8 +51,11 @@ Rules you MUST follow:
   - high: serious risk (stairs, step down, large obstacle in path)
   - medium: caution needed (person nearby, slow cyclist, small obstacle)
   - low: awareness only (background elements, distant objects)
-- Object labels should be navigation-relevant: vehicle, bicycle, person, obstacle, step, stairs, road, pavement, door, table, chair
-- Focus ONLY on navigation hazards — ignore colours, brands, text, decorative details
+- Object labels must be navigation-relevant — use ONLY these values:
+  vehicle, bicycle, cyclist, motorcycle, bus, truck, person, pedestrian,
+  obstacle, step, stairs, escalator, road, crossing, intersection, pavement,
+  door, gate, entrance, exit, sign, traffic_light, signal
+- Focus ONLY on navigation hazards — ignore colours, brands, logos, text content
 - Return ONLY the JSON object — no explanatory text before or after`;
 
 interface GPTVisionResponse {
@@ -168,6 +174,7 @@ export class OpenAIVisionProvider implements VisionAnalysisProvider {
       return {
         environment: parsed.environment ?? 'Scanning environment…',
         objects,
+        categories: categorizeDetections(objects),
         hazards,
         confidence: overallConf,
         recommendedAction,

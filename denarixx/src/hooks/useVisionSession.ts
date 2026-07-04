@@ -14,6 +14,7 @@ import { SensorFusionEngine } from '@/engines/sensorFusionEngine';
 import { useLastGuidance } from './useLastGuidance';
 import { loadSettings } from '@/lib/settingsStore';
 import type { Detection, HazardAlert, SceneDescription, SafetyDecision } from '@/types';
+import type { VisionAnalysisV4 } from '@/types/vision';
 import type { WorldModelSnapshot } from '@/types/spatial';
 import type { SensorContext, VibrationPattern } from '@/types/sensors';
 
@@ -233,23 +234,58 @@ export function useVisionSession() {
         addLog(`[scene] Unchanged · ${scene.summary.slice(0, 50)}${scene.summary.length > 50 ? '…' : ''}`);
       }
 
-      // 3. Evaluate hazards
-      const hazardRes = await fetch('/api/hazards/evaluate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: sid, detections }),
-      });
-      const { data: hazardData } = await hazardRes.json();
-      const alerts: HazardAlert[] = hazardData.alerts ?? [];
+      // 3 + 4. Hazard evaluation + safety decision
+      // Sprint 4: when real AI analysis is available, feed its hazards directly
+      // into the cognitive pipeline — skip simulated evaluation round-trips.
+      const visionAnalysis = visionData.visionAnalysis as VisionAnalysisV4 | undefined;
+      const isRealVision = !!(visionAnalysis?.isRealAI && !visionAnalysis?.usedFallback);
 
-      // 4. Safety decision
-      const safetyRes = await fetch('/api/safety/decide', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: sid, alerts }),
-      });
-      const { data: safetyData } = await safetyRes.json();
-      const decision: SafetyDecision = safetyData.decision;
+      let alerts: HazardAlert[];
+      let decision: SafetyDecision;
+
+      if (isRealVision && visionAnalysis) {
+        // Feed real AI hazards directly — no simulated evaluation needed
+        alerts = visionAnalysis.hazards.map((h, i) => ({
+          id: `ai-${Date.now()}-${i}`,
+          type: h.type,
+          description: h.description,
+          severity: h.severity,
+          confidence: h.confidence,
+          timestamp: new Date(),
+          shouldInterrupt: h.severity === 'critical' || h.severity === 'high',
+          disclaimer: 'AI vision analysis — please verify before acting.',
+        }));
+        // Build safety decision from V4 structured output
+        const topHazard =
+          alerts.find((a) => a.severity === 'critical') ??
+          alerts.find((a) => a.severity === 'high') ??
+          alerts[0];
+        const shouldAlert = alerts.length > 0 && (topHazard?.confidence ?? 0) >= 0.5;
+        decision = {
+          shouldAlert,
+          urgency: shouldAlert ? (topHazard?.severity ?? 'none') : 'none',
+          message: visionAnalysis.recommendedAction,
+          confidence: visionAnalysis.confidence,
+          interruptNarration: !!(topHazard?.shouldInterrupt),
+        };
+      } else {
+        // Simulation or fallback — use existing evaluation pipeline
+        const hazardRes = await fetch('/api/hazards/evaluate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: sid, detections }),
+        });
+        const { data: hazardData } = await hazardRes.json();
+        alerts = hazardData.alerts ?? [];
+
+        const safetyRes = await fetch('/api/safety/decide', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: sid, alerts }),
+        });
+        const { data: safetyData } = await safetyRes.json();
+        decision = safetyData.decision;
+      }
 
       // Track peak urgency
       if (decision.urgency !== 'none') {

@@ -7,6 +7,7 @@
  */
 
 import { MockVisionProvider } from './MockVisionProvider';
+import { categorizeDetections } from './categorizeDetections';
 import type { VisionAnalysisProvider, VisionAnalysisV4 } from '@/types/vision';
 import type { VisionFrame, HazardSeverity } from '@/types';
 
@@ -78,6 +79,7 @@ export class SimulationVisionProvider implements VisionAnalysisProvider {
     return {
       environment: buildEnvironmentSummary(labels),
       objects: detections,
+      categories: categorizeDetections(detections),
       hazards,
       confidence: avgConf,
       recommendedAction,
