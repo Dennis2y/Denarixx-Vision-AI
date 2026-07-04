@@ -21,7 +21,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 
 ## Where things live
 
-- **Next.js app:** `denarixx/` — all 11 pages and 13 API routes
+- **Next.js app:** `denarixx/` — all 10 pages and 12 API routes
 - **Express proxy:** `artifacts/api-server/src/app.ts` — single entry point on port 8080
 - **V1 engines:** `denarixx/src/engines/` — VisionEngine, HazardDetectionEngine, SafetyDecisionEngine, SceneReasoningEngine, MemoryEngine, ConversationEngine
 - **V2 engines:** `denarixx/src/engines/` — cognitiveGuardianEngine, proactiveAlertEngine, silenceDecisionEngine, predictiveRiskEngine, companionContextEngine, routineLearningEngine
@@ -30,7 +30,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V2 tests:** `denarixx/tests/cognitiveGuardian.test.ts` (27 tests)
 - **Session hook:** `denarixx/src/hooks/useVisionSession.ts` — 7-step demo flow, completedSteps tracking, session report generation
 - **UI components:** `denarixx/src/components/` — Card, Badge, Button, DemoFlow, SessionReport, HazardPanel, etc.
-- **API routes:** `denarixx/src/app/api/` — 13 routes (health, sessions/start, sessions/end, vision/analyze-frame, hazards/evaluate, safety/decide, scene/describe, conversation/ask, audio/speak, memory, memory/save, navigation)
+- **API routes:** `denarixx/src/app/api/` — 12 routes (health, sessions, sessions/start, sessions/end, vision/analyze-frame, hazards/evaluate, safety/decide, scene/describe, conversation/ask, audio/speak, memory, memory/save)
 - **V2 roadmap:** `denarixx/docs/V2_COGNITIVE_GUARDIAN_ROADMAP.md`
 
 ## Architecture decisions
@@ -47,7 +47,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 
 Denarixx Vision AI is a Phase 1 simulation MVP of an assistive AI perception platform for blind and visually impaired users.
 
-**11 pages:**
+**10 pages:**
 - **Homepage (`/`)** — Investor-grade landing with 7-step demo flow, AI pipeline diagram, roadmap
 - **Vision Session (`/session`)** — Interactive 7-step guided demo with live DemoFlow tracker and SessionReport
 - **Cognitive Guardian (`/guardian`)** — V2 pipeline debugger: pick a scenario, run the full AI decision pipeline, see live timings per stage
