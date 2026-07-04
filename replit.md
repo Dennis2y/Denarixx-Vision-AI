@@ -17,6 +17,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/humanBehaviour.test.ts` — V9 Human Behaviour & Social Intelligence tests (134/134)
 - `cd denarixx && npx tsx tests/mobileReadiness.test.ts` — V10 Mobile Deployment Readiness tests (47/47)
 - `cd denarixx && npx tsx tests/pilotTesting.test.ts` — V11 Pilot Testing tests (117/117)
+- `cd denarixx && npx tsx tests/visionPipeline.test.ts` — V12 Real-Time AI Vision tests (148/148)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
@@ -76,6 +77,11 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V11 routes:** `denarixx/src/app/api/pilot/session/route.ts` — POST/GET/PATCH/DELETE; `denarixx/src/app/api/pilot/feedback/route.ts` — POST/GET
 - **V11 tests:** `denarixx/tests/pilotTesting.test.ts` (117 tests)
 - **V11 docs:** `denarixx/docs/V11_REAL_WORLD_PILOT_TESTING.md`
+- **V12 types:** `denarixx/src/types/vision12.ts` — DetectedObject, TrackedObject, TrackerState, PerceptionFrame, PipelineConfig, ModelDescriptor, PipelineMetrics, SceneUnderstanding, BoundingBox, ObjectVelocity, PIPELINE_PRIVACY, DEFAULT_PIPELINE_CONFIG
+- **V12 engines:** `denarixx/src/engines/visionInferenceEngine.ts` — orchestrator, runSimulationPipeline, prioritizeObjects, selectSpeechGuidance, buildPerceptionFrame; `depthReasoningEngine.ts` — estimateDepthFromBox, assignObjectPriority, buildVelocity, predictNextPosition, estimateTimeToCollision; `objectTrackingEngine.ts` — IoU tracker, updateTracker, createTrackerState, tracksToDetectedObjects; `sceneUnderstandingEngine.ts` — classifyScene, buildSceneUnderstanding; `cameraPipelineEngine.ts` — FPS throttle, shouldSkipFrame, updateMetrics; `modelManagerEngine.ts` — MODEL_REGISTRY (7 providers), getRecommendedModel
+- **V12 page:** `denarixx/src/app/vision/page.tsx` — Live AI Vision: camera preview, tracked objects, scene panel, performance metrics, speech guidance, provider selector, battery mode selector
+- **V12 tests:** `denarixx/tests/visionPipeline.test.ts` (148 tests)
+- **V12 docs:** `denarixx/docs/V12_REAL_TIME_AI_VISION.md`
 - **V1 tests:** `denarixx/tests/engines.test.ts` (24 tests)
 - **V2 tests:** `denarixx/tests/cognitiveGuardian.test.ts` (37 tests — includes AlertThrottleEngine suite)
 - **V3 tests:** `denarixx/tests/v3reasoning.test.ts` (27 tests)
@@ -121,9 +127,10 @@ An assistive AI perception platform for blind and visually impaired users — pr
 
 Denarixx Vision AI is a Phase 11 platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
 
-**13 pages:**
+**14 pages:**
 - **Homepage (`/`)** — Investor-grade landing with 7-step demo flow, AI pipeline diagram, roadmap
 - **Vision Session (`/session`)** — Interactive 7-step guided demo with live DemoFlow tracker, SpatialMapPanel, SensorStatusPanel, and SessionReport
+- **Live AI Vision (`/vision`)** — V12 real-time perception pipeline: camera preview, tracked objects (IoU), scene understanding, performance metrics, speech guidance, provider + battery mode selectors
 - **Pilot Testing (`/pilot`)** — V11 4-phase supervised pilot testing: consent screen, 7 test scenarios, live feedback collection, session report with privacy guarantees and delete option
 - **Devices (`/devices`)** — V8 Smart Glasses Integration Layer: device cards, connect/disconnect, Active Sources selectors, Browser Capabilities, Safety Rules
 - **Cognitive Guardian (`/guardian`)** — V2 pipeline debugger: pick a scenario, run the full AI decision pipeline, see live timings per stage
@@ -143,6 +150,7 @@ Denarixx Vision AI is a Phase 11 platform for blind and visually impaired users.
 - V9 Human Behaviour & Social Intelligence: **134/134 passing**
 - V10 Mobile Deployment Readiness: **47/47 passing**
 - V11 Pilot Testing: **117/117 passing**
+- V12 Real-Time AI Vision Engine: **148/148 passing**
 
 ## User preferences
 
@@ -172,3 +180,4 @@ Denarixx Vision AI is a Phase 11 platform for blind and visually impaired users.
 - V10 docs: `denarixx/docs/V10_MOBILE_DEPLOYMENT_READINESS.md`
 - V10 checklist: `denarixx/docs/MOBILE_TESTING_CHECKLIST.md`
 - V11 docs: `denarixx/docs/V11_REAL_WORLD_PILOT_TESTING.md`
+- V12 docs: `denarixx/docs/V12_REAL_TIME_AI_VISION.md`
