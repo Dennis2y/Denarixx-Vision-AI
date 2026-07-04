@@ -1,6 +1,6 @@
 # Denarixx Vision AI — Phase 1 MVP
 
-An AI perception platform for blind and visually impaired users. Provides continuous scene understanding, hazard detection, audio guidance, and contextual memory.
+An AI perception platform for blind and visually impaired users. Provides continuous scene understanding, hazard detection, audio guidance, and contextual memory — with a V2 Cognitive Guardian layer for proactive, fatigue-aware alerting.
 
 **This is the Phase 1 simulation MVP.** All vision analysis is currently simulated. Real camera input and trained models are planned for subsequent phases.
 
@@ -23,7 +23,7 @@ Open http://localhost:3000. No API keys needed — runs in simulation mode by de
 ## How to Run on Replit
 
 1. Import this repository (Node.js template)
-2. In Replit Secrets: `DATABASE_URL=file:./dev.db`, `VISION_PROVIDER=simulation`
+2. In Replit Secrets: `SESSION_SECRET=<random string>`
 3. Shell: `npm install --ignore-scripts && npm run dev`
 4. No external services required.
 
@@ -33,40 +33,27 @@ Open http://localhost:3000. No API keys needed — runs in simulation mode by de
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | `file:./dev.db` | SQLite (local) or PostgreSQL (production) |
-| `VISION_PROVIDER` | `simulation` | `simulation` or `openai` |
-| `OPENAI_API_KEY` | — | Required only if `VISION_PROVIDER=openai` |
-| `FACE_RECOGNITION_ENABLED` | `false` | Keep false in Phase 1 |
-| `EMERGENCY_STREAMING_ENABLED` | `false` | Keep false in Phase 1 |
+| `SESSION_SECRET` | — | Session signing secret |
+| `VISION_PROVIDER` | `simulation` | `simulation` only in Phase 1 |
+| `DATABASE_URL` | — | PostgreSQL connection string (optional in Phase 1) |
 
 ---
 
 ## Tests
 
 ```bash
+# V1 core engine tests (19 tests)
 npm test
-# 19 engine unit tests, no database or API key required
+
+# V2 Cognitive Guardian tests (27 tests)
+npx tsx tests/cognitiveGuardian.test.ts
 ```
 
----
-
-## Database (optional in Phase 1)
-
-Engines use in-memory stores by default. To enable persistence:
-
-```bash
-npm run db:generate   # generates Prisma client
-npm run db:push       # pushes schema to SQLite
-npm run db:seed       # seeds demo data
-```
-
----
-
-## Docker
-
-```bash
-docker-compose up     # runs on http://localhost:3000
-```
+| Suite | Result |
+|---|---|
+| V1 Core Engines | 19 / 19 passed |
+| V2 Cognitive Guardian | 27 / 27 passed |
+| **Total** | **46 / 46 passed** |
 
 ---
 
@@ -74,8 +61,10 @@ docker-compose up     # runs on http://localhost:3000
 
 | Feature | Status |
 |---|---|
-| All 10 pages | Working |
-| All 12 API routes | Working |
+| All 11 pages | Working |
+| All 13 API routes | Working |
+| V1 engine tests | 19 / 19 passing |
+| V2 Cognitive Guardian tests | 27 / 27 passing |
 | Audio guidance (Web Speech API) | Working |
 | Priority-queued speech output | Working |
 | Hazard confidence scoring | Working |
@@ -83,9 +72,76 @@ docker-compose up     # runs on http://localhost:3000
 | Safety Decision Engine | Working |
 | Memory Engine (in-process) | Working |
 | Conversation Engine | Working |
-| 19 engine unit tests | All passing |
+| V2 Cognitive Guardian Engine | Working |
+| V2 Proactive Alert Engine | Working |
+| V2 Silence Decision Engine | Working |
+| V2 Predictive Risk Engine | Working |
+| V2 Companion Context Engine | Working |
+| V2 Routine Learning Engine | Working |
 | TypeScript — zero errors | Clean |
 | Next.js build | Clean |
+
+---
+
+## Pages
+
+| Path | Description |
+|---|---|
+| `/` | Investor-grade landing page with 7-step demo flow |
+| `/session` | Interactive 7-step guided vision session with live tracker |
+| `/guardian` | V2 Cognitive Guardian pipeline debugger |
+| `/hazards` | Standalone hazard detection tester |
+| `/memory` | AI memory store with seed data and stats |
+| `/navigation` | Navigation guidance stub |
+| `/settings` | Settings page |
+| `/privacy` | Privacy policy |
+| `/admin` | Admin panel |
+| `/docs` | Developer documentation |
+| `/api/*` | 13 JSON API routes (see below) |
+
+---
+
+## API Routes
+
+| Route | Method | Description |
+|---|---|---|
+| `/api/health` | GET | Health check |
+| `/api/sessions/start` | POST | Start a vision session |
+| `/api/sessions/end` | POST | End a session and return metrics |
+| `/api/vision/analyze-frame` | POST | Analyse a simulated vision frame |
+| `/api/hazards/evaluate` | POST | Run hazard detection on detections |
+| `/api/safety/decide` | POST | Run safety decision on hazard alerts |
+| `/api/scene/describe` | POST | Generate a scene description |
+| `/api/conversation/ask` | POST | Ask a natural-language question |
+| `/api/audio/speak` | POST | Request audio guidance text |
+| `/api/memory` | GET | Retrieve all memory items |
+| `/api/memory` | POST | Save a memory item |
+| `/api/memory/save` | POST | Save a memory item (alias) |
+| `/api/navigation` | GET | Navigation guidance stub |
+
+---
+
+## Architecture
+
+```
+Camera Input → Vision Engine → Hazard Detection Engine → Safety Decision Engine
+                             → Scene Reasoning Engine
+                             → Memory Engine
+                             → Conversation Engine → Audio Guidance Engine
+
+                 ┌─────────────────────────────────────────┐
+                 │         V2 Cognitive Guardian            │
+                 │  ProactiveAlertEngine                    │
+                 │  SilenceDecisionEngine                   │
+                 │  PredictiveRiskEngine                    │
+                 │  CompanionContextEngine                  │
+                 │  RoutineLearningEngine                   │
+                 └─────────────────────────────────────────┘
+```
+
+Each engine implements a clean TypeScript interface. Swap any engine by implementing the interface — no other code changes required.
+
+---
 
 ## What is Simulated
 
@@ -96,33 +152,27 @@ docker-compose up     # runs on http://localhost:3000
 - Navigation guidance (stub, no GPS)
 - Memory recall (resets on server restart)
 
-## What Must Be Built Next (Phase 2)
+---
+
+## What Must Be Built Next (Phase 2 / 3)
 
 1. Real vision model (OpenAIVisionProvider or local ONNX/TensorFlow.js)
-2. Persistent database (wire Prisma to API routes)
+2. Persistent database (wire Drizzle/Prisma to API routes)
 3. GPS navigation (browser Geolocation + routing service)
 4. WebSocket push (replace client polling)
-5. Authentication (NextAuth or similar)
+5. Authentication (Replit Auth or Clerk)
 6. LLM conversation engine (replace rule-based stubs)
+7. Persistent routine learning (move RoutineLearningEngine to database)
+
+---
 
 ## Known Risks
 
 | Risk | Notes |
 |---|---|
 | No real-world validation | Must test with real blind/low-vision users before any safety-critical use |
-| Prisma client not generated | Engine binaries need network download; app runs fine in simulation mode without it |
+| In-memory session store | Resets on server restart — Phase 1 limitation |
 | No authentication | Single demo-user mode only |
 | Web Speech API | Best support in Chrome/Edge |
 | Face recognition | Intentionally disabled — requires GDPR DPIA + BIPA consent flow |
 | Emergency streaming | Intentionally disabled — requires jurisdiction-specific legal review |
-
-## Engine Pipeline
-
-```
-Camera Input → Vision Engine → Hazard Detection Engine → Safety Decision Engine
-                             → Scene Reasoning Engine
-                             → Memory Engine
-                             → Conversation Engine → Audio Guidance Engine
-```
-
-Each engine implements a clean TypeScript interface. Swap any engine by implementing the interface — no other code changes required.
