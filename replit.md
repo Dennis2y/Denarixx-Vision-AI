@@ -9,6 +9,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npm run type-check` — TypeScript check for the Next.js app
 - `cd denarixx && npm test` — V1 core engine tests (24/24)
 - `cd denarixx && npx tsx tests/cognitiveGuardian.test.ts` — V2 Cognitive Guardian + AlertThrottleEngine tests (37/37)
+- `cd denarixx && npx tsx tests/guardianAlertQuality.test.ts` — Sprint 5 Guardian Alert Quality tests (60/60)
 - `cd denarixx && npx tsx tests/v3reasoning.test.ts` — V3 Cognitive Reasoning Engine tests (27/27)
 - `cd denarixx && npx tsx tests/voiceCompanion.test.ts` — V5 Voice Companion tests (72/72)
 - `cd denarixx && npx tsx tests/spatial.test.ts` — V6 Spatial Intelligence tests (86/86)
@@ -97,6 +98,9 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V13 docs:** `denarixx/docs/V13_INDOOR_OUTDOOR_NAVIGATION_ENGINE.md`
 - **V1 tests:** `denarixx/tests/engines.test.ts` (24 tests)
 - **V2 tests:** `denarixx/tests/cognitiveGuardian.test.ts` (37 tests — includes AlertThrottleEngine suite)
+- **Sprint 5 engines:** `src/engines/alertDeduplicationEngine.ts` — cross-frame hazard tracking (appeared/disappeared/ongoing, everSeenBeforeFrame snapshot); `guardianWordingEngine.ts` — specific directional messages, 30+ hazard templates, confidence hedging, directional hints from boundingBox; `guardianDecisionLogger.ts` — ring-buffer 100 entries, spoke/silent, getSilenceRatio, getSpeakTriggerSummary; `alertQualityEngine.ts` — Sprint 5 orchestrator, speak-when rules (6 triggers + critical bypass)
+- **Sprint 5 tests:** `denarixx/tests/guardianAlertQuality.test.ts` (60 tests)
+- **Sprint 5 docs:** `denarixx/docs/SPRINT_5_GUARDIAN_ALERT_QUALITY.md`
 - **V3 tests:** `denarixx/tests/v3reasoning.test.ts` (27 tests)
 - **V5 tests:** `denarixx/tests/voiceCompanion.test.ts` (72 tests)
 - **V6 tests:** `denarixx/tests/spatial.test.ts` (86 tests)
@@ -134,7 +138,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V18 tests:** `denarixx/tests/manufacturingReadiness.test.ts` (144 tests)
 - **V18 docs:** `denarixx/docs/V18_MANUFACTURING_READINESS.md`, `denarixx/docs/CERTIFICATION_AND_COMPLIANCE_ROADMAP.md`, `denarixx/docs/MANUFACTURER_REQUIREMENTS_BRIEF.md`
 - **Camera hook:** `denarixx/src/hooks/useCameraCapture.ts` — getUserMedia, stream lifecycle, frame capture (JPEG base64), 4-state status machine
-- **Alert throttle engine:** `denarixx/src/engines/alertThrottleEngine.ts` — per-severity cooldowns, shouldSpeak() decision, confidence-escalation override, speak-count tracking
+- **Alert throttle engine:** `denarixx/src/engines/alertThrottleEngine.ts` — per-severity cooldowns (Sprint 5: critical:5s, high:10s, medium:20s, low:30s), shouldSpeak() decision, confidence-escalation override, speak-count tracking
 - **Session hook:** `denarixx/src/hooks/useVisionSession.ts` — 7-step demo flow, camera integration, spatial intelligence, completedSteps tracking, session report generation
 - **UI components:** `denarixx/src/components/` — Card, Badge, Button, DemoFlow, SessionReport, HazardPanel, SpatialMapPanel, etc.
 - **API routes:** `denarixx/src/app/api/` — 13 routes (health, sessions, sessions/start, sessions/end, vision/analyze-frame, hazards/evaluate, safety/decide, scene/describe, conversation/ask, audio/speak, memory, memory/save, navigation)

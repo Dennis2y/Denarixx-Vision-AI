@@ -1,10 +1,28 @@
+/**
+ * CognitiveGuardianEngine — V2 + Sprint 5
+ *
+ * Orchestrates the full V2 cognitive pipeline (ProactiveAlertEngine,
+ * SilenceDecisionEngine, PredictiveRiskEngine, CompanionContextEngine,
+ * RoutineLearningEngine) with optional Sprint 5 quality layer.
+ *
+ * Sprint 5: when `categories` (DetectedCategories from Sprint 4) are provided,
+ * the AlertQualityEngine runs deduplication, improved wording, and logs the
+ * speak/silent decision with a structured reason. The result is available in
+ * `GuardianDecision.qualityDecision`.
+ *
+ * Backward-compatible: existing callers that do NOT pass `categories` see
+ * identical behaviour to V2.
+ */
+
 import type { Detection, HazardAlert, SafetyDecision } from '@/types';
-import type { GuardianDecision } from '@/types/cognitive';
+import type { DetectedCategories, VisionHazardResult } from '@/types/vision';
+import type { GuardianDecision, RiskLevel } from '@/types/cognitive';
 import { ProactiveAlertEngine } from './proactiveAlertEngine';
 import { SilenceDecisionEngine } from './silenceDecisionEngine';
 import { PredictiveRiskEngine } from './predictiveRiskEngine';
 import { CompanionContextEngine } from './companionContextEngine';
 import { RoutineLearningEngine } from './routineLearningEngine';
+import { AlertQualityEngine } from './alertQualityEngine';
 
 interface CognitiveGuardianOptions {
   maxAlertsPerMinute?: number;
@@ -17,8 +35,10 @@ export class CognitiveGuardianEngine {
   private riskEngine: PredictiveRiskEngine;
   private contextEngine: CompanionContextEngine;
   private routineEngine: RoutineLearningEngine;
+  private qualityEngine: AlertQualityEngine;
   private frameCount = 0;
   private alertCount = 0;
+  private prevRiskLevel: RiskLevel = 'none';
 
   constructor(options: CognitiveGuardianOptions = {}) {
     this.proactiveEngine = new ProactiveAlertEngine(options.proactiveThreshold ?? 0.4);
@@ -29,12 +49,28 @@ export class CognitiveGuardianEngine {
     this.riskEngine = new PredictiveRiskEngine();
     this.contextEngine = new CompanionContextEngine();
     this.routineEngine = new RoutineLearningEngine();
+    this.qualityEngine = new AlertQualityEngine();
   }
 
+  /**
+   * Process a frame and return a GuardianDecision.
+   *
+   * @param detections  Legacy Detection[] — always required.
+   * @param baseDecision The safety decision from the evaluation pipeline.
+   * @param alerts       Legacy HazardAlert[] — pass [] if none.
+   * @param categories   Sprint 4 DetectedCategories — when provided, activates the
+   *                     Sprint 5 AlertQualityEngine (dedup, wording, logging).
+   * @param aiHazards    Real AI hazard results from VisionAnalysisV4 — used by the
+   *                     quality engine when categories are present.
+   * @param repeatRequested  True when the user explicitly asked for a repeat.
+   */
   process(
     detections: Detection[],
     baseDecision: SafetyDecision,
-    _alerts: HazardAlert[]
+    alerts: HazardAlert[],
+    categories?: DetectedCategories,
+    aiHazards?: VisionHazardResult[],
+    repeatRequested?: boolean
   ): GuardianDecision {
     this.frameCount++;
     this.riskEngine.addFrame(detections);
@@ -75,27 +111,48 @@ export class CognitiveGuardianEngine {
       `Fatigue: ${silenceDecision.fatigueLevel}`,
     ].join(' | ');
 
+    // Sprint 5: run quality engine when categories are provided
+    let qualityDecision = undefined;
+    if (categories) {
+      qualityDecision = this.qualityEngine.process({
+        detections,
+        categories,
+        aiHazards,
+        alerts,
+        baseDecision,
+        prevRiskLevel: this.prevRiskLevel,
+        repeatRequested,
+      });
+    }
+
+    this.prevRiskLevel = riskPrediction.predictedRisk;
+
     return {
-      shouldAlert,
-      shouldSilence: silenceDecision.shouldSilence,
+      shouldAlert: qualityDecision ? qualityDecision.shouldSpeak : shouldAlert,
+      shouldSilence: qualityDecision ? !qualityDecision.shouldSpeak : silenceDecision.shouldSilence,
       proactiveAlerts,
       riskPrediction,
       userContext,
-      message: shouldAlert ? baseDecision.message : null,
-      confidence: baseDecision.confidence,
-      reasoning,
+      message: qualityDecision ? qualityDecision.message : (shouldAlert ? baseDecision.message : null),
+      confidence: qualityDecision ? qualityDecision.confidence : baseDecision.confidence,
+      reasoning: qualityDecision
+        ? `Quality[${qualityDecision.speakTrigger ?? qualityDecision.silenceReason}] | ${reasoning}`
+        : reasoning,
+      qualityDecision,
     };
   }
 
   reset() {
     this.frameCount = 0;
     this.alertCount = 0;
+    this.prevRiskLevel = 'none';
     this.contextEngine.reset();
     this.riskEngine.clearHistory();
     this.routineEngine.clear();
+    this.qualityEngine.reset();
   }
 
-  getFrameCount(): number {
-    return this.frameCount;
-  }
+  getFrameCount(): number { return this.frameCount; }
+
+  getQualityEngine(): AlertQualityEngine { return this.qualityEngine; }
 }

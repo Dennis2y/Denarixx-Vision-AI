@@ -314,7 +314,7 @@ async function runAll() {
     assert(result.msUntilCooldownExpires > 0, 'cooldown remaining should be positive');
   });
 
-  await test('silences same high hazard within 15s cooldown', () => {
+  await test('silences same high hazard within 10s cooldown', () => {
     throttle.reset();
     throttle.record('obstacle', 'high', 0.8, 'Obstacle ahead.');
     const result = throttle.shouldSpeak({
@@ -323,7 +323,7 @@ async function runAll() {
       confidence: 0.81, // only tiny confidence increase — not enough to override
       message: 'Obstacle ahead.',
     });
-    assert(!result.shouldSpeak, 'same high hazard within 15s cooldown should be silenced');
+    assert(!result.shouldSpeak, 'same high hazard within 10s cooldown should be silenced');
   });
 
   await test('always speaks for critical hazard regardless of cooldown', () => {

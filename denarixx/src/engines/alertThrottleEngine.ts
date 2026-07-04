@@ -28,10 +28,15 @@ interface ThrottleRecord {
   lastMessage: string;
 }
 
+// Sprint 5 updated cooldowns:
+//   critical  →  5 s  (life-safety — allows repeats)
+//   high      → 10 s  (was 15 s — reduced for faster re-alert on serious hazards)
+//   medium    → 20 s  (was 30 s — reduced for better hazard tracking)
+//   low       → 30 s  (unchanged)
 const COOLDOWN_MS: Record<string, number> = {
   critical: 5_000,
-  high: 15_000,
-  medium: 30_000,
+  high: 10_000,
+  medium: 20_000,
   low: 30_000,
 };
 
