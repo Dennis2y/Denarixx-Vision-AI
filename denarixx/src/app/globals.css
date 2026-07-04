@@ -18,6 +18,48 @@ body {
   outline-offset: 2px;
 }
 
+/* ── High contrast mode (system or explicit toggle) ──────────────────────── */
+@media (prefers-contrast: more) {
+  body { background: #000; color: #fff; }
+  a, button { outline: 2px solid currentColor; }
+}
+
+.high-contrast-mode body,
+.high-contrast-mode {
+  --background: #000000;
+  --foreground: #ffffff;
+  background: #000 !important;
+  color: #fff !important;
+}
+
+.high-contrast-mode .text-gray-400,
+.high-contrast-mode .text-gray-500,
+.high-contrast-mode .text-gray-600 {
+  color: #d1d5db !important;
+}
+
+/* ── Reduced motion (system or explicit toggle) ───────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.reduced-motion *, .reduced-motion *::before, .reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* ── Minimum touch target ─────────────────────────────────────────────────── */
+.touch-target {
+  min-height: 48px;
+  min-width: 48px;
+}
+
 /* Screen reader only */
 .sr-only {
   position: absolute;

@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/Button';
 import { loadSettings, saveSettings, resetSettings, SETTINGS_DEFAULTS } from '@/lib/settingsStore';
 import type { AppSettings } from '@/lib/settingsStore';
 import { resetOnboarding } from '@/components/session/OnboardingFlow';
+import { usePWAInstall } from '@/hooks/usePWAInstall';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings>(SETTINGS_DEFAULTS);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [saved, setSaved] = useState(false);
   const [onboardingReset, setOnboardingReset] = useState(false);
+  const { canInstall, isInstalled, promptInstall } = usePWAInstall();
 
   // Load settings and voices from browser on mount
   useEffect(() => {
@@ -33,6 +35,12 @@ export default function SettingsPage() {
   const handleSave = useCallback(() => {
     saveSettings(settings);
     setSaved(true);
+    // Apply accessibility classes immediately on save
+    const html = document.documentElement;
+    if (settings.highContrastMode) html.classList.add('high-contrast-mode');
+    else html.classList.remove('high-contrast-mode');
+    if (settings.reducedMotion) html.classList.add('reduced-motion');
+    else html.classList.remove('reduced-motion');
     setTimeout(() => setSaved(false), 3000);
   }, [settings]);
 
@@ -491,6 +499,128 @@ export default function SettingsPage() {
         </button>
       </div>
 
+      {/* ── V10: Mobile & Accessibility ──────────────────────────────────── */}
+      <section className="mb-8 space-y-4" aria-labelledby="mobile-heading">
+        <h2 id="mobile-heading" className="text-lg font-bold text-white">📱 Mobile &amp; Accessibility</h2>
+        <p className="text-gray-500 text-xs -mt-2">
+          V10 settings for mobile deployment. Changes apply after Save.
+        </p>
+
+        {/* High Contrast Mode */}
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white font-semibold mb-0.5">High Contrast Mode</p>
+              <p className="text-gray-400 text-xs">
+                Increase text and background contrast for low-vision users.
+              </p>
+            </div>
+            <button
+              role="switch"
+              aria-checked={settings.highContrastMode}
+              onClick={() => update('highContrastMode', !settings.highContrastMode)}
+              className={`relative w-12 h-6 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 shrink-0 ${
+                settings.highContrastMode
+                  ? 'bg-yellow-500 border-yellow-600'
+                  : 'bg-gray-700 border-gray-600'
+              }`}
+              aria-label="Toggle high contrast mode"
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  settings.highContrastMode ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </Card>
+
+        {/* Reduced Motion */}
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white font-semibold mb-0.5">Reduced Motion</p>
+              <p className="text-gray-400 text-xs">
+                Disable all animations and transitions. Helps with motion sensitivity.
+              </p>
+            </div>
+            <button
+              role="switch"
+              aria-checked={settings.reducedMotion}
+              onClick={() => update('reducedMotion', !settings.reducedMotion)}
+              className={`relative w-12 h-6 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 shrink-0 ${
+                settings.reducedMotion
+                  ? 'bg-yellow-500 border-yellow-600'
+                  : 'bg-gray-700 border-gray-600'
+              }`}
+              aria-label="Toggle reduced motion"
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  settings.reducedMotion ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </Card>
+
+        {/* Fullscreen Walking Mode */}
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white font-semibold mb-0.5">Fullscreen Walking Mode</p>
+              <p className="text-gray-400 text-xs">
+                Auto-enter fullscreen with large emergency stop button when session starts.
+              </p>
+            </div>
+            <button
+              role="switch"
+              aria-checked={settings.fullscreenWalkingMode}
+              onClick={() => update('fullscreenWalkingMode', !settings.fullscreenWalkingMode)}
+              className={`relative w-12 h-6 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 shrink-0 ${
+                settings.fullscreenWalkingMode
+                  ? 'bg-yellow-500 border-yellow-600'
+                  : 'bg-gray-700 border-gray-600'
+              }`}
+              aria-label="Toggle fullscreen walking mode"
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  settings.fullscreenWalkingMode ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </Card>
+
+        {/* PWA Install */}
+        {canInstall && !isInstalled && (
+          <Card>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-white font-semibold mb-0.5">Add to Home Screen</p>
+                <p className="text-gray-400 text-xs">
+                  Install Denarixx as an app for the best experience on Android and iPhone.
+                </p>
+              </div>
+              <button
+                onClick={() => promptInstall()}
+                className="shrink-0 px-4 py-2 rounded-xl bg-yellow-500 text-black font-bold text-sm hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                aria-label="Install Denarixx Vision AI as an app"
+              >
+                Install
+              </button>
+            </div>
+          </Card>
+        )}
+
+        {isInstalled && (
+          <div className="bg-green-950/50 border border-green-800 rounded-xl p-3 text-green-300 text-sm">
+            ✓ Denarixx is installed as an app on this device.
+          </div>
+        )}
+      </section>
+
       {/* ── Accessibility Notes ─────────────────────────────────────────── */}
       <Card className="mb-6">
         <CardHeader><CardTitle>Accessibility Notes</CardTitle></CardHeader>
@@ -500,6 +630,8 @@ export default function SettingsPage() {
           <li>All interactive elements have screen reader labels</li>
           <li>Audio alerts use priority queuing — critical alerts always interrupt</li>
           <li>Voice commands work in Chrome and Edge (not Firefox/Safari)</li>
+          <li>Reduced motion disables all CSS transitions and animations</li>
+          <li>Walking Mode shows a large emergency stop button for one-thumb use</li>
         </ul>
       </Card>
 

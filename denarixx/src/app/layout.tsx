@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import Link from 'next/link';
 import './globals.css';
+import { PWASetup } from '@/components/PWASetup';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
@@ -9,15 +10,25 @@ const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin']
 export const metadata: Metadata = {
   title: 'Denarixx Vision AI — AI Perception Platform',
   description:
-    'Assistive AI perception platform for blind and visually impaired users. Phase 1 MVP.',
+    'Assistive AI perception platform for blind and visually impaired users. Real-time hazard detection, scene understanding and audio guidance.',
   manifest: '/manifest.json',
-  keywords: ['assistive technology', 'blind', 'visually impaired', 'AI', 'perception'],
+  keywords: ['assistive technology', 'blind', 'visually impaired', 'AI', 'perception', 'PWA'],
+  appleWebApp: {
+    capable: true,
+    title: 'Denarixx',
+    statusBarStyle: 'black-translucent',
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0f172a',
+  themeColor: '#030712',
   width: 'device-width',
   initialScale: 1,
+  viewportFit: 'cover',
+  maximumScale: 5,
 };
 
 const NAV_LINKS = [
@@ -40,6 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-950 text-white min-h-screen`}
       >
+        <PWASetup />
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-yellow-400 focus:text-black focus:px-3 focus:py-1 focus:rounded"

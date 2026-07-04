@@ -15,6 +15,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/sensorFusion.test.ts` — V7 Phone Sensor tests (69/69)
 - `cd denarixx && npx tsx tests/hardwareBridge.test.ts` — V8 Smart Glasses HAL tests (97/97)
 - `cd denarixx && npx tsx tests/humanBehaviour.test.ts` — V9 Human Behaviour & Social Intelligence tests (134/134)
+- `cd denarixx && npx tsx tests/mobileReadiness.test.ts` — V10 Mobile Deployment Readiness tests (47/47)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
@@ -56,6 +57,17 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V9 types:** `denarixx/src/types/social.ts` — HumanActivity, NearbyPerson, SocialContext, CrowdState, InteractionPrediction, SocialAlert, SocialInput, SocialScenario
 - **V9 engines:** `denarixx/src/engines/humanBehaviourEngine.ts` — activity/direction/distance inference; `crowdUnderstandingEngine.ts` — density, queue detection, crowd risk; `interactionPredictionEngine.ts` — collision risk, path crossing, time to approach; `socialAwarenessEngine.ts` — full pipeline, guidance, alerts, 8 scenarios
 - **V9 component:** `denarixx/src/components/session/SocialAwarenessPanel.tsx` — live social awareness panel on session page (self-contained simulation, 4 s tick)
+- **V10 pwa lib:** `denarixx/src/lib/pwa.ts` — SW registration, install detection, offline/battery/connection utilities, capability check
+- **V10 hook:** `denarixx/src/hooks/usePWAInstall.ts` — install prompt state, online/offline tracking
+- **V10 component:** `denarixx/src/components/PWASetup.tsx` — client bootstrap: SW registration, high-contrast/reduced-motion class, offline + install banners
+- **V10 session:** session page — walking mode overlay, emergency stop, battery warning, offline notice, walking/emergency buttons during active session
+- **V10 settings:** settings page — high contrast mode, reduced motion, fullscreen walking mode, PWA install button
+- **V10 guardian:** guardian page — `role="group"` on scenario picker, `aria-busy` + `aria-label` on run button
+- **V10 sw:** `denarixx/public/sw.js` — cache-first assets, network-first navigation, offline JSON stub for API
+- **V10 offline:** `denarixx/public/offline.html` — spoken offline message, auto-reload on reconnect
+- **V10 manifest:** `denarixx/public/manifest.json` — display_override, shortcuts to /session + /settings, portrait lock, start_url=/session
+- **V10 globals:** high-contrast-mode, reduced-motion CSS classes + @media (prefers-contrast/reduced-motion)
+- **V10 docs:** `denarixx/docs/V10_MOBILE_DEPLOYMENT_READINESS.md`, `denarixx/docs/MOBILE_TESTING_CHECKLIST.md`
 - **V1 tests:** `denarixx/tests/engines.test.ts` (24 tests)
 - **V2 tests:** `denarixx/tests/cognitiveGuardian.test.ts` (37 tests — includes AlertThrottleEngine suite)
 - **V3 tests:** `denarixx/tests/v3reasoning.test.ts` (27 tests)
@@ -64,6 +76,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V7 tests:** `denarixx/tests/sensorFusion.test.ts` (69 tests)
 - **V8 tests:** `denarixx/tests/hardwareBridge.test.ts` (97 tests)
 - **V9 tests:** `denarixx/tests/humanBehaviour.test.ts` (134 tests)
+- **V10 tests:** `denarixx/tests/mobileReadiness.test.ts` (47 tests)
 - **Camera hook:** `denarixx/src/hooks/useCameraCapture.ts` — getUserMedia, stream lifecycle, frame capture (JPEG base64), 4-state status machine
 - **Alert throttle engine:** `denarixx/src/engines/alertThrottleEngine.ts` — per-severity cooldowns, shouldSpeak() decision, confidence-escalation override, speak-count tracking
 - **Session hook:** `denarixx/src/hooks/useVisionSession.ts` — 7-step demo flow, camera integration, spatial intelligence, completedSteps tracking, session report generation
@@ -90,10 +103,12 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V8 hardware abstraction:** Three pure engines (WearableConnectionEngine, DeviceCapabilityEngine, HardwareBridgeEngine). Phone camera is always auto-activated via `ensurePhoneCamera()`. All other devices start disconnected. Camera source priority: denarixx_glasses > wifi_glasses > bluetooth > usb > phone > simulation.
 - **V8 safety rules:** SAFETY_RULES constants in hardwareBridgeEngine — noVideoStorage, noFaceRecognition, warnOnVisionDisconnect, phoneCameraFallback all true. Glasses disconnect during session → "Vision device disconnected. Please stop and check carefully."
 - **V9 privacy rules:** No person ever identified or named. Emotions never inferred as facts. Only observable behaviour described. Hedging language enforced ("appears to be", "may be"). All four engines are pure — no async, no I/O.
+- **V10 PWA:** SW cache name `denarixx-v10`. Bump to `denarixx-v11` on next deploy to purge old caches. start_url = `/session`. `isOffline()` guards `typeof navigator.onLine !== 'boolean'` (Node.js has navigator but no onLine). Walking mode overlay is React-level (not native Fullscreen API) so it works on iOS.
+- **V10 settings:** `highContrastMode`, `reducedMotion`, `fullscreenWalkingMode` in AppSettings. Classes applied to `<html>` by PWASetup on mount and by settings page on Save.
 
 ## Product
 
-Denarixx Vision AI is a Phase 9 platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
+Denarixx Vision AI is a Phase 10 platform for blind and visually impaired users. The Vision Session page supports real browser camera input (getUserMedia) with simulation as automatic fallback. Phase 4 adds a real AI vision provider system (OpenAI GPT-4o) — set `VISION_PROVIDER=openai` and `OPENAI_API_KEY` to enable. Simulation is the default and always the fallback.
 
 **12 pages:**
 - **Homepage (`/`)** — Investor-grade landing with 7-step demo flow, AI pipeline diagram, roadmap
@@ -114,6 +129,7 @@ Denarixx Vision AI is a Phase 9 platform for blind and visually impaired users. 
 - V7 Phone Sensor Integration: **69/69 passing**
 - V8 Smart Glasses HAL: **97/97 passing**
 - V9 Human Behaviour & Social Intelligence: **134/134 passing**
+- V10 Mobile Deployment Readiness: **47/47 passing**
 
 ## User preferences
 
@@ -140,3 +156,5 @@ Denarixx Vision AI is a Phase 9 platform for blind and visually impaired users. 
 - V7 docs: `denarixx/docs/V7_PHONE_SENSOR_INTEGRATION.md`
 - V8 docs: `denarixx/docs/V8_SMART_GLASSES_INTEGRATION.md`
 - V9 docs: `denarixx/docs/V9_HUMAN_BEHAVIOUR_AND_SOCIAL_INTELLIGENCE.md`
+- V10 docs: `denarixx/docs/V10_MOBILE_DEPLOYMENT_READINESS.md`
+- V10 checklist: `denarixx/docs/MOBILE_TESTING_CHECKLIST.md`

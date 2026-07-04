@@ -1,24 +1,51 @@
 {
   "name": "Denarixx Vision AI",
-  "short_name": "DenarixxAI",
-  "description": "AI perception platform for blind and visually impaired users",
-  "start_url": "/",
+  "short_name": "Denarixx",
+  "description": "AI perception platform for blind and visually impaired users. Real-time hazard detection, scene understanding and audio guidance.",
+  "start_url": "/session",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#030712",
   "theme_color": "#030712",
-  "orientation": "portrait",
-  "categories": ["accessibility", "health"],
+  "orientation": "portrait-primary",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["accessibility", "health", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "32x32",
+      "type": "image/x-icon"
+    },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Start Vision Session",
+      "short_name": "Session",
+      "description": "Open the live vision and hazard detection session",
+      "url": "/session",
+      "icons": [{ "src": "/favicon.ico", "sizes": "32x32" }]
+    },
+    {
+      "name": "Settings",
+      "short_name": "Settings",
+      "description": "Adjust voice, accessibility and sensor settings",
+      "url": "/settings",
+      "icons": [{ "src": "/favicon.ico", "sizes": "32x32" }]
     }
   ]
 }

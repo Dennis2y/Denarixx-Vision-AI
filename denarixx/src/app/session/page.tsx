@@ -1,10 +1,12 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useVisionSession } from '@/hooks/useVisionSession';
 import type { CameraStatus } from '@/hooks/useVisionSession';
 import { useVoiceCommands } from '@/hooks/useVoiceCommands';
 import type { ParsedVoiceCommand } from '@/hooks/useVoiceCommands';
+import { usePWAInstall } from '@/hooks/usePWAInstall';
+import { batteryWarningMessage } from '@/lib/pwa';
 import { SessionControls } from '@/components/session/SessionControls';
 import { HazardPanel } from '@/components/session/HazardPanel';
 import { ScenePanel } from '@/components/session/ScenePanel';
@@ -40,7 +42,55 @@ export default function SessionPage() {
     stopGPS,
   } = useVisionSession();
 
-  const locationPrecision = loadSettings().locationPrecision;
+  const _settings = loadSettings();
+  const locationPrecision = _settings.locationPrecision;
+
+  const { isOffline } = usePWAInstall();
+  const [isWalkingMode, setIsWalkingMode] = useState(false);
+
+  // Battery warning (from V7 sensor context)
+  const batteryLevel = sensorContext?.battery?.level ?? 1;
+  const batteryWarn = batteryWarningMessage(batteryLevel);
+
+  // Auto-enter walking mode when setting is on and session starts
+  useEffect(() => {
+    if (_settings.fullscreenWalkingMode && state.isActive && !isWalkingMode) {
+      setIsWalkingMode(true);
+      try { document.documentElement.requestFullscreen?.(); } catch { /* iOS */ }
+    }
+  }, [state.isActive]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Exit walking mode when session ends
+  useEffect(() => {
+    if (!state.isActive) {
+      setIsWalkingMode(false);
+      try {
+        if (typeof document !== 'undefined' && document.fullscreenElement) {
+          document.exitFullscreen?.();
+        }
+      } catch { /* ignore */ }
+    }
+  }, [state.isActive]);
+
+  const handleEmergencyStop = useCallback(() => {
+    speak('Session stopped. Emergency stop activated.');
+    stopSession();
+    setIsWalkingMode(false);
+  }, [speak, stopSession]);
+
+  const enterWalkingMode = useCallback(() => {
+    setIsWalkingMode(true);
+    try { document.documentElement.requestFullscreen?.(); } catch { /* iOS */ }
+  }, []);
+
+  const exitWalkingMode = useCallback(() => {
+    setIsWalkingMode(false);
+    try {
+      if (typeof document !== 'undefined' && document.fullscreenElement) {
+        document.exitFullscreen?.();
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   // ── Voice command handler ──────────────────────────────────────────────────
 
@@ -139,6 +189,73 @@ export default function SessionPage() {
 
   return (
     <>
+      {/* ── Walking Mode Overlay ─────────────────────────────────────────── */}
+      {isWalkingMode && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Walking Mode — simplified session view"
+          className="fixed inset-0 z-60 bg-gray-950 flex flex-col items-center justify-center gap-6 px-6 py-safe"
+        >
+          {/* Header */}
+          <div className="text-center">
+            <p className="text-yellow-400 text-sm font-bold uppercase tracking-widest mb-1">
+              🚶 Walking Mode
+            </p>
+            <CameraStatusBadge status={cameraStatus} />
+          </div>
+
+          {/* Battery warning */}
+          {batteryWarn && (
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="w-full max-w-sm bg-amber-900/80 border border-amber-600 rounded-xl px-4 py-3 text-amber-100 text-sm text-center"
+            >
+              🔋 {batteryWarn}
+            </div>
+          )}
+
+          {/* Last guidance */}
+          {lastGuidance && (
+            <div className="w-full max-w-sm bg-gray-900 border border-gray-700 rounded-2xl px-5 py-4 text-center">
+              <p className="text-gray-400 text-xs uppercase tracking-wider mb-2">Last Guidance</p>
+              <p className="text-white text-lg font-semibold leading-snug">{lastGuidance?.text}</p>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex flex-col gap-4 w-full max-w-xs">
+            <button
+              onClick={handleEmergencyStop}
+              disabled={!state.isActive}
+              className="w-full py-5 rounded-2xl bg-red-600 hover:bg-red-500 text-white text-xl font-black border-2 border-red-400
+                focus:outline-none focus:ring-4 focus:ring-red-400 disabled:opacity-40 touch-target"
+              aria-label="Emergency stop — end vision session immediately"
+            >
+              ⛔ Emergency Stop
+            </button>
+            <button
+              onClick={repeatLastGuidance}
+              disabled={!lastGuidance}
+              className="w-full py-4 rounded-2xl bg-yellow-500 hover:bg-yellow-400 text-black text-base font-bold border-2 border-yellow-400
+                focus:outline-none focus:ring-4 focus:ring-yellow-300 disabled:opacity-40 touch-target"
+              aria-label="Repeat last spoken guidance"
+            >
+              🔁 Repeat Last Guidance
+            </button>
+            <button
+              onClick={exitWalkingMode}
+              className="w-full py-3 rounded-xl border border-gray-600 text-gray-300 text-sm font-semibold
+                hover:border-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-400 touch-target"
+              aria-label="Exit walking mode and return to full session view"
+            >
+              ✕ Exit Walking Mode
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Onboarding (shown once via localStorage) ────────────────────── */}
       <OnboardingFlow
         onComplete={() => {}}
@@ -156,6 +273,30 @@ export default function SessionPage() {
           </div>
           <CameraStatusBadge status={cameraStatus} />
         </div>
+
+        {/* ── Offline warning ────────────────────────────────────────────── */}
+        {isOffline && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="bg-amber-950 border border-amber-700 text-amber-200 rounded-xl p-3 mb-4 text-sm flex items-center gap-2"
+          >
+            <span aria-hidden="true">📴</span>
+            <span>Offline — simulation mode active. All AI processing uses on-device simulation.</span>
+          </div>
+        )}
+
+        {/* ── Battery warning ────────────────────────────────────────────── */}
+        {batteryWarn && (
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="bg-amber-950 border border-amber-600 text-amber-100 rounded-xl p-3 mb-4 text-sm flex items-center gap-2"
+          >
+            <span aria-hidden="true">🔋</span>
+            <span>{batteryWarn}</span>
+          </div>
+        )}
 
         {state.error && (
           <div
@@ -293,6 +434,27 @@ export default function SessionPage() {
             onStart={startSession}
             onStop={stopSession}
           />
+          {/* Walking Mode + Emergency Stop (mobile) */}
+          {state.isActive && (
+            <div className="mt-3 flex gap-3 flex-wrap">
+              <button
+                onClick={enterWalkingMode}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-yellow-700/60 bg-yellow-950/30 text-yellow-300 text-sm font-semibold
+                  hover:bg-yellow-950/60 focus:outline-none focus:ring-2 focus:ring-yellow-400 touch-target"
+                aria-label="Enter fullscreen walking mode with large emergency stop button"
+              >
+                🚶 Walking Mode
+              </button>
+              <button
+                onClick={handleEmergencyStop}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-700/60 bg-red-950/30 text-red-300 text-sm font-semibold
+                  hover:bg-red-950/70 focus:outline-none focus:ring-2 focus:ring-red-400 touch-target"
+                aria-label="Emergency stop — immediately end the vision session"
+              >
+                ⛔ Emergency Stop
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ── V7 Sensor Status ───────────────────────────────────────────── */}

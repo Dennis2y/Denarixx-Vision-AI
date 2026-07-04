@@ -387,7 +387,11 @@ export default function GuardianPage() {
       {/* Scenario picker + launch */}
       <Card className="mb-6">
         <CardHeader><CardTitle>Choose a scenario</CardTitle></CardHeader>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+        <div
+          role="group"
+          aria-label="Scenario selection"
+          className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5"
+        >
           {SCENARIOS.map(s => (
             <button
               key={s.id}
@@ -424,7 +428,13 @@ export default function GuardianPage() {
               <p className="text-gray-500">Select a scenario and start the simulation.</p>
             )}
           </div>
-          <Button onClick={startSimulation} disabled={running} size="lg">
+          <Button
+            onClick={startSimulation}
+            disabled={running}
+            size="lg"
+            aria-busy={running}
+            aria-label={running ? 'Simulation running…' : 'Run guardian simulation'}
+          >
             {running ? (
               <span className="flex items-center gap-2">
                 <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />

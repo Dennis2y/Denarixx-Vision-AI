@@ -5,6 +5,7 @@
  * Used by the Settings page and the session hook.
  *
  * V7: adds SensorSettings fields to AppSettings.
+ * V10: adds highContrastMode, reducedMotion, fullscreenWalkingMode.
  */
 
 import type { GuidancePersonality } from '@/engines/guidancePersonalityEngine';
@@ -42,6 +43,13 @@ export interface AppSettings {
   vibrationEnabled: boolean;
   /** Reduce frame rate + audio when battery < 20% */
   batteryAwareMode: boolean;
+  // ── V10: Mobile / Accessibility settings ────────────────────────────────────
+  /** Apply CSS high-contrast class globally */
+  highContrastMode: boolean;
+  /** Disable CSS transitions and animations globally */
+  reducedMotion: boolean;
+  /** Automatically enter fullscreen walking overlay when session starts */
+  fullscreenWalkingMode: boolean;
 }
 
 const DEFAULTS: AppSettings = {
@@ -60,6 +68,10 @@ const DEFAULTS: AppSettings = {
   motionEnabled: true,
   vibrationEnabled: true,
   batteryAwareMode: true,
+  // V10 mobile / accessibility defaults
+  highContrastMode: false,
+  reducedMotion: false,
+  fullscreenWalkingMode: false,
 };
 
 const STORAGE_KEY = 'denarixx_settings';
