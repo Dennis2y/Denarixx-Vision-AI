@@ -10,3 +10,4 @@
 - [V3 reasoning pipeline](v3-reasoning-pipeline.md) — environmentUnderstandingEngine → cognitiveReasoningEngine → actionDecisionEngine
 - [V8 HAL imports](v8-hal-imports.md) — HardwareBridgeEngine, WearableConnectionEngine, DeviceCapabilityEngine import paths
 - [Sprint 8 memory types separation](sprint8-memory-types.md) — longTermMemory.ts separate from V1 MemoryItem in index.ts; never merge
+- [Sprint 9 trust types separation](sprint9-trust-types.md) — trust.ts is separate from all other type files; DecisionSource/ExplanationCategory only here

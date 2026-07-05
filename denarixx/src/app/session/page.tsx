@@ -21,6 +21,10 @@ import { LastGuidancePanel } from '@/components/session/LastGuidancePanel';
 import { SpatialMapPanel } from '@/components/session/SpatialMapPanel';
 import { SensorStatusPanel } from '@/components/session/SensorStatusPanel';
 import { SocialAwarenessPanel } from '@/components/session/SocialAwarenessPanel';
+import { ExplanationPanel } from '@/components/session/ExplanationPanel';
+import { buildFromSafetyDecision } from '@/engines/explainableAIEngine';
+import type { ExplainedDecision } from '@/types/trust';
+import type { FeedbackType } from '@/types/trust';
 import { loadSettings } from '@/lib/settingsStore';
 
 export default function SessionPage() {
@@ -45,6 +49,9 @@ export default function SessionPage() {
 
   const _settings = loadSettings();
   const locationPrecision = _settings.locationPrecision;
+
+  // Sprint 9 — latest AI explanation
+  const [latestExplanation, setLatestExplanation] = useState<ExplainedDecision | null>(null);
 
   const { isOffline } = usePWAInstall();
   const [isWalkingMode, setIsWalkingMode] = useState(false);
@@ -92,6 +99,33 @@ export default function SessionPage() {
       }
     } catch { /* ignore */ }
   }, []);
+
+  // Sprint 9 — build explanation when session state changes
+  useEffect(() => {
+    if (!state.currentDecision) return;
+    const detections = state.currentAlerts.map(a => ({
+      label: a.type,
+      confidence: a.confidence,
+    }));
+    const explanation = buildFromSafetyDecision({
+      decision: state.currentDecision,
+      detections,
+      hazards: state.currentAlerts,
+      sceneDescription: state.currentScene?.summary ?? null,
+    });
+    setLatestExplanation(explanation);
+  }, [state.currentDecision, state.currentAlerts, state.currentScene]);
+
+  const handleExplanationFeedback = useCallback(async (type: FeedbackType) => {
+    if (!latestExplanation) return;
+    try {
+      await fetch('/api/trust/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decisionId: latestExplanation.id, type }),
+      });
+    } catch { /* non-critical */ }
+  }, [latestExplanation]);
 
   // ── Voice command handler ──────────────────────────────────────────────────
 
@@ -489,6 +523,14 @@ export default function SessionPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
           <SpatialMapPanel snapshot={state.spatialData} isActive={state.isActive} />
           <HazardPanel alerts={state.currentAlerts} decision={state.currentDecision} />
+        </div>
+
+        {/* ── Sprint 9: Why did Denarixx say that? ──────────────────────── */}
+        <div className="mb-4">
+          <ExplanationPanel
+            decision={latestExplanation}
+            onFeedback={handleExplanationFeedback}
+          />
         </div>
 
         {/* ── Scene + Last Guidance ──────────────────────────────────────── */}

@@ -26,6 +26,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/fieldTrial.test.ts` — V17 Real-World Field Trial tests (161/161)
 - `cd denarixx && npx tsx tests/manufacturingReadiness.test.ts` — V18 Manufacturing Readiness tests (144/144)
 - `cd denarixx && npx tsx tests/longTermMemory.test.ts` — Sprint 8 Long-Term Memory tests (100/100)
+- `cd denarixx && npx tsx tests/explainableAI.test.ts` — Sprint 9 Explainable AI & Trust tests (90/90)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
