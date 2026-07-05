@@ -9,3 +9,12 @@ export async function GET() {
     return handleError(e);
   }
 }
+
+export async function DELETE() {
+  try {
+    await getMemoryEngine().clearAll();
+    return ok({ deleted: true, message: 'All memory items deleted.' });
+  } catch (e) {
+    return handleError(e);
+  }
+}

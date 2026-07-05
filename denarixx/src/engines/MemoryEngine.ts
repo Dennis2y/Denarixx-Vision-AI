@@ -10,6 +10,10 @@ class InMemoryStore {
     this.items.set(item.id, item);
   }
 
+  clearAll(): void {
+    this.items.clear();
+  }
+
   findByLabel(label: string): MemoryItem | null {
     const lower = label.toLowerCase();
     for (const item of this.items.values()) {
@@ -80,6 +84,10 @@ export class MemoryEngine implements IMemoryEngine {
 
   async recall(context: string): Promise<MemoryItem[]> {
     return store.search(context);
+  }
+
+  async clearAll(): Promise<void> {
+    store.clearAll();
   }
 }
 

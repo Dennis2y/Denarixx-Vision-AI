@@ -9,3 +9,4 @@
 - [Stale closures stop](stale-closures-stop.md) — useRef pattern for values read at session-stop time
 - [V3 reasoning pipeline](v3-reasoning-pipeline.md) — environmentUnderstandingEngine → cognitiveReasoningEngine → actionDecisionEngine
 - [V8 HAL imports](v8-hal-imports.md) — HardwareBridgeEngine, WearableConnectionEngine, DeviceCapabilityEngine import paths
+- [Sprint 8 memory types separation](sprint8-memory-types.md) — longTermMemory.ts separate from V1 MemoryItem in index.ts; never merge

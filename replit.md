@@ -25,6 +25,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/denarixxGlassesPrototype.test.ts` — V16 Denarixx Vision Glasses Prototype tests (176/176)
 - `cd denarixx && npx tsx tests/fieldTrial.test.ts` — V17 Real-World Field Trial tests (161/161)
 - `cd denarixx && npx tsx tests/manufacturingReadiness.test.ts` — V18 Manufacturing Readiness tests (144/144)
+- `cd denarixx && npx tsx tests/longTermMemory.test.ts` — Sprint 8 Long-Term Memory tests (100/100)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
@@ -37,7 +38,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 
 ## Where things live
 
-- **Next.js app:** `denarixx/` — all 14 pages and 18 API routes
+- **Next.js app:** `denarixx/` — all 17 pages, 26 API routes, 83 engine files, 23 test files
 - **Express proxy:** `artifacts/api-server/src/app.ts` — single entry point on port 8080
 - **V1 engines:** `denarixx/src/engines/` — VisionEngine, HazardDetectionEngine, SafetyDecisionEngine, SceneReasoningEngine, MemoryEngine, ConversationEngine
 - **V2 engines:** `denarixx/src/engines/` — cognitiveGuardianEngine, proactiveAlertEngine, silenceDecisionEngine, predictiveRiskEngine, companionContextEngine, routineLearningEngine
@@ -224,7 +225,7 @@ Denarixx Vision AI is a Phase 18 platform for blind and visually impaired users.
 - **Cognitive Guardian (`/guardian`)** — V2 pipeline debugger: pick a scenario, run the full AI decision pipeline, see live timings per stage
 - **Cognitive Reasoning (`/reasoning`)** — V3 live pipeline debugger: 6-panel view showing environment understanding, internal reasoning, risk prediction, action decision, and human guide message
 - **Hazards (`/hazards`)** — Standalone HazardDetectionEngine tester with 4 example scenarios
-- **Memory (`/memory`)** — AI memory store with seed demo data, stats bar, add/view items
+- **Memory (`/memory`)** — Sprint 8 long-term memory: 6-tab dashboard (Overview, Saved Places, Routes, Hazards, Preferences, Privacy), delete all, export placeholder, privacy rules panel
 - **Navigation (`/navigation`)** — V13 Indoor & Outdoor Navigation: mode toggle, venue modes, route status panel, heading, distance, SVG route map, crossing decision panel, guidance queue, location privacy notes
 - **Settings (`/settings`)**, **Privacy (`/privacy`)**, **Admin (`/admin`)**, **Docs (`/docs`)**
 
@@ -246,6 +247,7 @@ Denarixx Vision AI is a Phase 18 platform for blind and visually impaired users.
 - V16 Denarixx Glasses Prototype: **176/176 passing**
 - V17 Real-World Field Trials: **161/161 passing**
 - V18 Manufacturing Readiness: **144/144 passing**
+- Sprint 8 Long-Term Memory: **100/100 passing**
 
 ## User preferences
 
@@ -286,3 +288,4 @@ Denarixx Vision AI is a Phase 18 platform for blind and visually impaired users.
 - V18 docs: `denarixx/docs/V18_MANUFACTURING_READINESS.md`
 - V18 roadmap: `denarixx/docs/CERTIFICATION_AND_COMPLIANCE_ROADMAP.md`
 - V18 brief: `denarixx/docs/MANUFACTURER_REQUIREMENTS_BRIEF.md`
+- Sprint 8 docs: `denarixx/docs/SPRINT_8_LONG_TERM_MEMORY_CONTEXT.md`
