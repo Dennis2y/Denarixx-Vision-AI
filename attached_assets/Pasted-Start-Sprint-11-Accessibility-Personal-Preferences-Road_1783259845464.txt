@@ -1,0 +1,172 @@
+Start Sprint 11: Accessibility & Personal Preferences.
+
+Roadmap Section:
+Context & Trust
+
+Use Sprint 1–10 as the foundation.
+
+Do NOT redesign the application.
+
+Goal:
+Allow every user to fully personalize how Denarixx Vision AI communicates, navigates, and assists them.
+
+──────────────────────────────
+CREATE
+──────────────────────────────
+
+src/engines/
+accessibilityEngine.ts
+userPreferenceEngine.ts
+audioPreferenceEngine.ts
+hapticPreferenceEngine.ts
+
+src/types/
+preferences.ts
+
+tests/
+accessibilityEngine.test.ts
+
+docs/
+SPRINT_11_ACCESSIBILITY_PREFERENCES.md
+
+──────────────────────────────
+USER PREFERENCES
+──────────────────────────────
+
+Allow users to configure:
+
+• speech rate
+• speech volume
+• alert frequency
+• navigation detail
+• personality mode
+• guidance verbosity
+• confidence announcements
+• haptic feedback
+• vibration intensity
+• repeat reminders
+• automatic silence mode
+• indoor guidance style
+• outdoor guidance style
+
+──────────────────────────────
+ACCESSIBILITY
+──────────────────────────────
+
+Support:
+
+• blind users
+
+• low vision users
+
+• hearing impaired users
+
+• colour-blind friendly UI
+
+• high contrast mode
+
+• large text mode
+
+• one-hand operation
+
+• screen reader compatibility
+
+──────────────────────────────
+INTEGRATION
+──────────────────────────────
+
+Connect with:
+
+Companion Personality
+
+Guardian
+
+Navigation
+
+Memory
+
+Trust Engine
+
+Voice Engine
+
+Settings
+
+Preferences must automatically affect behaviour throughout the app.
+
+──────────────────────────────
+UI
+──────────────────────────────
+
+Create a complete Accessibility & Preferences page.
+
+Include:
+
+Voice settings
+
+Navigation settings
+
+Alert settings
+
+Haptic settings
+
+Display settings
+
+Accessibility presets
+
+Reset to defaults
+
+Live preview
+
+──────────────────────────────
+TESTS
+──────────────────────────────
+
+Test:
+
+Preference saving
+
+Preference loading
+
+Speech adaptation
+
+Accessibility modes
+
+Engine integration
+
+──────────────────────────────
+DOCUMENTATION
+──────────────────────────────
+
+Create:
+
+docs/SPRINT_11_ACCESSIBILITY_PREFERENCES.md
+
+Document:
+
+Architecture
+
+Preference hierarchy
+
+Accessibility principles
+
+Future hardware compatibility
+
+──────────────────────────────
+QUALITY
+──────────────────────────────
+
+Run:
+
+npm run type-check
+
+npm test
+
+npm run build
+
+Fix every issue.
+
+Update README statistics.
+
+Push everything to GitHub.
+
+Do not stop until Sprint 11 is completely finished.
