@@ -3,7 +3,6 @@ import fs from 'fs';
 import path from 'path';
 import {
   SPRINT_REGISTRY,
-  PHASE_REGISTRY,
   computeProgress,
   phaseStatusLabel,
 } from '@/engines/projectProgressEngine';
