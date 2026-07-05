@@ -1,0 +1,235 @@
+Start Sprint 12: Privacy Dashboard & Consent Management.
+
+Roadmap Section:
+Context & Trust
+
+Use Sprint 1–11 as the foundation.
+
+Do NOT redesign the application.
+
+Goal:
+Give users complete transparency and control over their personal data, permissions, memories, and AI features.
+
+──────────────────────────────
+CREATE
+──────────────────────────────
+
+src/engines/
+privacyDashboardEngine.ts
+consentManagementEngine.ts
+permissionAuditEngine.ts
+dataRetentionEngine.ts
+
+src/types/
+privacy.ts
+
+tests/
+privacyDashboard.test.ts
+
+docs/
+SPRINT_12_PRIVACY_DASHBOARD.md
+
+──────────────────────────────
+CONSENT MANAGEMENT
+──────────────────────────────
+
+Allow users to enable or disable:
+
+• Camera
+• Microphone
+• Navigation
+• Long-term Memory
+• Voice Companion
+• Scene Descriptions
+• AI Explanations
+• Analytics (simulation only)
+• Future Cloud Sync (placeholder)
+• Face Recognition (future feature placeholder)
+
+Each permission should display:
+
+Current status
+
+Reason for use
+
+Last accessed time
+
+Privacy impact
+
+──────────────────────────────
+PRIVACY DASHBOARD
+──────────────────────────────
+
+Create a dedicated dashboard showing:
+
+Current permissions
+
+Stored memories
+
+Saved places
+
+Navigation history
+
+AI activity summary
+
+Data retention status
+
+Export data
+
+Delete data
+
+Clear navigation history
+
+Clear memories
+
+Reset privacy settings
+
+──────────────────────────────
+DATA RETENTION
+──────────────────────────────
+
+Support:
+
+Automatic expiry
+
+Manual deletion
+
+Retention policy
+
+Temporary session storage
+
+Future encrypted cloud sync placeholder
+
+──────────────────────────────
+PERMISSION AUDIT
+──────────────────────────────
+
+Track:
+
+Permission granted
+
+Permission revoked
+
+Memory created
+
+Memory deleted
+
+Settings changed
+
+Navigation exported
+
+Privacy reset
+
+──────────────────────────────
+INTEGRATION
+──────────────────────────────
+
+Connect with:
+
+Guardian
+
+Memory Engine
+
+Navigation
+
+Accessibility
+
+Companion
+
+Trust Engine
+
+Explainable AI
+
+──────────────────────────────
+UI
+──────────────────────────────
+
+Create:
+
+Privacy Dashboard
+
+Consent Settings
+
+Permission History
+
+Data Export screen
+
+Privacy Summary
+
+Use clear icons and accessibility-friendly controls.
+
+──────────────────────────────
+TESTS
+──────────────────────────────
+
+Test:
+
+Permission changes
+
+Consent persistence
+
+Dashboard rendering
+
+Export placeholder
+
+Deletion logic
+
+Retention policy
+
+Audit logging
+
+──────────────────────────────
+DOCUMENTATION
+──────────────────────────────
+
+Create:
+
+docs/SPRINT_12_PRIVACY_DASHBOARD.md
+
+Explain:
+
+Architecture
+
+Privacy philosophy
+
+Consent lifecycle
+
+Future GDPR-ready cloud architecture
+
+──────────────────────────────
+ROADMAP
+──────────────────────────────
+
+When Sprint 12 finishes:
+
+Automatically mark
+
+✅ Context & Trust
+
+as Complete.
+
+Automatically activate
+
+Expanded Access
+
+Update the dynamic Build Roadmap accordingly.
+
+──────────────────────────────
+QUALITY
+──────────────────────────────
+
+Run:
+
+npm run type-check
+
+npm test
+
+npm run build
+
+Fix every issue.
+
+Update README statistics.
+
+Push everything to GitHub.
+
+Do not stop until Sprint 12 is completely finished.

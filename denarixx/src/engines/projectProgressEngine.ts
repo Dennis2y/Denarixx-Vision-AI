@@ -165,9 +165,30 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
     milestone: 'Personalised guidance for every user',
   },
 
-  // ── Phase 3: Device & Navigation ──────────────────────────────────────────
   {
     id: 11,
+    name: 'Accessibility & Preferences',
+    description: 'Accessibility presets, audio/haptic preferences, user preference engine, display settings.',
+    phase: 2,
+    testFile: 'accessibilityEngine.test.ts',
+    engineCount: 4,
+    testCount: 127,
+    milestone: 'Full personalisation for every user need',
+  },
+  {
+    id: 12,
+    name: 'Privacy Dashboard & Consent',
+    description: 'Consent management, permission audit, data retention, full privacy dashboard.',
+    phase: 2,
+    testFile: 'privacyDashboard.test.ts',
+    engineCount: 4,
+    testCount: 105,
+    milestone: 'Complete user privacy control — Phase 2 complete',
+  },
+
+  // ── Phase 3: Device & Navigation ──────────────────────────────────────────
+  {
+    id: 13,
     name: 'Human Behaviour & Social',
     description: 'Activity inference, crowd understanding, interaction prediction, social awareness.',
     phase: 3,
@@ -177,7 +198,7 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
     milestone: 'Social context understood in real-time',
   },
   {
-    id: 12,
+    id: 14,
     name: 'Mobile Deployment Ready',
     description: 'PWA, service worker, offline mode, battery awareness, high-contrast accessibility.',
     phase: 3,
@@ -187,7 +208,7 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
     milestone: 'Fully installable offline-capable PWA',
   },
   {
-    id: 13,
+    id: 15,
     name: 'Pilot Testing Framework',
     description: 'Consent management, scenario registry, feedback collection, pilot reports.',
     phase: 3,
@@ -197,7 +218,7 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
     milestone: 'Structured real-world pilot testing ready',
   },
   {
-    id: 14,
+    id: 16,
     name: 'Real-Time AI Vision Pipeline',
     description: 'Live inference orchestrator, depth reasoning, object tracking, scene understanding.',
     phase: 3,
@@ -207,7 +228,7 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
     milestone: 'Live 30 FPS vision pipeline operational',
   },
   {
-    id: 15,
+    id: 17,
     name: 'Indoor & Outdoor Navigation',
     description: 'Turn-by-turn navigation, crossing safety, landmark guidance, route memory.',
     phase: 3,
@@ -219,7 +240,7 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
 
   // ── Phase 4: Production & Launch ──────────────────────────────────────────
   {
-    id: 16,
+    id: 18,
     name: 'Multi-Camera Smart Glasses',
     description: 'Camera fusion, health monitoring, FOV zone tracking, wearable sensor fusion.',
     phase: 4,
@@ -229,7 +250,7 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
     milestone: '4-camera glasses fully operational',
   },
   {
-    id: 17,
+    id: 19,
     name: 'On-Device AI Optimization',
     description: 'Edge inference, battery optimization, latency budgets, offline safety path.',
     phase: 4,
@@ -239,7 +260,7 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
     milestone: 'Sub-500ms on-device inference achieved',
   },
   {
-    id: 18,
+    id: 20,
     name: 'Denarixx Glasses Prototype',
     description: 'Hardware prototype, bone-conduction audio, haptic patterns, power management.',
     phase: 4,
@@ -249,7 +270,7 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
     milestone: 'Physical hardware prototype validated',
   },
   {
-    id: 19,
+    id: 21,
     name: 'Real-World Field Trials',
     description: 'Field trial sessions, safety metrics, user feedback scoring, trial reports.',
     phase: 4,
@@ -259,7 +280,7 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
     milestone: 'Field trials passed with real users',
   },
   {
-    id: 20,
+    id: 22,
     name: 'Manufacturing Readiness',
     description: 'Compliance planning, CE/MDR certification roadmap, risk assessment, manufacturer brief.',
     phase: 4,
@@ -285,15 +306,15 @@ export const PHASE_REGISTRY: PhaseDefinition[] = [
     id: 2,
     name: 'Phase 2',
     label: 'Context & Trust',
-    sprintRange: [6, 10],
-    description: 'Spatial intelligence, sensor fusion, long-term memory, explainable AI, companion personality.',
+    sprintRange: [6, 12],
+    description: 'Spatial intelligence, sensor fusion, long-term memory, explainable AI, companion personality, accessibility, privacy.',
     icon: '🧠',
   },
   {
     id: 3,
     name: 'Phase 3',
     label: 'Device & Navigation',
-    sprintRange: [11, 15],
+    sprintRange: [13, 17],
     description: 'Social awareness, mobile PWA, pilot testing, live vision pipeline, indoor/outdoor navigation.',
     icon: '🧭',
   },
@@ -301,7 +322,7 @@ export const PHASE_REGISTRY: PhaseDefinition[] = [
     id: 4,
     name: 'Phase 4',
     label: 'Production & Launch',
-    sprintRange: [16, 20],
+    sprintRange: [18, 22],
     description: 'Multi-camera glasses, on-device AI, hardware prototype, field trials, manufacturing readiness.',
     icon: '🚀',
   },

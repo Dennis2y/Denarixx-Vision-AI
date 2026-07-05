@@ -30,6 +30,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/companionPersonality.test.ts` — Sprint 10 Adaptive Companion Personality tests (92/92)
 - `cd denarixx && npx tsx tests/projectProgress.test.ts` — Project Progress Tracker tests (59/59)
 - `cd denarixx && npx tsx tests/accessibilityEngine.test.ts` — Sprint 11 Accessibility & Personal Preferences tests (127/127)
+- `cd denarixx && npx tsx tests/privacyDashboard.test.ts` — Sprint 12 Privacy Dashboard & Consent Management tests (103/103)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
@@ -142,6 +143,16 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **V18 routes:** `api/manufacturing/readiness/route.ts` — GET full report; `risk/route.ts` — GET risks (filterable); `certification/route.ts` — GET milestones + compliance warnings
 - **V18 tests:** `denarixx/tests/manufacturingReadiness.test.ts` (144 tests)
 - **V18 docs:** `denarixx/docs/V18_MANUFACTURING_READINESS.md`, `denarixx/docs/CERTIFICATION_AND_COMPLIANCE_ROADMAP.md`, `denarixx/docs/MANUFACTURER_REQUIREMENTS_BRIEF.md`
+- **Sprint 11 types:** `denarixx/src/types/preferences.ts` — AccessibilityMode, AudioPreferences, HapticPreferences, NavigationPreferences, AlertPreferences, DisplayPreferences, UserPreferences, AccessibilityPreset (15 types)
+- **Sprint 11 engines:** `accessibilityEngine.ts` — 5 presets, CSS class derivation, ARIA helpers, colour-blind palette; `userPreferenceEngine.ts` — save/load/validate/diff, bridge to AppSettings; `audioPreferenceEngine.ts` — speech rate/volume/verbosity/repeat/silence/earcons; `hapticPreferenceEngine.ts` — 6 patterns, intensity scaling, event routing
+- **Sprint 11 page:** `denarixx/src/app/accessibility/page.tsx` — 6-tab UI: Presets · Voice · Navigation · Alerts · Haptic · Display
+- **Sprint 11 tests:** `denarixx/tests/accessibilityEngine.test.ts` (127 tests)
+- **Sprint 11 docs:** `denarixx/docs/SPRINT_11_ACCESSIBILITY_PREFERENCES.md`
+- **Sprint 12 types:** `denarixx/src/types/privacy.ts` — ConsentItem, AuditEvent, RetentionRule, PrivacyDashboardState, PrivacyExport, PrivacySummary, PRIVACY_DISCLAIMER, GDPR_NOTE (separate file, never merge with index.ts)
+- **Sprint 12 engines:** `consentManagementEngine.ts` — CONSENT_REGISTRY (10 items), grant/revoke/toggle/reset lifecycle; `permissionAuditEngine.ts` — ring-buffer 100 events, 10 audit event types, summary; `dataRetentionEngine.ts` — 6 retention rules, expiry detection, deletion simulation; `privacyDashboardEngine.ts` — dashboard state, privacy summary, export/reset orchestration
+- **Sprint 12 page:** `denarixx/src/app/privacy/page.tsx` — 5-tab Privacy Dashboard: Overview · Permissions · Your Data · Activity Log · Retention; consent toggles, data deletion, JSON export, audit trail
+- **Sprint 12 tests:** `denarixx/tests/privacyDashboard.test.ts` (103 tests)
+- **Sprint 12 docs:** `denarixx/docs/SPRINT_12_PRIVACY_DASHBOARD.md`
 - **Camera hook:** `denarixx/src/hooks/useCameraCapture.ts` — getUserMedia, stream lifecycle, frame capture (JPEG base64), 4-state status machine
 - **Alert throttle engine:** `denarixx/src/engines/alertThrottleEngine.ts` — per-severity cooldowns (Sprint 5: critical:5s, high:10s, medium:20s, low:30s), shouldSpeak() decision, confidence-escalation override, speak-count tracking
 - **Session hook:** `denarixx/src/hooks/useVisionSession.ts` — 7-step demo flow, camera integration, spatial intelligence, completedSteps tracking, session report generation
