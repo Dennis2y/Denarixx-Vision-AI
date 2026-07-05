@@ -1,0 +1,187 @@
+Start Sprint 10: Adaptive Companion Personality.
+
+Roadmap Section:
+Context & Trust
+
+Use Sprint 1–9 as the foundation.
+
+Do NOT redesign the architecture.
+Extend the existing engines.
+
+Goal:
+Make Denarixx Vision AI adapt naturally to different users and situations while always remaining predictable and safe.
+
+──────────────────────────────
+CREATE
+──────────────────────────────
+
+src/engines/
+    companionPersonalityEngine.ts
+    guidanceStyleEngine.ts
+    speechAdaptationEngine.ts
+    contextAwarenessEngine.ts
+
+src/types/
+    companion.ts
+
+tests/
+    companionPersonality.test.ts
+
+docs/
+    SPRINT_10_ADAPTIVE_COMPANION.md
+
+──────────────────────────────
+PERSONALITY MODES
+──────────────────────────────
+
+Support:
+
+• Minimal
+• Balanced
+• Detailed
+• Companion
+
+Minimal:
+- only important hazards
+- short guidance
+
+Balanced:
+- normal navigation
+- moderate descriptions
+
+Detailed:
+- rich environmental descriptions
+- landmarks
+- surroundings
+- navigation reasoning
+
+Companion:
+- conversational
+- reassuring
+- encouraging
+- remembers preferences
+- still concise during danger
+
+──────────────────────────────
+CONTEXT ADAPTATION
+──────────────────────────────
+
+Automatically adjust guidance based on:
+
+• walking indoors
+• walking outdoors
+• crossing roads
+• crowded places
+• quiet places
+• poor lighting
+• user preference
+• previous interactions
+
+──────────────────────────────
+SPEECH ADAPTATION
+──────────────────────────────
+
+Support:
+
+slow speech
+
+normal speech
+
+fast speech
+
+repeat automatically
+
+brief mode
+
+verbose mode
+
+──────────────────────────────
+CONNECT TO
+
+Vision Engine
+
+Navigation
+
+Guardian
+
+Long-Term Memory
+
+Explainable AI
+
+Trust Engine
+
+──────────────────────────────
+UI
+──────────────────────────────
+
+Create Companion Settings page.
+
+Allow users to choose:
+
+Personality
+
+Speech amount
+
+Alert frequency
+
+Navigation detail
+
+Voice speed
+
+Confidence announcements
+
+Preview mode
+
+──────────────────────────────
+TESTS
+──────────────────────────────
+
+Test:
+
+Personality switching
+
+Speech adaptation
+
+Context adaptation
+
+Memory integration
+
+Safety overrides
+
+──────────────────────────────
+DOCUMENTATION
+──────────────────────────────
+
+Create:
+
+docs/SPRINT_10_ADAPTIVE_COMPANION.md
+
+Explain:
+
+Architecture
+
+Decision flow
+
+Context adaptation
+
+Future LLM integration
+
+──────────────────────────────
+QUALITY
+──────────────────────────────
+
+Run:
+
+npm run type-check
+
+npm test
+
+npm run build
+
+Fix every error.
+
+Update README statistics.
+
+Push everything to GitHub.
+
+Do not stop until Sprint 10 is completely finished.
