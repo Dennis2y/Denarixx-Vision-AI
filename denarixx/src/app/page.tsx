@@ -1,4 +1,27 @@
 import Link from 'next/link';
+import fs from 'fs';
+import path from 'path';
+import {
+  SPRINT_REGISTRY,
+  PHASE_REGISTRY,
+  computeProgress,
+  phaseStatusLabel,
+} from '@/engines/projectProgressEngine';
+import type { PhaseState } from '@/engines/projectProgressEngine';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+async function getLiveProgress() {
+  const testsDir = path.join(process.cwd(), 'tests');
+  const completed = new Set<string>();
+  for (const sprint of SPRINT_REGISTRY) {
+    if (fs.existsSync(path.join(testsDir, sprint.testFile))) {
+      completed.add(sprint.testFile);
+    }
+  }
+  return computeProgress(completed);
+}
 
 const STATS = [
   { value: '3 s', label: 'scan interval' },
@@ -57,34 +80,10 @@ const ENGINES = [
   { icon: '🔊', name: 'AudioGuidanceEngine', role: 'Priority speech queue management' },
 ];
 
-const PHASES = [
-  {
-    phase: 'Phase 1 — Now',
-    label: 'Safety Core MVP',
-    status: 'current',
-    items: ['Hazard detection', 'Scene reasoning', 'Audio guidance', 'Memory foundation', 'Cognitive Guardian'],
-  },
-  {
-    phase: 'Phase 2',
-    label: 'Context & Trust',
-    status: 'planned',
-    items: ['Full AI Memory', 'Conversation AI', 'Document reading', 'Face recognition (consent)'],
-  },
-  {
-    phase: 'Phase 3',
-    label: 'Expanded Access',
-    status: 'planned',
-    items: ['Multi-language', 'Offline mode', 'Medication safety', 'GPS navigation'],
-  },
-  {
-    phase: 'Phase 4',
-    label: 'Platform & Hardware',
-    status: 'planned',
-    items: ['Smart glasses', 'Emergency Guardian', 'Custom AI hardware', 'SDK for partners'],
-  },
-];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const progress = await getLiveProgress();
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
 
@@ -274,41 +273,118 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Roadmap */}
+      {/* Roadmap — live progress tracker */}
       <section aria-labelledby="roadmap-heading" className="mb-16">
-        <h2 id="roadmap-heading" className="text-2xl font-bold text-white text-center mb-8">
-          Build Roadmap
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {PHASES.map((p) => (
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <h2 id="roadmap-heading" className="text-2xl font-bold text-white">
+            Build Roadmap
+          </h2>
+          <Link
+            href="/roadmap"
+            className="text-sm text-yellow-400 hover:text-yellow-300 font-semibold border border-yellow-700/50 hover:border-yellow-500 rounded-lg px-3 py-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          >
+            View Full Tracker →
+          </Link>
+        </div>
+
+        {/* MVP complete banner */}
+        {progress.mvpComplete && (
+          <div className="rounded-xl border border-yellow-600 bg-yellow-950/30 p-5 mb-5 text-center">
+            <p className="text-3xl mb-1" aria-hidden="true">🎉</p>
+            <p className="text-xl font-black text-yellow-400">Denarixx Vision AI MVP Completed</p>
+            <p className="text-yellow-200 text-sm mt-1">All {progress.totalSprints} sprints complete across {progress.phases.length} phases.</p>
+          </div>
+        )}
+
+        {/* Overall progress bar */}
+        <div className="rounded-xl border border-gray-700 bg-gray-900 p-4 mb-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-400">Overall Progress</span>
+            <span className="text-xl font-black text-yellow-400">{progress.overallPercent}%</span>
+          </div>
+          <div
+            className="h-2.5 rounded-full bg-gray-800 overflow-hidden"
+            role="progressbar"
+            aria-valuenow={progress.overallPercent}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Overall project progress"
+          >
             <div
-              key={p.phase}
-              className={`rounded-xl p-4 border ${
-                p.status === 'current'
-                  ? 'bg-yellow-950/40 border-yellow-700'
-                  : 'bg-gray-900/60 border-gray-800 opacity-60'
-              }`}
-            >
-              <p className="text-xs text-gray-500 mb-1 font-mono">{p.phase}</p>
-              <p className="font-bold text-white text-sm mb-1">{p.label}</p>
-              {p.status === 'current' && (
-                <span className="inline-flex items-center gap-1 text-xs text-yellow-400 font-semibold mb-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" aria-hidden="true" />
-                  Active
+              className={`h-full rounded-full transition-all ${progress.mvpComplete ? 'bg-green-500' : 'bg-yellow-500'}`}
+              style={{ width: `${progress.overallPercent}%` }}
+            />
+          </div>
+          <div className="flex justify-between mt-2 text-xs text-gray-600">
+            <span>{progress.completedSprints} / {progress.totalSprints} sprints</span>
+            {progress.currentSprint && (
+              <span>
+                Sprint {progress.currentSprint.id} active — {progress.currentSprint.name}
+              </span>
+            )}
+            <span>Est: {progress.estimatedCompletion}</span>
+          </div>
+        </div>
+
+        {/* Phase cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {progress.phases.map((ph: PhaseState) => {
+            const isComplete = ph.status === 'complete';
+            const isActive = ph.status === 'active';
+            const isLocked = ph.status === 'locked';
+            return (
+              <div
+                key={ph.id}
+                className={`rounded-xl p-4 border transition-colors ${
+                  isComplete
+                    ? 'bg-green-950/20 border-green-800'
+                    : isActive
+                    ? 'bg-yellow-950/40 border-yellow-700'
+                    : 'bg-gray-900/40 border-gray-800 opacity-60'
+                }`}
+                aria-label={`${ph.name}: ${ph.label} — ${phaseStatusLabel(ph.status)}`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span aria-hidden="true">{ph.icon}</span>
+                  <p className="text-xs text-gray-500 font-mono">{ph.name}</p>
+                </div>
+                <p className={`font-bold text-sm mb-1 ${isLocked ? 'text-gray-500' : 'text-white'}`}>
+                  {ph.label}
+                </p>
+                <span
+                  className={`inline-flex items-center gap-1 text-xs font-semibold mb-2 ${
+                    isComplete ? 'text-green-400' : isActive ? 'text-yellow-400' : 'text-gray-600'
+                  }`}
+                >
+                  {isActive && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" aria-hidden="true" />
+                  )}
+                  {phaseStatusLabel(ph.status)}
                 </span>
-              )}
-              <ul className="space-y-1 mt-2">
-                {p.items.map((item) => (
-                  <li key={item} className="text-gray-400 text-xs flex gap-1.5 items-start">
-                    <span aria-hidden="true" className="text-gray-600">
-                      {p.status === 'current' ? '✓' : '○'}
-                    </span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+
+                {/* Mini progress bar */}
+                <div className="h-1 rounded-full bg-gray-800 overflow-hidden mb-2">
+                  <div
+                    className={`h-full rounded-full ${isComplete ? 'bg-green-500' : isActive ? 'bg-yellow-500' : 'bg-gray-700'}`}
+                    style={{ width: `${ph.progress}%` }}
+                  />
+                </div>
+
+                <p className="text-xs text-gray-600 mb-2">
+                  {ph.completedSprints}/{ph.totalSprints} sprints · Sprint {ph.sprintRange[0]}–{ph.sprintRange[1]}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="text-center mt-4">
+          <Link
+            href="/roadmap"
+            className="text-sm text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 rounded-lg px-2 py-1"
+          >
+            View all sprints & milestones →
+          </Link>
         </div>
       </section>
 

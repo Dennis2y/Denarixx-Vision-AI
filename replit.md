@@ -28,6 +28,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/longTermMemory.test.ts` — Sprint 8 Long-Term Memory tests (100/100)
 - `cd denarixx && npx tsx tests/explainableAI.test.ts` — Sprint 9 Explainable AI & Trust tests (90/90)
 - `cd denarixx && npx tsx tests/companionPersonality.test.ts` — Sprint 10 Adaptive Companion Personality tests (92/92)
+- `cd denarixx && npx tsx tests/projectProgress.test.ts` — Project Progress Tracker tests (59/59)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
