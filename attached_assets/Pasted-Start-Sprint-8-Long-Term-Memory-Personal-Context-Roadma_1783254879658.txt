@@ -1,0 +1,223 @@
+Start Sprint 8: Long-Term Memory & Personal Context.
+
+Roadmap Section:
+Context & Trust
+
+Use Sprint 1–7 as the baseline.
+Do NOT redesign the project.
+Extend the existing architecture.
+
+Goal:
+Make Denarixx Vision AI remember useful information over time while remaining privacy-first.
+
+──────────────────────────────
+MEMORY ENGINE
+──────────────────────────────
+
+Create:
+
+src/engines/
+    longTermMemoryEngine.ts
+    memoryRetrievalEngine.ts
+    memoryRankingEngine.ts
+    memoryPrivacyEngine.ts
+    routeMemoryEngine.ts
+
+src/types/
+    longTermMemory.ts
+
+The memory system should remember:
+
+• Saved places
+• Frequently visited landmarks
+• Preferred walking speed
+• Preferred amount of speech
+• Preferred alert frequency
+• Favourite navigation destinations
+• Recent successful navigation sessions
+• Frequently encountered hazards
+• Guidance style preference
+• Voice preference
+
+Every memory must contain:
+
+- id
+- category
+- title
+- description
+- createdAt
+- updatedAt
+- confidence
+- expiry
+- source
+- userEditable
+
+──────────────────────────────
+MEMORY CONFIDENCE
+──────────────────────────────
+
+Support:
+
+Remembered
+Likely
+Uncertain
+Expired
+User Confirmed
+
+──────────────────────────────
+PRIVACY
+──────────────────────────────
+
+Never store:
+
+❌ Faces
+
+❌ Voiceprints
+
+❌ Biometrics
+
+❌ Exact GPS unless user explicitly saves a place
+
+Allow:
+
+✓ Delete memory
+
+✓ Export memory (placeholder)
+
+✓ Clear all memories
+
+──────────────────────────────
+CONNECT TO EXISTING SYSTEMS
+──────────────────────────────
+
+Integrate with:
+
+Vision Session
+
+Navigation Engine
+
+Voice Companion
+
+Guardian
+
+Settings
+
+When appropriate the assistant should naturally use remembered preferences.
+
+Example:
+
+"Last time you preferred fewer alerts."
+
+"Home is 150 metres ahead."
+
+"You usually walk slightly slower."
+
+──────────────────────────────
+UI
+──────────────────────────────
+
+Improve Memory page.
+
+Show:
+
+Saved places
+
+Preferred destinations
+
+Recent navigation sessions
+
+Repeated hazards
+
+Guidance preferences
+
+Delete buttons
+
+Clear all
+
+Privacy explanation
+
+Memory confidence badges
+
+Search memories
+
+──────────────────────────────
+API
+──────────────────────────────
+
+Expand existing memory API.
+
+Support:
+
+GET /api/memory
+
+POST /api/memory
+
+DELETE /api/memory/:id
+
+POST /api/memory/clear
+
+POST /api/memory/export
+
+──────────────────────────────
+TESTS
+──────────────────────────────
+
+Create:
+
+tests/longTermMemory.test.ts
+
+Test:
+
+Saving
+
+Deleting
+
+Retrieving
+
+Ranking
+
+Privacy rules
+
+Confidence
+
+Route memories
+
+Guidance preferences
+
+──────────────────────────────
+DOCUMENTATION
+──────────────────────────────
+
+Create:
+
+docs/SPRINT_8_LONG_TERM_MEMORY_CONTEXT.md
+
+Explain:
+
+Architecture
+
+Privacy model
+
+Confidence system
+
+Future cloud sync
+
+──────────────────────────────
+QUALITY
+──────────────────────────────
+
+Run:
+
+npm run type-check
+
+npm test
+
+npm run build
+
+Fix every error.
+
+Update README statistics.
+
+Push everything to GitHub.
+
+Do not stop until the sprint is fully complete.
