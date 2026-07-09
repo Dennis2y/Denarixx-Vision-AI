@@ -33,6 +33,8 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/privacyDashboard.test.ts` — Sprint 12 Privacy Dashboard & Consent Management tests (103/103)
 - `cd denarixx && npx tsx tests/languageEngine.test.ts` — Sprint 13 Multi-Language AI Engine tests (118/118)
 - `cd denarixx && npx tsx tests/offlineEngine.test.ts` — Sprint 14 Offline Mode & Edge AI tests (152/152)
+- `cd denarixx && npx tsx tests/streetSafety.test.ts` — Sprint 15 No-Internet Street Safety tests (143/143)
+- `cd denarixx && npx tsx tests/glassesRuntime.test.ts` — Sprint 16 Standalone Glasses OS tests (160/160)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
@@ -168,6 +170,12 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **Sprint 15 engines:** `localHazardPatternEngine.ts` — 12-entry on-glasses pattern library, keyword matching, severity estimation, guidance generation (crossing never says "safe to cross"); `connectivityFallbackEngine.ts` — internet loss detection, mode determination, transition announcements, offline duration; `offlineStreetGuardianEngine.ts` — critical bypass (vehicle/stairs/stop/camera-failure always speak), cooldown table, prioritisation, camera failure alert; `streetSafetyEngine.ts` — tick orchestrator, hazard upsert, stale clear, alert ring-buffer (max 20), mode label/colour
 - **Sprint 15 page:** `/street-safety` — mode indicator (online/offline/degraded), hazard injector (8 scenarios), alert log (bone-conduction), network simulator, safety rules panel; phone dashboard only — glasses operate independently
 - **Sprint 15 architecture:** Guardian never waits for internet. Critical alerts bypass cooldown. Camera failure triggers immediate warning. Offline → bone-conduction announcement. Online restored → safety mode remains active.
+- **Sprint 16 types:** `denarixx/src/types/glassesOS.ts` — BootPhase (7 phases), BootStatus, BootStepResult, BootSequenceResult, BootDiagnostic, SensorType (10 types), SensorStatus, GlassesOSSensor, SensorFusionFrame, SensorStatusSummary, PowerLevel, PowerProfile, ComponentName (7), ComponentStatus, ComponentHealth, DeviceHealth, RuntimeMode (4 modes), RuntimeState, RuntimeSummary, EmergencyModeState; constants: WAKE_WORD, CRITICAL_BATTERY_PCT, LOW_BATTERY_PCT, THERMAL_THROTTLE_TEMP_C, ALWAYS_ACTIVE_FEATURES, STANDALONE_PRINCIPLE, EMERGENCY_MODE_ANNOUNCEMENT, CRITICAL_BATTERY_ANNOUNCEMENT
+- **Sprint 16 engines:** `glassesRuntimeEngine.ts` — standalone OS orchestrator, determineRuntimeMode, selectActiveFeatures, bootGlasses, processRuntimeTick, activateEmergencyMode, buildRuntimeSummary, isOperational; `bootSequenceEngine.ts` — 7-phase boot simulation, runBootSequence, runBootUntilPhase, buildBootDiagnostic, getFailureRecoveryMessage; `glassesPowerEngine.ts` — classifyPowerLevel, buildPowerProfile, getReducedPowerFeatures, estimateDrainRate, buildPowerWarning, simulateBatteryTick; `glassesOSSensorEngine.ts` — 10-sensor lifecycle, initializeSensor, activateSensor, restartSensor, buildSensorFusionFrame, detectSensorAnomalies; `deviceHealthEngine.ts` — 7-component health assessment, buildDeviceHealthReport, isHealthCritical
+- **Sprint 16 pages:** `/glasses-status` (runtime mode, features, emergency), `/device-health` (component health scores), `/battery` (power profile, drain simulation), `/sensors` (10 sensors, fusion frame, restart), `/boot-diagnostics` (7-phase boot results)
+- **Sprint 16 tests:** `denarixx/tests/glassesRuntime.test.ts` (160/160)
+- **Sprint 16 docs:** `denarixx/docs/SPRINT_16_STANDALONE_GLASSES_OS.md`
+- **Sprint 16 architecture:** Glasses = primary computer. Phone = optional dashboard. Cloud = optional enhancement. No phone required for any safety feature. Guardian is last feature disabled at critical battery. Boot completes before any user interaction — Guardian active before wake word listener.
 - **Sprint 14 tests:** `denarixx/tests/offlineEngine.test.ts` (152 tests)
 - **Sprint 14 docs:** `denarixx/docs/SPRINT_14_OFFLINE_EDGE_AI.md`
 - **Roadmap Phase 5:** `Expanded Access` — sprintRange [23, 27], Sprint 23 = Multi-Language, Sprint 24 = Offline Mode & Edge AI

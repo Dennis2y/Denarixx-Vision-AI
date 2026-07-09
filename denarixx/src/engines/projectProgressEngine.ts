@@ -321,6 +321,16 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
     testCount: 143,
     milestone: 'Blind users are protected on the street even without internet',
   },
+  {
+    id: 26,
+    name: 'Standalone Smart Glasses OS',
+    description: 'Full standalone OS for Denarixx Vision Glasses: 7-phase boot sequence, 10-sensor array, power management, device health, runtime mode (standalone/companion/cloud/emergency). Phone and cloud are optional.',
+    phase: 5,
+    testFile: 'glassesRuntime.test.ts',
+    engineCount: 5,
+    testCount: 180,
+    milestone: 'Glasses are the primary computer — no phone required for any safety feature',
+  },
 ];
 
 // ─── Phase registry ───────────────────────────────────────────────────────────
