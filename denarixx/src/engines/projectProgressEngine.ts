@@ -328,8 +328,18 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
     phase: 5,
     testFile: 'glassesRuntime.test.ts',
     engineCount: 5,
-    testCount: 180,
+    testCount: 160,
     milestone: 'Glasses are the primary computer — no phone required for any safety feature',
+  },
+  {
+    id: 27,
+    name: 'Hardware Abstraction Layer (HAL)',
+    description: 'Hardware-independent HAL so the AI runs on prototype, Android XR, Linux wearable, and future Denarixx v1 hardware. The AI communicates with the HAL, never directly with hardware.',
+    phase: 5,
+    testFile: 'hardwareAbstraction.test.ts',
+    engineCount: 9,
+    testCount: 161,
+    milestone: 'Denarixx Vision AI runs on any hardware platform',
   },
 ];
 

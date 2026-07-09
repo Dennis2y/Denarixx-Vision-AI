@@ -1,0 +1,240 @@
+Start Sprint 17: Smart Glasses Hardware Abstraction Layer (HAL).
+
+Roadmap Section:
+Expanded Access
+
+Use Sprint 1–16 as the foundation.
+
+IMPORTANT
+
+Denarixx Vision AI must never depend on one hardware manufacturer.
+
+Build a Hardware Abstraction Layer (HAL) so the AI can run on:
+
+• Prototype smart glasses
+• Android XR smart glasses
+• Linux-based smart glasses
+• Raspberry Pi compute module prototypes
+• Future Denarixx Vision Glasses hardware
+
+The AI should communicate with the HAL, never directly with hardware.
+
+──────────────────────────────
+CREATE
+──────────────────────────────
+
+src/engines/
+hardwareAbstractionEngine.ts
+cameraHAL.ts
+microphoneHAL.ts
+speakerHAL.ts
+imuHAL.ts
+gpsHAL.ts
+batteryHAL.ts
+displayHAL.ts
+sensorManagerEngine.ts
+
+src/types/
+hardware.ts
+
+tests/
+hardwareAbstraction.test.ts
+
+docs/
+SPRINT_17_HARDWARE_ABSTRACTION_LAYER.md
+
+──────────────────────────────
+CAMERA HAL
+──────────────────────────────
+
+Support:
+
+Initialize camera
+
+Capture frame
+
+Frame stream
+
+Camera health
+
+Camera restart
+
+Fallback camera
+
+──────────────────────────────
+MICROPHONE HAL
+──────────────────────────────
+
+Support:
+
+Wake word
+
+Speech capture
+
+Noise reduction placeholder
+
+Microphone diagnostics
+
+──────────────────────────────
+SPEAKER HAL
+──────────────────────────────
+
+Support:
+
+Bone-conduction speaker abstraction
+
+Volume control
+
+Emergency override
+
+Speech queue
+
+──────────────────────────────
+IMU HAL
+──────────────────────────────
+
+Support:
+
+Accelerometer
+
+Gyroscope
+
+Magnetometer
+
+Motion state
+
+Heading
+
+──────────────────────────────
+GPS HAL
+──────────────────────────────
+
+Support:
+
+GNSS
+
+Location quality
+
+Speed
+
+Heading
+
+Offline operation
+
+──────────────────────────────
+BATTERY HAL
+──────────────────────────────
+
+Support:
+
+Battery percentage
+
+Temperature
+
+Charging
+
+Health
+
+Critical battery mode
+
+──────────────────────────────
+DISPLAY HAL
+──────────────────────────────
+
+Support:
+
+HUD placeholder
+
+Brightness
+
+Low-power mode
+
+Future AR overlay abstraction
+
+──────────────────────────────
+SENSOR MANAGER
+──────────────────────────────
+
+Coordinate all hardware.
+
+Monitor failures.
+
+Automatically restart failed sensors where appropriate.
+
+Report health to the Glasses Runtime.
+
+──────────────────────────────
+INTEGRATION
+──────────────────────────────
+
+Connect with:
+
+Glasses Runtime
+
+Guardian
+
+Navigation
+
+Offline Engine
+
+Vision Engine
+
+Voice Engine
+
+Memory
+
+Privacy
+
+──────────────────────────────
+TESTS
+──────────────────────────────
+
+Test:
+
+Camera HAL
+
+Battery HAL
+
+GPS HAL
+
+Sensor failures
+
+Automatic restart
+
+Device diagnostics
+
+──────────────────────────────
+DOCUMENTATION
+──────────────────────────────
+
+Create:
+
+docs/SPRINT_17_HARDWARE_ABSTRACTION_LAYER.md
+
+Explain:
+
+HAL architecture
+
+Hardware independence
+
+Future custom Denarixx hardware
+
+──────────────────────────────
+QUALITY
+──────────────────────────────
+
+Run:
+
+npm run type-check
+
+npm test
+
+npm run build
+
+Fix all issues.
+
+Update README statistics.
+
+Push everything to GitHub.
+
+Do not stop until Sprint 17 is fully complete.
