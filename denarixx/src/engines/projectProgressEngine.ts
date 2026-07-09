@@ -311,6 +311,16 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
     testCount: 152,
     milestone: 'Denarixx operates safely without internet connection',
   },
+  {
+    id: 25,
+    name: 'No-Internet Street Safety Mode',
+    description: 'Glasses edge AI detects internet loss, activates offline street safety mode, announces via bone-conduction, and continues all critical guidance without cloud.',
+    phase: 5,
+    testFile: 'streetSafety.test.ts',
+    engineCount: 4,
+    testCount: 143,
+    milestone: 'Blind users are protected on the street even without internet',
+  },
 ];
 
 // ─── Phase registry ───────────────────────────────────────────────────────────
