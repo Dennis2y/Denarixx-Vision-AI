@@ -289,6 +289,18 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
     testCount: 144,
     milestone: 'CE/MDR certification roadmap complete',
   },
+
+  // ── Phase 5: Expanded Access ───────────────────────────────────────────────
+  {
+    id: 23,
+    name: 'Multi-Language AI Engine',
+    description: 'Language detection, translation pipeline, speech voice management — 8 languages with safety-first architecture.',
+    phase: 5,
+    testFile: 'languageEngine.test.ts',
+    engineCount: 4,
+    testCount: 120,
+    milestone: 'Denarixx speaks 8 languages — safety always first',
+  },
 ];
 
 // ─── Phase registry ───────────────────────────────────────────────────────────
@@ -325,6 +337,14 @@ export const PHASE_REGISTRY: PhaseDefinition[] = [
     sprintRange: [18, 22],
     description: 'Multi-camera glasses, on-device AI, hardware prototype, field trials, manufacturing readiness.',
     icon: '🚀',
+  },
+  {
+    id: 5,
+    name: 'Phase 5',
+    label: 'Expanded Access',
+    sprintRange: [23, 27],
+    description: 'Multi-language AI, global accessibility, advanced personalisation, community features.',
+    icon: '🌐',
   },
 ];
 

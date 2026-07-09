@@ -31,6 +31,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/projectProgress.test.ts` — Project Progress Tracker tests (59/59)
 - `cd denarixx && npx tsx tests/accessibilityEngine.test.ts` — Sprint 11 Accessibility & Personal Preferences tests (127/127)
 - `cd denarixx && npx tsx tests/privacyDashboard.test.ts` — Sprint 12 Privacy Dashboard & Consent Management tests (103/103)
+- `cd denarixx && npx tsx tests/languageEngine.test.ts` — Sprint 13 Multi-Language AI Engine tests (118/118)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
@@ -153,6 +154,12 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **Sprint 12 page:** `denarixx/src/app/privacy/page.tsx` — 5-tab Privacy Dashboard: Overview · Permissions · Your Data · Activity Log · Retention; consent toggles, data deletion, JSON export, audit trail
 - **Sprint 12 tests:** `denarixx/tests/privacyDashboard.test.ts` (103 tests)
 - **Sprint 12 docs:** `denarixx/docs/SPRINT_12_PRIVACY_DASHBOARD.md`
+- **Sprint 13 types:** `denarixx/src/types/language.ts` — SupportedLanguage (8 langs), LanguageInfo, TranslationContext, TranslationInput, TranslationOutput, VoiceOption, VoicePreference, LanguagePreferences, LanguageDetectionResult, SpeechUtteranceConfig, LANGUAGE_DEFAULTS, GUARDIAN_SAFETY_NOTE (separate file, never merge with index.ts)
+- **Sprint 13 engines:** `languageDetectionEngine.ts` — locale map (50+ variants), Arabic script detection, text-frequency analysis, detectFromLocale/Text/Language/LanguageList; `languageEngine.ts` — LANGUAGE_REGISTRY (8 languages), preference lifecycle, RTL helpers, diff; `translationEngine.ts` — PHRASE_DICTIONARY (30+ phrases × 8 languages), translateHazardAlert (sync-only critical safety), batchTranslate, RTL formatting; `speechLanguageEngine.ts` — VOICE_OPTIONS (2–3 voices per language), voice switching, buildSpeechUtteranceConfig, clampVoicePreference
+- **Sprint 13 page:** `denarixx/src/app/language/page.tsx` — 4-tab Language Settings: Language (8-card grid, auto-detect) · Voice (selector, pitch/rate/volume sliders, presets) · Preview (live translation for all contexts) · Test (hear phrases in all 8 languages)
+- **Sprint 13 tests:** `denarixx/tests/languageEngine.test.ts` (118 tests)
+- **Sprint 13 docs:** `denarixx/docs/SPRINT_13_MULTI_LANGUAGE.md`
+- **Roadmap Phase 5:** `Expanded Access` — sprintRange [23, 27], Sprint 23 = Multi-Language AI Engine (languageEngine.test.ts)
 - **Camera hook:** `denarixx/src/hooks/useCameraCapture.ts` — getUserMedia, stream lifecycle, frame capture (JPEG base64), 4-state status machine
 - **Alert throttle engine:** `denarixx/src/engines/alertThrottleEngine.ts` — per-severity cooldowns (Sprint 5: critical:5s, high:10s, medium:20s, low:30s), shouldSpeak() decision, confidence-escalation override, speak-count tracking
 - **Session hook:** `denarixx/src/hooks/useVisionSession.ts` — 7-step demo flow, camera integration, spatial intelligence, completedSteps tracking, session report generation

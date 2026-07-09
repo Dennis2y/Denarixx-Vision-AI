@@ -1,0 +1,199 @@
+Start Sprint 13: Multi-Language AI Engine.
+
+Roadmap Section:
+Expanded Access
+
+Use Sprint 1–12 as the foundation.
+
+Do NOT redesign the application.
+
+Goal:
+Allow Denarixx Vision AI to communicate naturally with users in multiple languages while keeping the safety system language-independent.
+
+──────────────────────────────
+CREATE
+──────────────────────────────
+
+src/engines/
+languageEngine.ts
+translationEngine.ts
+speechLanguageEngine.ts
+languageDetectionEngine.ts
+
+src/types/
+language.ts
+
+tests/
+languageEngine.test.ts
+
+docs/
+SPRINT_13_MULTI_LANGUAGE.md
+
+──────────────────────────────
+SUPPORTED LANGUAGES
+──────────────────────────────
+
+Initial support:
+
+English
+German
+French
+Spanish
+Italian
+Portuguese
+Arabic
+Swahili
+
+Architecture must allow adding new languages easily.
+
+──────────────────────────────
+FEATURES
+──────────────────────────────
+
+Automatically detect user language.
+
+Allow manual language selection.
+
+Remember preferred language.
+
+Translate:
+
+Scene descriptions
+
+Hazard alerts
+
+Navigation
+
+Companion speech
+
+Memory summaries
+
+Explainable AI
+
+Trust messages
+
+Settings
+
+──────────────────────────────
+VOICE
+──────────────────────────────
+
+Support different voices per language.
+
+Store voice preference.
+
+Allow automatic voice switching when language changes.
+
+──────────────────────────────
+SAFETY
+──────────────────────────────
+
+Critical alerts must never be delayed because of translation.
+
+Guardian always generates decisions in the core language first, then translates for presentation.
+
+──────────────────────────────
+UI
+──────────────────────────────
+
+Create:
+
+Language Settings page
+
+Language selector
+
+Voice selector
+
+Translation preview
+
+Language test page
+
+──────────────────────────────
+INTEGRATION
+──────────────────────────────
+
+Connect with:
+
+Guardian
+
+Navigation
+
+Memory
+
+Accessibility
+
+Privacy
+
+Companion
+
+Explainable AI
+
+Trust Engine
+
+──────────────────────────────
+TESTS
+──────────────────────────────
+
+Test:
+
+Language detection
+
+Translation
+
+Voice switching
+
+Preference persistence
+
+Fallback behaviour
+
+Guardian integration
+
+──────────────────────────────
+DOCUMENTATION
+──────────────────────────────
+
+Create:
+
+docs/SPRINT_13_MULTI_LANGUAGE.md
+
+Explain:
+
+Architecture
+
+Translation pipeline
+
+Safety considerations
+
+Future LLM translation integration
+
+──────────────────────────────
+ROADMAP
+──────────────────────────────
+
+Mark:
+
+Expanded Access
+
+as Active.
+
+Update the dynamic Build Roadmap.
+
+──────────────────────────────
+QUALITY
+──────────────────────────────
+
+Run:
+
+npm run type-check
+
+npm test
+
+npm run build
+
+Fix every issue.
+
+Update README statistics.
+
+Push everything to GitHub.
+
+Do not stop until Sprint 13 is completely finished.
