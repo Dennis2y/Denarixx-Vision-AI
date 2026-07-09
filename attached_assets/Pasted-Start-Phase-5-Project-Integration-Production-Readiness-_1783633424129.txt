@@ -1,0 +1,167 @@
+Start Phase 5: Project Integration & Production Readiness.
+
+This is NOT another architecture sprint.
+
+The goal is to transform the existing architecture into a fully connected, production-quality system.
+
+Do NOT create duplicate engines.
+
+Do NOT create overlapping modules.
+
+Instead:
+
+──────────────────────────────
+STEP 1
+──────────────────────────────
+
+Audit every engine.
+
+Verify:
+
+• Every engine is actually used.
+• No unused engines remain.
+• No duplicated responsibilities.
+• No dead code.
+• No placeholder imports.
+
+Generate:
+
+docs/ENGINE_AUDIT.md
+
+──────────────────────────────
+STEP 2
+──────────────────────────────
+
+Audit every API route.
+
+Verify:
+
+• Connected to UI.
+• Connected to engines.
+• Error handling.
+• Type safety.
+
+Generate:
+
+docs/API_AUDIT.md
+
+──────────────────────────────
+STEP 3
+──────────────────────────────
+
+Audit every page.
+
+Verify:
+
+• Every button works.
+• Every toggle works.
+• Every setting persists.
+• Every dashboard updates correctly.
+
+Generate:
+
+docs/UI_AUDIT.md
+
+──────────────────────────────
+STEP 4
+──────────────────────────────
+
+Audit every test.
+
+Increase meaningful coverage.
+
+Replace placeholder tests with behavioural tests where appropriate.
+
+Generate:
+
+docs/TEST_AUDIT.md
+
+──────────────────────────────
+STEP 5
+──────────────────────────────
+
+Run a full end-to-end simulation.
+
+Simulate:
+
+Power on glasses
+
+Navigation
+
+Obstacle detection
+
+Offline operation
+
+Language switching
+
+Privacy controls
+
+Memory
+
+Guardian
+
+Shutdown
+
+Generate:
+
+docs/END_TO_END_VALIDATION.md
+
+──────────────────────────────
+STEP 6
+──────────────────────────────
+
+Performance audit.
+
+Measure:
+
+Memory usage
+
+CPU usage
+
+Render performance
+
+Bundle size
+
+Latency
+
+Startup time
+
+Generate:
+
+docs/PERFORMANCE_REPORT.md
+
+──────────────────────────────
+STEP 7
+──────────────────────────────
+
+Fix every issue discovered.
+
+Do not stop until:
+
+npm run type-check
+
+npm test
+
+npm run build
+
+all pass successfully.
+
+──────────────────────────────
+STEP 8
+──────────────────────────────
+
+Update:
+
+README
+
+Build Roadmap
+
+Statistics
+
+Overall completion percentage
+
+Mark the project as:
+
+Production Prototype Ready.
+
+Push everything to GitHub.

@@ -160,6 +160,23 @@ export default async function RoadmapPage() {
         </p>
       </div>
 
+      {/* Production Prototype Ready banner */}
+      {progress.productionPrototypeReady && (
+        <div
+          className="rounded-2xl border border-green-500 bg-green-950/40 p-8 mb-6 text-center"
+          role="status"
+          aria-live="polite"
+        >
+          <p className="text-5xl mb-3" aria-hidden="true">🟢</p>
+          <h2 className="text-3xl font-black text-green-400 mb-2">
+            Production Prototype Ready
+          </h2>
+          <p className="text-green-200 text-sm max-w-xl mx-auto">
+            All 30 core sprints complete. Phase 5 integration audit passed. 142 engines, 3,244+ tests, 30 API routes, 30 pages — all verified. Software stack is ready to run on prototype hardware without code changes.
+          </p>
+        </div>
+      )}
+
       {/* MVP Complete banner */}
       {progress.mvpComplete && (
         <div

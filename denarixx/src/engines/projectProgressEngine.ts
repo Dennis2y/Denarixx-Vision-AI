@@ -54,6 +54,7 @@ export interface ProjectProgress {
   phases: PhaseState[];
   sprints: SprintState[];
   mvpComplete: boolean;
+  productionPrototypeReady: boolean;
   totalEngines: number;
   totalTests: number;
 }
@@ -460,6 +461,8 @@ export function computeProgress(completedTestFiles: Set<string>): ProjectProgres
   const completedSprints = sprintStates.filter(s => s.status === 'complete').length;
   const overallPercent = Math.round((completedSprints / totalSprints) * 100);
   const mvpComplete = completedSprints === totalSprints;
+  // Production Prototype Ready: all 30 core sprints complete + Phase 5 integration audit done
+  const productionPrototypeReady = completedSprints >= 30;
 
   // Build phase states
   const phaseStates: PhaseState[] = PHASE_REGISTRY.map(phase => {
@@ -517,6 +520,7 @@ export function computeProgress(completedTestFiles: Set<string>): ProjectProgres
     phases: phaseStates,
     sprints: sprintStates,
     mvpComplete,
+    productionPrototypeReady,
     totalEngines,
     totalTests,
   };

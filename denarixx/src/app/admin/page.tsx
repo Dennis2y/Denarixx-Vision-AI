@@ -24,16 +24,26 @@ export default function AdminPage() {
   const [memory, setMemory] = useState<{ count: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const safeFetch = async (url: string) => {
+    try {
+      const r = await fetch(url);
+      if (!r.ok) return null;
+      return r.json();
+    } catch {
+      return null;
+    }
+  };
+
   const load = async () => {
     setLoading(true);
     const [hRes, sRes, mRes] = await Promise.all([
-      fetch('/api/health').then((r) => r.json()),
-      fetch('/api/sessions').then((r) => r.json()),
-      fetch('/api/memory').then((r) => r.json()),
+      safeFetch('/api/health'),
+      safeFetch('/api/sessions'),
+      safeFetch('/api/memory'),
     ]);
-    setHealth(hRes.data);
-    setSessions(sRes.data);
-    setMemory(mRes.data);
+    setHealth(hRes?.data ?? null);
+    setSessions(sRes?.data ?? null);
+    setMemory(mRes?.data ?? null);
     setLoading(false);
   };
 
