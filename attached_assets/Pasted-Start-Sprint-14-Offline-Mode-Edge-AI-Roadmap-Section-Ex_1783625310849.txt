@@ -1,0 +1,225 @@
+Start Sprint 14: Offline Mode & Edge AI.
+
+Roadmap Section:
+Expanded Access
+
+Use Sprint 1–13 as the foundation.
+
+Do NOT redesign the application.
+
+Goal:
+Allow Denarixx Vision AI to continue operating safely when there is no internet connection.
+
+──────────────────────────────
+CREATE
+──────────────────────────────
+
+src/engines/
+offlineEngine.ts
+edgeInferenceEngine.ts
+networkMonitorEngine.ts
+offlineSyncEngine.ts
+modelManagerEngine.ts
+
+src/types/
+offline.ts
+
+tests/
+offlineEngine.test.ts
+
+docs/
+SPRINT_14_OFFLINE_EDGE_AI.md
+
+──────────────────────────────
+FEATURES
+──────────────────────────────
+
+Support:
+
+• Automatic online/offline detection
+
+• Graceful offline fallback
+
+• Local AI inference (simulation architecture)
+
+• Local speech generation placeholder
+
+• Local speech recognition placeholder
+
+• Offline navigation cache
+
+• Offline hazard detection cache
+
+• Offline memory access
+
+• Offline settings
+
+• Offline companion mode
+
+──────────────────────────────
+NETWORK MONITOR
+──────────────────────────────
+
+Track:
+
+Online
+
+Offline
+
+Weak connection
+
+Reconnecting
+
+Sync pending
+
+Last successful sync
+
+──────────────────────────────
+EDGE AI
+──────────────────────────────
+
+Create architecture for:
+
+Vision model manager
+
+Speech model manager
+
+Navigation model manager
+
+Memory model manager
+
+Future downloadable AI models
+
+Model versioning
+
+Model integrity checks
+
+──────────────────────────────
+SYNC ENGINE
+──────────────────────────────
+
+When connection returns:
+
+Synchronize:
+
+Navigation history
+
+Memories
+
+Preferences
+
+Permission changes
+
+Analytics (simulation)
+
+Conflict resolution
+
+Retry queue
+
+──────────────────────────────
+UI
+──────────────────────────────
+
+Create:
+
+Offline Status page
+
+Model Manager page
+
+Synchronization page
+
+Offline indicator
+
+Pending sync badge
+
+──────────────────────────────
+INTEGRATION
+──────────────────────────────
+
+Connect with:
+
+Guardian
+
+Memory
+
+Navigation
+
+Privacy
+
+Accessibility
+
+Language Engine
+
+Companion
+
+Trust Engine
+
+──────────────────────────────
+TESTS
+──────────────────────────────
+
+Test:
+
+Offline detection
+
+Model loading
+
+Sync queue
+
+Conflict resolution
+
+Fallback behaviour
+
+Guardian operation while offline
+
+Memory retrieval while offline
+
+──────────────────────────────
+DOCUMENTATION
+──────────────────────────────
+
+Create:
+
+docs/SPRINT_14_OFFLINE_EDGE_AI.md
+
+Explain:
+
+Offline architecture
+
+Edge AI strategy
+
+Synchronization flow
+
+Future on-device AI deployment
+
+──────────────────────────────
+ROADMAP
+──────────────────────────────
+
+Update the Build Roadmap.
+
+Expanded Access should display:
+
+Sprint 14 active.
+
+Update overall completion percentage.
+
+──────────────────────────────
+QUALITY
+──────────────────────────────
+
+Run:
+
+npm run type-check
+
+npm test
+
+npm run build
+
+Fix every issue.
+
+Update README statistics.
+
+Push everything to GitHub.
+
+Do not stop until Sprint 14 is completely finished.

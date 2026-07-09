@@ -301,6 +301,16 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
     testCount: 120,
     milestone: 'Denarixx speaks 8 languages — safety always first',
   },
+  {
+    id: 24,
+    name: 'Offline Mode & Edge AI',
+    description: 'Network monitoring, on-device edge inference, sync queue with conflict resolution — all 10 features available offline.',
+    phase: 5,
+    testFile: 'offlineEngine.test.ts',
+    engineCount: 5,
+    testCount: 152,
+    milestone: 'Denarixx operates safely without internet connection',
+  },
 ];
 
 // ─── Phase registry ───────────────────────────────────────────────────────────

@@ -32,6 +32,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/accessibilityEngine.test.ts` — Sprint 11 Accessibility & Personal Preferences tests (127/127)
 - `cd denarixx && npx tsx tests/privacyDashboard.test.ts` — Sprint 12 Privacy Dashboard & Consent Management tests (103/103)
 - `cd denarixx && npx tsx tests/languageEngine.test.ts` — Sprint 13 Multi-Language AI Engine tests (118/118)
+- `cd denarixx && npx tsx tests/offlineEngine.test.ts` — Sprint 14 Offline Mode & Edge AI tests (152/152)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
@@ -159,7 +160,12 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **Sprint 13 page:** `denarixx/src/app/language/page.tsx` — 4-tab Language Settings: Language (8-card grid, auto-detect) · Voice (selector, pitch/rate/volume sliders, presets) · Preview (live translation for all contexts) · Test (hear phrases in all 8 languages)
 - **Sprint 13 tests:** `denarixx/tests/languageEngine.test.ts` (118 tests)
 - **Sprint 13 docs:** `denarixx/docs/SPRINT_13_MULTI_LANGUAGE.md`
-- **Roadmap Phase 5:** `Expanded Access` — sprintRange [23, 27], Sprint 23 = Multi-Language AI Engine (languageEngine.test.ts)
+- **Sprint 14 types:** `denarixx/src/types/offline.ts` — NetworkStatus (5 states), NetworkQuality (4), EdgeModelType (5), ModelStatus (6), OfflineFeature (10), SyncCategory (7), SyncState (6), ConflictStrategy (4), NetworkReading, EdgeModel, OfflineCapabilityEntry, OfflineCapabilityTable, SyncRecord, SyncQueue, ConflictReport, ModelIntegrityCheck, OfflineState, OfflineSummary, OFFLINE_SAFETY_NOTE, SYNC_PRIVACY_NOTE
+- **Sprint 14 engines:** `networkMonitorEngine.ts` — status/quality detection, goOnline/goOffline/goWeak/goReconnecting transitions, diagnostic formatting; `offlineEngine.ts` — orchestrator, capability table (10 features), guardian/memory/navigation fallbacks, offline readiness validation; `offlineEdgeEngine.ts` — 5-model registry (vision/speech-synth/speech-recog/nav/memory), integrity checks, offline inference simulation, speech fallback; `offlineSyncEngine.ts` — sync queue, conflict resolution (4 strategies), retry logic, batch processing; `offlineModelRegistryEngine.ts` — model lifecycle (download/update/remove), coverage validation, storage summary
+- **Sprint 14 pages:** `/offline-status` — network monitor, simulate statuses, readiness check, feature table; `/models` — edge model cards, download/remove, integrity check, version summary; `/sync` — queue management, conflict simulation/resolution, category breakdown, activity log
+- **Sprint 14 tests:** `denarixx/tests/offlineEngine.test.ts` (152 tests)
+- **Sprint 14 docs:** `denarixx/docs/SPRINT_14_OFFLINE_EDGE_AI.md`
+- **Roadmap Phase 5:** `Expanded Access` — sprintRange [23, 27], Sprint 23 = Multi-Language, Sprint 24 = Offline Mode & Edge AI
 - **Camera hook:** `denarixx/src/hooks/useCameraCapture.ts` — getUserMedia, stream lifecycle, frame capture (JPEG base64), 4-state status machine
 - **Alert throttle engine:** `denarixx/src/engines/alertThrottleEngine.ts` — per-severity cooldowns (Sprint 5: critical:5s, high:10s, medium:20s, low:30s), shouldSpeak() decision, confidence-escalation override, speak-count tracking
 - **Session hook:** `denarixx/src/hooks/useVisionSession.ts` — 7-step demo flow, camera integration, spatial intelligence, completedSteps tracking, session report generation
