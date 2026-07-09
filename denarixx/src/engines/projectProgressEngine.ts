@@ -351,6 +351,16 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
     testCount: 190,
     milestone: 'Every hardware subsystem validated in software before manufacturing',
   },
+  {
+    id: 29,
+    name: 'Hardware Specification & Manufacturing Readiness',
+    description: 'Complete engineering specification for the first Denarixx Vision Glasses prototype — covering camera array (4 cameras), sensor suite, power system (EVT/DVT/PVT roadmap), connectivity, thermal budget, hardware interfaces, and software-hardware contracts.',
+    phase: 6,
+    testFile: 'hardwareSpecification.test.ts',
+    engineCount: 6,
+    testCount: 35,
+    milestone: 'Engineering specification ready for prototype PCB order',
+  },
 ];
 
 // ─── Phase registry ───────────────────────────────────────────────────────────
