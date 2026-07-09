@@ -28,7 +28,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/longTermMemory.test.ts` — Sprint 8 Long-Term Memory tests (100/100)
 - `cd denarixx && npx tsx tests/explainableAI.test.ts` — Sprint 9 Explainable AI & Trust tests (90/90)
 - `cd denarixx && npx tsx tests/companionPersonality.test.ts` — Sprint 10 Adaptive Companion Personality tests (92/92)
-- `cd denarixx && npx tsx tests/projectProgress.test.ts` — Project Progress Tracker tests (59/59)
+- `cd denarixx && npx tsx tests/projectProgress.test.ts` — Project Progress Tracker tests (59/59) — updated for 28 sprints, 6 phases
 - `cd denarixx && npx tsx tests/accessibilityEngine.test.ts` — Sprint 11 Accessibility & Personal Preferences tests (127/127)
 - `cd denarixx && npx tsx tests/privacyDashboard.test.ts` — Sprint 12 Privacy Dashboard & Consent Management tests (103/103)
 - `cd denarixx && npx tsx tests/languageEngine.test.ts` — Sprint 13 Multi-Language AI Engine tests (118/118)
@@ -36,6 +36,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/streetSafety.test.ts` — Sprint 15 No-Internet Street Safety tests (143/143)
 - `cd denarixx && npx tsx tests/glassesRuntime.test.ts` — Sprint 16 Standalone Glasses OS tests (160/160)
 - `cd denarixx && npx tsx tests/hardwareAbstraction.test.ts` — Sprint 17 Hardware Abstraction Layer tests (161/161)
+- `cd denarixx && npx tsx tests/glassesSimulator.test.ts` — Sprint 18 Digital Twin tests (127/127)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Stack
@@ -182,6 +183,11 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - **Sprint 17 tests:** `denarixx/tests/hardwareAbstraction.test.ts` (161/161)
 - **Sprint 17 docs:** `denarixx/docs/SPRINT_17_HARDWARE_ABSTRACTION_LAYER.md`
 - **Sprint 17 architecture:** AI communicates with HAL only — never directly with hardware. Platform switching (simulation → prototype → android-xr → linux-wearable → denarixx-v1) requires zero changes to AI engines. Camera fallback: up to 3 restarts then switches to secondary camera. Sensor auto-restart with cooldown prevents restart storms. Battery HAL imports CRITICAL_BATTERY_PCT from glassesOS.ts (Sprint 16). Future: denarixx-v1 native drivers connect HAL to custom Denarixx hardware (target Q4 2027).
+- **Sprint 18 types:** `denarixx/src/types/simulator.ts` — EnvironmentType (11), SimulatorFaultType (9), DigitalTwinState, VirtualCamera, VirtualGPS, VirtualIMU, VirtualBattery, VirtualMicrophone, VirtualSpeaker, VirtualDisplay, SimulatedFault, FaultInjectionResult, DiagnosticsReport, AIValidationResult, PerformanceMetrics, ManufacturingReadinessScore; TWIN_NOTE, DIGITAL_TWIN_PLATFORM, TOTAL_VIRTUAL_COMPONENTS (11). Never merge with hardware.ts (V8) or hardwareHAL.ts (Sprint 17).
+- **Sprint 18 engines:** `environmentSimulationEngine.ts` — ENVIRONMENT_REGISTRY (11 profiles: busy-city/quiet-street/shopping-mall/airport/train-station/rain/fog/night/snow/strong-sunlight/indoor-navigation), applyEnvironment, getGPSAccuracyForEnvironment, needsBoneConductionBoost, getEnvironmentCameraChallenge; `virtualSensorEngine.ts` — simulateCameraFrame, simulateGPS, simulateIMU, simulateCompass, simulateBatteryTick, simulateTemperature, isBatteryThermalCritical, simulateMicFrame, getMicQuality, getDisplayVisibility; `hardwareFaultEngine.ts` — FAULT_DEFINITIONS (9), injectCameraFailure/GPSLoss/LowBattery/SensorDrift/MicrophoneFailure/SpeakerFailure/Overheating/LowLight/PartialObstruction, clearFault, recoverFrom* helpers, getActiveFaults, isCriticalFaultActive; `glassesSimulatorEngine.ts` — createGlassesSimulator, bootSimulator, tickSimulator, resetSimulator, setSimulatorEnvironment, getWorkingCameraCount, isSimulatorHealthy, getSimulatorSummary, getComponentStatuses (11 components); `digitalTwinEngine.ts` — createDigitalTwin, getTwinHealthScore, buildTwinSnapshot, validateGuardianResponse/NavigationDegradation/OfflineMode/EmergencyMode/ExplainableAI, runAllAIValidations, allAIValidationsPassed, buildManufacturingReadinessScore, getPerformanceMetrics; `diagnosticsEngine.ts` — buildSensorHealthDashboard, runDiagnostics, validateAISystems, buildPerformanceSummary, getFaultHistory
+- **Sprint 18 tests:** `denarixx/tests/glassesSimulator.test.ts` (127/127)
+- **Sprint 18 docs:** `denarixx/docs/SPRINT_18_DIGITAL_TWIN.md`
+- **Sprint 18 architecture:** Digital Twin platform = 'simulation'. 11 virtual components (3 cameras + GPS + IMU + battery + 2 mics + speaker + display + temperature). 5 AI validation scenarios must pass before isManufacturingReady=true. Phase 5 (Expanded Access) sprintRange extended to [23,28]. Phase 6 "Platform & Hardware" added [29,33]. projectProgressEngine now tracks 28 sprints / 6 phases. Phase 6 remains 'locked' until Sprint 19 is added.
 - **Sprint 14 tests:** `denarixx/tests/offlineEngine.test.ts` (152 tests)
 - **Sprint 14 docs:** `denarixx/docs/SPRINT_14_OFFLINE_EDGE_AI.md`
 - **Roadmap Phase 5:** `Expanded Access` — sprintRange [23, 27], Sprint 23 = Multi-Language, Sprint 24 = Offline Mode & Edge AI

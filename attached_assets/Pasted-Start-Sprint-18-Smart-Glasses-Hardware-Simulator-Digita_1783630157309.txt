@@ -1,0 +1,237 @@
+Start Sprint 18: Smart Glasses Hardware Simulator & Digital Twin.
+
+Roadmap Section:
+Expanded Access
+
+Use Sprint 1–17 as the foundation.
+
+IMPORTANT
+
+No real hardware exists yet.
+
+Create a complete Digital Twin of Denarixx Vision Glasses.
+
+The Digital Twin should simulate hardware behaviour so every subsystem can be tested before manufacturing.
+
+──────────────────────────────
+CREATE
+──────────────────────────────
+
+src/engines/
+glassesSimulatorEngine.ts
+digitalTwinEngine.ts
+virtualSensorEngine.ts
+hardwareFaultEngine.ts
+environmentSimulationEngine.ts
+diagnosticsEngine.ts
+
+src/types/
+simulator.ts
+
+tests/
+glassesSimulator.test.ts
+
+docs/
+SPRINT_18_DIGITAL_TWIN.md
+
+──────────────────────────────
+SIMULATE
+──────────────────────────────
+
+Camera
+
+GPS
+
+IMU
+
+Compass
+
+Battery
+
+Temperature
+
+Microphones
+
+Bone-conduction speakers
+
+Display
+
+Buttons
+
+Touch controls
+
+──────────────────────────────
+ENVIRONMENTS
+──────────────────────────────
+
+Simulate:
+
+Busy city
+
+Quiet street
+
+Shopping mall
+
+Airport
+
+Train station
+
+Rain
+
+Fog
+
+Night
+
+Snow
+
+Strong sunlight
+
+Indoor navigation
+
+──────────────────────────────
+FAULT SIMULATION
+──────────────────────────────
+
+Camera failure
+
+GPS loss
+
+Low battery
+
+Sensor drift
+
+Microphone failure
+
+Speaker failure
+
+Overheating
+
+Low light
+
+Partial obstruction
+
+──────────────────────────────
+AI VALIDATION
+──────────────────────────────
+
+Verify that:
+
+Guardian responds correctly.
+
+Navigation degrades safely.
+
+Offline mode continues.
+
+Emergency mode works.
+
+Explainable AI remains available.
+
+──────────────────────────────
+DIAGNOSTICS
+──────────────────────────────
+
+Create:
+
+Hardware diagnostics page
+
+Sensor health dashboard
+
+Fault injection controls
+
+Performance monitor
+
+──────────────────────────────
+INTEGRATION
+──────────────────────────────
+
+Integrate with:
+
+HAL
+
+Glasses Runtime
+
+Guardian
+
+Navigation
+
+Offline Engine
+
+Memory
+
+Voice
+
+Privacy
+
+Accessibility
+
+──────────────────────────────
+TESTS
+──────────────────────────────
+
+Test:
+
+Hardware faults
+
+Recovery
+
+Sensor simulation
+
+Battery drain
+
+Offline behaviour
+
+Safety responses
+
+──────────────────────────────
+DOCUMENTATION
+──────────────────────────────
+
+Create:
+
+docs/SPRINT_18_DIGITAL_TWIN.md
+
+Explain:
+
+Digital Twin architecture
+
+Hardware simulation strategy
+
+Manufacturing readiness
+
+Future prototype validation
+
+──────────────────────────────
+ROADMAP
+──────────────────────────────
+
+Mark Sprint 18 complete.
+
+If Sprint 18 is the final sprint of Expanded Access in your roadmap, automatically mark:
+
+✅ Expanded Access
+
+Then activate:
+
+🟢 Platform & Hardware
+
+Update overall completion percentage.
+
+──────────────────────────────
+QUALITY
+──────────────────────────────
+
+Run:
+
+npm run type-check
+
+npm test
+
+npm run build
+
+Fix every issue.
+
+Update README statistics.
+
+Push everything to GitHub.
+
+Do not stop until Sprint 18 is fully complete.

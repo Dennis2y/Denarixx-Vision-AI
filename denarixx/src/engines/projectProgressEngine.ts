@@ -341,6 +341,16 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
     testCount: 161,
     milestone: 'Denarixx Vision AI runs on any hardware platform',
   },
+  {
+    id: 28,
+    name: 'Smart Glasses Hardware Simulator & Digital Twin',
+    description: 'Complete Digital Twin of Denarixx Vision Glasses — simulates all 11 hardware components, 11 environments, 9 fault types, AI validation, and manufacturing readiness so every subsystem can be tested before production.',
+    phase: 5,
+    testFile: 'glassesSimulator.test.ts',
+    engineCount: 6,
+    testCount: 190,
+    milestone: 'Every hardware subsystem validated in software before manufacturing',
+  },
 ];
 
 // ─── Phase registry ───────────────────────────────────────────────────────────
@@ -382,9 +392,17 @@ export const PHASE_REGISTRY: PhaseDefinition[] = [
     id: 5,
     name: 'Phase 5',
     label: 'Expanded Access',
-    sprintRange: [23, 27],
-    description: 'Multi-language AI, global accessibility, advanced personalisation, community features.',
+    sprintRange: [23, 28],
+    description: 'Multi-language AI, global accessibility, advanced personalisation, community features, hardware simulator & digital twin.',
     icon: '🌐',
+  },
+  {
+    id: 6,
+    name: 'Phase 6',
+    label: 'Platform & Hardware',
+    sprintRange: [29, 33],
+    description: 'Hardware manufacturing, platform integrations, third-party partnerships, and global launch.',
+    icon: '🏭',
   },
 ];
 
@@ -430,10 +448,12 @@ export function computeProgress(completedTestFiles: Set<string>): ProjectProgres
     );
     const phaseCompleted = phaseSprints.filter(s => s.status === 'complete').length;
     const phaseTotal = phaseSprints.length;
-    const phaseProgress = Math.round((phaseCompleted / phaseTotal) * 100);
+    const phaseProgress = phaseTotal === 0 ? 0 : Math.round((phaseCompleted / phaseTotal) * 100);
 
     let status: PhaseStatus;
-    if (phaseCompleted === phaseTotal) {
+    if (phaseTotal === 0) {
+      status = 'locked'; // phase defined but no sprints exist yet
+    } else if (phaseCompleted === phaseTotal) {
       status = 'complete';
     } else if (phaseSprints.some(s => s.status === 'active' || s.status === 'complete')) {
       status = 'active';

@@ -41,12 +41,12 @@ function firstN(n: number): Set<string> {
 
 console.log('\nRegistry integrity');
 
-test('27 sprints defined', () => {
-  assert.equal(SPRINT_REGISTRY.length, 27);
+test('28 sprints defined', () => {
+  assert.equal(SPRINT_REGISTRY.length, 28);
 });
 
-test('5 phases defined', () => {
-  assert.equal(PHASE_REGISTRY.length, 5);
+test('6 phases defined', () => {
+  assert.equal(PHASE_REGISTRY.length, 6);
 });
 
 test('sprint IDs are 1-24 sequential', () => {
@@ -55,7 +55,7 @@ test('sprint IDs are 1-24 sequential', () => {
   }
 });
 
-test('phase IDs are 1-5 sequential', () => {
+test('phase IDs are 1-6 sequential', () => {
   for (let i = 0; i < PHASE_REGISTRY.length; i++) {
     assert.equal(PHASE_REGISTRY[i].id, i + 1);
   }
@@ -74,18 +74,18 @@ test('all sprints have positive engineCount and testCount', () => {
   }
 });
 
-test('all sprints belong to phases 1-5', () => {
+test('all sprints belong to phases 1-6', () => {
   for (const s of SPRINT_REGISTRY) {
-    assert.ok(s.phase >= 1 && s.phase <= 5, `Sprint ${s.id} has invalid phase ${s.phase}`);
+    assert.ok(s.phase >= 1 && s.phase <= 6, `Sprint ${s.id} has invalid phase ${s.phase}`);
   }
 });
 
-test('phase sprint ranges cover 1-25 without gap', () => {
+test('phase sprint ranges cover 1-28 without gap', () => {
   const covered = new Set<number>();
   for (const p of PHASE_REGISTRY) {
     for (let i = p.sprintRange[0]; i <= p.sprintRange[1]; i++) covered.add(i);
   }
-  for (let i = 1; i <= 26; i++) {
+  for (let i = 1; i <= 28; i++) {
     assert.ok(covered.has(i), `Sprint ${i} not covered by any phase range`);
   }
 });
@@ -120,14 +120,14 @@ test('completedSprints is 0 with no files', () => {
   assert.equal(p.completedSprints, 0);
 });
 
-test('totalSprints is 27', () => {
+test('totalSprints is 28', () => {
   const p = computeProgress(noFiles());
-  assert.equal(p.totalSprints, 27);
+  assert.equal(p.totalSprints, 28);
 });
 
-test('remainingSprints is 27 with no files', () => {
+test('remainingSprints is 28 with no files', () => {
   const p = computeProgress(noFiles());
-  assert.equal(p.remainingSprints, 27);
+  assert.equal(p.remainingSprints, 28);
 });
 
 test('mvpComplete is false with no files', () => {
@@ -152,7 +152,7 @@ test('phase 1 is active when no files', () => {
   assert.equal(p.phases[0].status, 'active');
 });
 
-test('phases 2-5 are locked when no files', () => {
+test('phases 2-6 are locked when no files', () => {
   const p = computeProgress(noFiles());
   for (const ph of p.phases.slice(1)) {
     assert.equal(ph.status, 'locked');
@@ -163,14 +163,14 @@ test('phases 2-5 are locked when no files', () => {
 
 console.log('\ncomputeProgress — partial completion');
 
-test('5 completed files → 19% overall', () => {
+test('5 completed files → 18% overall', () => {
   const p = computeProgress(firstN(5));
-  assert.equal(p.overallPercent, Math.round(5 / 27 * 100)); // 19
+  assert.equal(p.overallPercent, Math.round(5 / 28 * 100)); // 18
 });
 
-test('12 completed files → 44% overall', () => {
+test('12 completed files → 43% overall', () => {
   const p = computeProgress(firstN(12));
-  assert.equal(p.overallPercent, Math.round(12 / 27 * 100)); // 44
+  assert.equal(p.overallPercent, Math.round(12 / 28 * 100)); // 43
 });
 
 test('sprint 6 is active when sprints 1-5 complete', () => {
@@ -198,11 +198,12 @@ test('phase 2 is active when sprint 6 is active', () => {
   assert.equal(p.phases[1].status, 'active');
 });
 
-test('phases 3-5 locked while phase 2 is active', () => {
+test('phases 3-6 locked while phase 2 is active', () => {
   const p = computeProgress(firstN(5));
   assert.equal(p.phases[2].status, 'locked');
   assert.equal(p.phases[3].status, 'locked');
   assert.equal(p.phases[4].status, 'locked');
+  assert.equal(p.phases[5].status, 'locked');
 });
 
 test('phase progress is correct for partial completion', () => {
@@ -254,9 +255,9 @@ test('mvpComplete is true with all files', () => {
   assert.equal(p.mvpComplete, true);
 });
 
-test('completedSprints is 27 with all files', () => {
+test('completedSprints is 28 with all files', () => {
   const p = computeProgress(allFiles());
-  assert.equal(p.completedSprints, 27);
+  assert.equal(p.completedSprints, 28);
 });
 
 test('remainingSprints is 0 with all files', () => {
@@ -270,12 +271,15 @@ test('no active sprint when all complete', () => {
   assert.equal(activeFound, false);
 });
 
-test('all phases complete when all files detected', () => {
+test('phases 1-5 complete and phase 6 locked when all files detected', () => {
   const p = computeProgress(allFiles());
-  for (const ph of p.phases) {
+  // Phases 1-5 have all their sprints completed
+  for (const ph of p.phases.slice(0, 5)) {
     assert.equal(ph.status, 'complete', `Phase ${ph.id} should be complete`);
     assert.equal(ph.progress, 100);
   }
+  // Phase 6 has no sprints defined yet — it remains locked (future phase)
+  assert.equal(p.phases[5].status, 'locked');
 });
 
 test('currentSprint is null when MVP complete', () => {
@@ -298,7 +302,7 @@ test('estimatedCompletion is "Complete" when done', () => {
   assert.equal(p.estimatedCompletion, 'Complete');
 });
 
-test('all 27 sprints are "complete" status', () => {
+test('all 28 sprints are "complete" status', () => {
   const p = computeProgress(allFiles());
   for (const s of p.sprints) {
     assert.equal(s.status, 'complete', `Sprint ${s.id} should be complete`);
@@ -391,14 +395,14 @@ test('complete sprint has progress of 100', () => {
   assert.equal(complete?.progress, 100);
 });
 
-test('phases output contains all 5 phases', () => {
+test('phases output contains all 6 phases', () => {
   const p = computeProgress(firstN(10));
-  assert.equal(p.phases.length, 5);
+  assert.equal(p.phases.length, 6);
 });
 
-test('sprints output contains all 27 sprints', () => {
+test('sprints output contains all 28 sprints', () => {
   const p = computeProgress(firstN(10));
-  assert.equal(p.sprints.length, 27);
+  assert.equal(p.sprints.length, 28);
 });
 
 test('estimatedCompletion is non-empty for incomplete state', () => {
