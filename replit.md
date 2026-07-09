@@ -41,6 +41,25 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/prototypeIntegration.test.ts` — Sprint 20 Prototype Hardware Integration tests (75/75)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
+## Real AI Integration (Sprint 21)
+
+Three vision modes selectable in Settings → AI Vision Mode:
+- **Simulation** (default) — synthetic detections, no camera or API key needed
+- **Live Local AI** — TensorFlow.js COCO-SSD on-device (80 classes, no API key, works offline)
+- **Live Cloud AI** — Gemini / OpenAI vision via `/api/vision/analyze-frame` (requires env key)
+
+OCR (Tesseract.js): Settings → OCR toggle — reads signs/labels from camera frames every 15 s.
+
+New files:
+- `denarixx/src/hooks/useLocalObjectDetection.ts` — COCO-SSD hook (lazy model load, status/error tracking)
+- `denarixx/src/hooks/useOCR.ts` — Tesseract.js hook (lazy worker, confidence output)
+- `denarixx/docs/REAL_AI_INTEGRATION.md` — feature status table, latency table, architecture
+
+Session page shows an **AI Processing** panel: mode badge, model status, live pipeline latency (ms), OCR results.
+Latency is tracked in `useVisionSession.ts` → `state.lastLatencyMs` / `state.avgLatencyMs`.
+New settings keys in `settingsStore.ts`: `visionMode`, `ocrEnabled`.
+Web Speech API (TTS + STT) was already real; now documented explicitly.
+
 ## Stack
 
 - **Next.js 15** (App Router) — main application in `denarixx/`

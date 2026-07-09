@@ -96,6 +96,101 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* ── AI Vision Mode ───────────────────────────────────────────────── */}
+      <section className="mb-8" aria-labelledby="vision-mode-heading">
+        <h2 id="vision-mode-heading" className="text-lg font-bold text-white mb-1">
+          🤖 AI Vision Mode
+        </h2>
+        <p className="text-gray-400 text-xs mb-3">
+          Controls how objects are detected. Changes take effect at the next session start.
+        </p>
+        <div className="grid grid-cols-1 gap-3">
+          {([
+            {
+              value: 'simulation' as const,
+              icon: '🔬',
+              title: 'Simulation',
+              desc: 'Fully synthetic detections. No camera or API key required. Best for development and testing.',
+              badge: null,
+            },
+            {
+              value: 'local-ai' as const,
+              icon: '⚡',
+              title: 'Live Local AI',
+              desc: 'Live camera + TensorFlow.js COCO-SSD running on-device. No API key needed. Detects 80 object classes in real-time.',
+              badge: 'Recommended',
+            },
+            {
+              value: 'cloud-ai' as const,
+              icon: '☁️',
+              title: 'Live Cloud AI',
+              desc: 'Live camera + Gemini / OpenAI cloud vision. Requires GEMINI_API_KEY or OPENAI_API_KEY environment variable.',
+              badge: 'API key required',
+            },
+          ] as const).map((mode) => {
+            const active = settings.visionMode === mode.value;
+            return (
+              <button
+                key={mode.value}
+                onClick={() => update('visionMode', mode.value)}
+                className={`rounded-xl border p-3 text-left transition-all focus:outline-none focus:ring-2 focus:ring-yellow-400 ${
+                  active
+                    ? 'bg-yellow-950/40 border-yellow-600 text-yellow-300'
+                    : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
+                }`}
+                aria-pressed={active}
+                aria-label={`${mode.title} mode: ${mode.desc}`}
+              >
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-lg" aria-hidden="true">{mode.icon}</span>
+                  <span className="text-sm font-bold">{mode.title}</span>
+                  {mode.badge && (
+                    <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-semibold ${
+                      mode.badge === 'Recommended'
+                        ? 'bg-green-900/50 text-green-300 border border-green-700'
+                        : 'bg-gray-700 text-gray-400 border border-gray-600'
+                    }`}>
+                      {mode.badge}
+                    </span>
+                  )}
+                </div>
+                <span className="block text-xs text-gray-400 leading-relaxed">{mode.desc}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* OCR toggle */}
+        <Card className="mt-3">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-white font-semibold mb-0.5">Read Signs &amp; Labels (OCR)</p>
+              <p className="text-gray-400 text-xs">
+                Use Tesseract.js to read text from camera frames — signs, menus, product labels.
+                Runs on-device. Requires camera access.
+              </p>
+            </div>
+            <button
+              onClick={() => update('ocrEnabled', !settings.ocrEnabled)}
+              className={`relative w-12 h-6 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 shrink-0 ${
+                settings.ocrEnabled
+                  ? 'bg-yellow-500 border-yellow-600'
+                  : 'bg-gray-700 border-gray-600'
+              }`}
+              aria-checked={settings.ocrEnabled}
+              role="switch"
+              aria-label="Toggle OCR text reading"
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  settings.ocrEnabled ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </Card>
+      </section>
+
       {/* ── Guidance Personality ─────────────────────────────────────────── */}
       <section className="mb-8" aria-labelledby="personality-heading">
         <h2 id="personality-heading" className="text-lg font-bold text-white mb-3">

@@ -14,7 +14,7 @@ import { SensorFusionEngine } from '@/engines/sensorFusionEngine';
 import { useLastGuidance } from './useLastGuidance';
 import { loadSettings } from '@/lib/settingsStore';
 import type { Detection, HazardAlert, SceneDescription, SafetyDecision } from '@/types';
-import type { VisionAnalysisV4 } from '@/types/vision';
+import type { VisionAnalysisV4, VisionHazardResult } from '@/types/vision';
 import type { WorldModelSnapshot } from '@/types/spatial';
 import type { SensorContext, VibrationPattern } from '@/types/sensors';
 
@@ -52,6 +52,9 @@ export interface SessionState {
   spatialData: WorldModelSnapshot | null;
   // V7: live sensor context
   sensorContext: SensorContext | null;
+  // Real AI Integration: capture-to-speech latency in ms
+  lastLatencyMs: number | null;
+  avgLatencyMs: number | null;
 }
 
 const FRAME_INTERVAL_MS = 3000;
@@ -95,6 +98,10 @@ export function useVisionSession() {
   const mobilityEngineRef = useRef(new MobilityEngine());
   const worldModelEngineRef = useRef(new WorldModelEngine());
 
+  // Real AI Integration refs
+  const localDetectionsRef = useRef<Detection[]>([]);
+  const latencySamplesRef = useRef<number[]>([]); // rolling 10-sample window
+
   // Session refs (stale-closure proof)
   const sessionIdRef = useRef<string | null>(null);
   const sessionSettingsRef = useRef(loadSettings());
@@ -137,6 +144,8 @@ export function useVisionSession() {
     report: null,
     spatialData: null,
     sensorContext: null,
+    lastLatencyMs: null,
+    avgLatencyMs: null,
   });
 
   const addLog = useCallback((msg: string) => {
@@ -168,31 +177,46 @@ export function useVisionSession() {
     }
     lastFrameTimeRef.current = now;
 
+    const visionMode = sessionSettingsRef.current.visionMode ?? 'simulation';
     const isCamera = cameraStatusRef.current === 'active';
     const imageData = isCamera ? captureFrameRef.current() : null;
     const source = imageData ? 'camera' : 'simulation';
 
     const personality = sessionSettingsRef.current.guidancePersonality;
     const personalityEngine = personalityEngineRef.current;
+    const frameStart = now;
 
     try {
-      // 1. Analyze frame
-      const visionRes = await fetch('/api/vision/analyze-frame', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: sid, source, imageData: imageData ?? undefined }),
-      });
-      const { data: visionData } = await visionRes.json();
-      const detections: Detection[] = visionData.detections ?? [];
+      // 1. Detect objects
+      // local-ai mode: use TFJS detections pushed by the client (no server round-trip)
+      // simulation / cloud-ai: call the server vision provider as before
+      type ServerVisionData = { detections: Detection[]; visionAnalysis?: VisionAnalysisV4 } | null;
+      let detections: Detection[];
+      let serverVisionData: ServerVisionData = null;
+
+      if (visionMode === 'local-ai') {
+        detections = localDetectionsRef.current;
+        addLog(`[local-ai] ${detections.length} object(s) from TF.js COCO-SSD`);
+      } else {
+        const visionRes = await fetch('/api/vision/analyze-frame', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: sid, source, imageData: imageData ?? undefined }),
+        });
+        const body = (await visionRes.json()) as { data: ServerVisionData };
+        serverVisionData = body.data;
+        detections = serverVisionData?.detections ?? [];
+      }
 
       setState((s) => {
         const newCount = s.frameCount + 1;
-        const camCount = s.cameraFrames + (imageData ? 1 : 0);
+        const usedCamera = imageData != null || visionMode === 'local-ai';
+        const camCount = s.cameraFrames + (usedCamera ? 1 : 0);
         const steps = [...s.completedSteps];
         if (newCount >= 2) steps[1] = true;
         return { ...s, frameCount: newCount, cameraFrames: camCount, completedSteps: steps };
       });
-      if (imageData) cameraFramesRef.current += 1;
+      if (imageData || visionMode === 'local-ai') cameraFramesRef.current += 1;
 
       // V6 + V7: Spatial analysis — runs from detections immediately after vision
       const currentFrame = worldModelEngineRef.current.getFrameCount();
@@ -235,9 +259,11 @@ export function useVisionSession() {
       }
 
       // 3 + 4. Hazard evaluation + safety decision
-      // Sprint 4: when real AI analysis is available, feed its hazards directly
+      // Sprint 4: when real cloud-AI analysis is available, feed its hazards directly
       // into the cognitive pipeline — skip simulated evaluation round-trips.
-      const visionAnalysis = visionData.visionAnalysis as VisionAnalysisV4 | undefined;
+      // In local-ai mode serverVisionData is null, so isRealVision stays false
+      // and we use the standard hazard/safety evaluation with TFJS detections.
+      const visionAnalysis = serverVisionData?.visionAnalysis;
       const isRealVision = !!(visionAnalysis?.isRealAI && !visionAnalysis?.usedFallback);
 
       let alerts: HazardAlert[];
@@ -245,7 +271,7 @@ export function useVisionSession() {
 
       if (isRealVision && visionAnalysis) {
         // Feed real AI hazards directly — no simulated evaluation needed
-        alerts = visionAnalysis.hazards.map((h, i) => ({
+        alerts = visionAnalysis.hazards.map((h: VisionHazardResult, i: number) => ({
           id: `ai-${Date.now()}-${i}`,
           type: h.type,
           description: h.description,
@@ -446,6 +472,13 @@ export function useVisionSession() {
         speak(memMsg, 'normal');
         addLog(`Memory recall: ${memMsg}`);
       }
+
+      // Latency: capture→decision pipeline time
+      const latencyMs = Date.now() - frameStart;
+      const newSamples = [...latencySamplesRef.current, latencyMs].slice(-10);
+      latencySamplesRef.current = newSamples;
+      const avgMs = Math.round(newSamples.reduce((a, b) => a + b, 0) / newSamples.length);
+      setState((s) => ({ ...s, lastLatencyMs: latencyMs, avgLatencyMs: avgMs }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       addLog(`Error: ${msg}`);
@@ -589,6 +622,11 @@ export function useVisionSession() {
     };
   }, []);
 
+  // Real AI Integration: allow session page to push TFJS detections into the pipeline
+  const setLocalDetections = useCallback((dets: Detection[]) => {
+    localDetectionsRef.current = dets;
+  }, []);
+
   return {
     state,
     cameraStatus: camera.status,
@@ -611,5 +649,7 @@ export function useVisionSession() {
     vibrate,
     isGPSSupported,
     isMotionSupported,
+    // Real AI Integration
+    setLocalDetections,
   };
 }

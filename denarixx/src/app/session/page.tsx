@@ -26,6 +26,9 @@ import { buildFromSafetyDecision } from '@/engines/explainableAIEngine';
 import type { ExplainedDecision } from '@/types/trust';
 import type { FeedbackType } from '@/types/trust';
 import { loadSettings } from '@/lib/settingsStore';
+import { useLocalObjectDetection } from '@/hooks/useLocalObjectDetection';
+import { useOCR } from '@/hooks/useOCR';
+import type { OCRResult } from '@/hooks/useOCR';
 
 export default function SessionPage() {
   const {
@@ -45,10 +48,18 @@ export default function SessionPage() {
     requestGPS,
     requestMotionSensors,
     stopGPS,
+    setLocalDetections,
   } = useVisionSession();
 
   const _settings = loadSettings();
   const locationPrecision = _settings.locationPrecision;
+  const visionMode = _settings.visionMode ?? 'simulation';
+  const ocrEnabled = _settings.ocrEnabled ?? false;
+
+  // ── Real AI Integration: local object detection (TF.js COCO-SSD) ──────────
+  const localDetect = useLocalObjectDetection();
+  const ocr = useOCR();
+  const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
 
   // Sprint 9 — latest AI explanation
   const [latestExplanation, setLatestExplanation] = useState<ExplainedDecision | null>(null);
@@ -99,6 +110,49 @@ export default function SessionPage() {
       }
     } catch { /* ignore */ }
   }, []);
+
+  // ── Local AI: load TFJS model when local-ai mode is selected ─────────────
+  useEffect(() => {
+    if (visionMode === 'local-ai') {
+      localDetect.loadModel().catch(() => {});
+    }
+  }, [visionMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Local AI: detection loop — runs COCO-SSD on video every 3 s ───────────
+  useEffect(() => {
+    if (visionMode !== 'local-ai' || !state.isActive) return;
+    const id = setInterval(async () => {
+      const video = videoRef.current;
+      if (!video || !localDetect.isReady) return;
+      const dets = await localDetect.detect(video);
+      setLocalDetections(dets);
+    }, 3000);
+    return () => clearInterval(id);
+  }, [visionMode, state.isActive, localDetect, setLocalDetections, videoRef]);
+
+  // ── OCR: load worker when OCR is enabled ──────────────────────────────────
+  useEffect(() => {
+    if (ocrEnabled) {
+      ocr.loadWorker().catch(() => {});
+    }
+  }, [ocrEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── OCR: read text from camera every 15 s ─────────────────────────────────
+  useEffect(() => {
+    if (!ocrEnabled || !state.isActive || cameraStatus !== 'active') return;
+    const id = setInterval(async () => {
+      const canvas = canvasRef.current;
+      if (!canvas || !ocr.isReady) return;
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      const result = await ocr.recognize(dataUrl);
+      if (result) {
+        setOcrResult(result);
+        const text = result.text.slice(0, 120);
+        speak(`I can read: ${text}`, 'normal');
+      }
+    }, 15000);
+    return () => clearInterval(id);
+  }, [ocrEnabled, state.isActive, cameraStatus, ocr, canvasRef, speak]);
 
   // Sprint 9 — build explanation when session state changes
   useEffect(() => {
@@ -445,6 +499,118 @@ export default function SessionPage() {
               </span>
             )}
           </div>
+        </div>
+
+        {/* ── Real AI Status Panel ───────────────────────────────────────── */}
+        <div className="mb-4 rounded-xl border border-gray-700 bg-gray-900 p-4">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <h2 className="text-base font-bold text-white">🤖 AI Processing</h2>
+            {/* Mode badge */}
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold ${
+              visionMode === 'local-ai'
+                ? 'bg-green-950/40 border-green-700 text-green-300'
+                : visionMode === 'cloud-ai'
+                ? 'bg-blue-950/40 border-blue-700 text-blue-300'
+                : 'bg-gray-800 border-gray-600 text-gray-400'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                visionMode === 'local-ai' ? 'bg-green-400 animate-pulse' :
+                visionMode === 'cloud-ai' ? 'bg-blue-400 animate-pulse' :
+                'bg-gray-500'
+              }`} aria-hidden="true" />
+              {visionMode === 'local-ai' ? '⚡ Local AI (COCO-SSD)' :
+               visionMode === 'cloud-ai' ? '☁️ Cloud AI' : '🔬 Simulation'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            {/* TTS */}
+            <div className="bg-gray-800/60 rounded-lg px-3 py-2">
+              <p className="text-gray-500 uppercase tracking-wider mb-1">Text-to-Speech</p>
+              <p className="text-green-300 font-semibold">✓ Real — Web Speech API</p>
+            </div>
+            {/* STT */}
+            <div className="bg-gray-800/60 rounded-lg px-3 py-2">
+              <p className="text-gray-500 uppercase tracking-wider mb-1">Speech Recognition</p>
+              <p className="text-green-300 font-semibold">✓ Real — Web Speech API</p>
+            </div>
+            {/* Local AI model status */}
+            {visionMode === 'local-ai' && (
+              <div className="bg-gray-800/60 rounded-lg px-3 py-2">
+                <p className="text-gray-500 uppercase tracking-wider mb-1">COCO-SSD Model</p>
+                <p className={`font-semibold ${
+                  localDetect.status === 'ready' || localDetect.status === 'detecting'
+                    ? 'text-green-300'
+                    : localDetect.status === 'loading'
+                    ? 'text-yellow-300'
+                    : localDetect.status === 'error'
+                    ? 'text-red-300'
+                    : 'text-gray-400'
+                }`}>
+                  {localDetect.status === 'ready' || localDetect.status === 'detecting'
+                    ? '✓ Ready'
+                    : localDetect.status === 'loading'
+                    ? '⏳ Loading model…'
+                    : localDetect.status === 'error'
+                    ? `✗ ${localDetect.error ?? 'Error'}`
+                    : '○ Not loaded'}
+                </p>
+              </div>
+            )}
+            {/* OCR status */}
+            {ocrEnabled && (
+              <div className="bg-gray-800/60 rounded-lg px-3 py-2">
+                <p className="text-gray-500 uppercase tracking-wider mb-1">OCR Engine</p>
+                <p className={`font-semibold ${
+                  ocr.status === 'ready' || ocr.status === 'recognizing'
+                    ? 'text-green-300'
+                    : ocr.status === 'loading'
+                    ? 'text-yellow-300'
+                    : ocr.status === 'error'
+                    ? 'text-red-300'
+                    : 'text-gray-400'
+                }`}>
+                  {ocr.status === 'ready' || ocr.status === 'recognizing'
+                    ? '✓ Tesseract.js ready'
+                    : ocr.status === 'loading'
+                    ? '⏳ Loading OCR…'
+                    : ocr.status === 'error'
+                    ? `✗ ${ocr.error ?? 'Error'}`
+                    : '○ Not loaded'}
+                </p>
+              </div>
+            )}
+            {/* Latency */}
+            {state.isActive && state.lastLatencyMs !== null && (
+              <div className="bg-gray-800/60 rounded-lg px-3 py-2">
+                <p className="text-gray-500 uppercase tracking-wider mb-1">Pipeline Latency</p>
+                <p className={`font-semibold font-mono ${
+                  state.lastLatencyMs < 500 ? 'text-green-300' :
+                  state.lastLatencyMs < 1500 ? 'text-yellow-300' : 'text-orange-300'
+                }`}>
+                  {state.lastLatencyMs} ms
+                  {state.avgLatencyMs !== null && (
+                    <span className="text-gray-500 font-normal"> avg {state.avgLatencyMs} ms</span>
+                  )}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* OCR result */}
+          {ocrEnabled && ocrResult && (
+            <div className="mt-3 bg-indigo-950/40 border border-indigo-700/50 rounded-lg px-3 py-2">
+              <p className="text-indigo-400 text-xs uppercase tracking-wider mb-1">
+                📖 OCR Read ({Math.round(ocrResult.confidence * 100)}% confidence)
+              </p>
+              <p className="text-indigo-100 text-sm leading-relaxed whitespace-pre-wrap">
+                {ocrResult.text}
+              </p>
+              <p className="text-indigo-600 text-xs mt-1">
+                {ocrResult.detectedAt.toLocaleTimeString()}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* ── Voice Command Indicator ────────────────────────────────────── */}

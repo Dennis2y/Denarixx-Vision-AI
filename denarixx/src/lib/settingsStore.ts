@@ -50,6 +50,16 @@ export interface AppSettings {
   reducedMotion: boolean;
   /** Automatically enter fullscreen walking overlay when session starts */
   fullscreenWalkingMode: boolean;
+  // ── Real AI Integration settings ────────────────────────────────────────────
+  /**
+   * Vision processing mode:
+   *  simulation — fully synthetic detections (no camera required)
+   *  local-ai   — live camera + TensorFlow.js COCO-SSD (on-device, no API key)
+   *  cloud-ai   — live camera + Gemini/OpenAI cloud vision (API key required)
+   */
+  visionMode: 'simulation' | 'local-ai' | 'cloud-ai';
+  /** Run Tesseract.js OCR on camera frames to read signs/labels */
+  ocrEnabled: boolean;
 }
 
 const DEFAULTS: AppSettings = {
@@ -72,6 +82,9 @@ const DEFAULTS: AppSettings = {
   highContrastMode: false,
   reducedMotion: false,
   fullscreenWalkingMode: false,
+  // Real AI Integration defaults
+  visionMode: 'simulation',
+  ocrEnabled: false,
 };
 
 const STORAGE_KEY = 'denarixx_settings';
