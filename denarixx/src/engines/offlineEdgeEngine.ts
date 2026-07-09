@@ -1,7 +1,8 @@
 // ─── Sprint 14: Offline Edge Inference Engine ─────────────────────────────────
 // Pure functions — no async, no I/O.
-// Local AI inference architecture for offline operation.
-// (Complements V15 edgeInferenceEngine.ts — offline-focused extension.)
+// Wearable edge AI inference on the Denarixx smart glasses compute module.
+// Primary device: smart glasses (ARM/NPU). Phone is secondary (fallback only).
+// (Complements V15 edgeInferenceEngine.ts — glasses-compute offline extension.)
 
 import type {
   EdgeModel,

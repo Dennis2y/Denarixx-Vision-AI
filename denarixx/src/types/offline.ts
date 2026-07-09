@@ -179,17 +179,18 @@ export interface OfflineSummary {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 export const OFFLINE_SAFETY_NOTE =
-  'Offline: Using cached hazard database. Guardian is active with local inference.';
+  'Glasses offline: Edge AI active on compute module. Guardian operating with on-device hazard detection.';
 
 export const OFFLINE_GUARDIAN_NOTE =
-  'Guardian is operating with local hazard patterns. Cloud-enhanced analysis unavailable.';
+  'Guardian running on glasses compute module. ' +
+  'Cloud scene enhancement unavailable — local vision model active.';
 
 export const SYNC_PRIVACY_NOTE =
   'Sync transmits only anonymised preference and navigation data. ' +
-  'Camera frames and audio are never stored or synced.';
+  'Camera frames, audio, and biometric data from the glasses are never stored or synced.';
 
 export const OFFLINE_NAVIGATION_NOTE =
-  'Navigation uses cached route data. Live traffic and real-time updates unavailable.';
+  'Navigation using cached route data on glasses. Live updates unavailable until cloud reconnects.';
 
 export const DEFAULT_NETWORK_READING: NetworkReading = {
   status: 'online',

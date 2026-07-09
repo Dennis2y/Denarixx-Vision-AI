@@ -1,6 +1,7 @@
 // ─── Sprint 14: Network Monitor Engine ───────────────────────────────────────
 // Pure functions — no async, no I/O.
-// Tracks network status, quality, and connection transitions.
+// Tracks the glasses compute module's connectivity to cloud and phone companion.
+// Architecture: Smart glasses (primary) → phone companion (bridge) → cloud (optional).
 
 import type {
   NetworkReading,

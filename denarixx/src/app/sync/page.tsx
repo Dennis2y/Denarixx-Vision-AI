@@ -123,15 +123,16 @@ export default function SyncPage() {
     <div className="min-h-screen bg-gray-950 text-gray-100 p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white mb-1">Synchronization</h1>
+          <h1 className="text-2xl font-bold text-white mb-1">Glasses Cloud Sync</h1>
           <p className="text-gray-400 text-sm">
-            Manage offline data sync queue, conflict resolution, and retry logic.
+            Data accumulated on the glasses compute module while offline.
+            Syncs to cloud via phone companion bridge when connectivity returns.
           </p>
         </div>
 
         {/* Privacy note */}
         <div className="mb-4 rounded-lg border border-blue-700/30 bg-blue-900/10 p-3 text-xs text-blue-300">
-          {SYNC_PRIVACY_NOTE}
+          {SYNC_PRIVACY_NOTE} Glasses are the source of truth; cloud is a sync target.
         </div>
 
         {/* Summary cards */}

@@ -115,9 +115,10 @@ export default function OfflineStatusPage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white mb-1">Offline Status</h1>
+          <h1 className="text-2xl font-bold text-white mb-1">Glasses Offline Status</h1>
           <p className="text-gray-400 text-sm">
-            Network monitor, edge AI status, and offline capability overview.
+            Glasses compute module connectivity, wearable edge AI status, and offline capability overview.
+            Phone app is a monitoring dashboard — the glasses operate independently.
           </p>
         </div>
 
@@ -176,10 +177,10 @@ export default function OfflineStatusPage() {
         {/* Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
-            { label: 'Edge Models', value: `${summary.modelsReady}/${summary.modelsTotal}`, sub: 'ready' },
-            { label: 'Features Online', value: `${summary.offlineFeaturesAvailable}/10`, sub: 'available offline' },
-            { label: 'Sync Queue', value: summary.pendingSyncItems.toString(), sub: 'pending items' },
-            { label: 'Guardian', value: summary.guardianReady ? 'Ready' : 'Limited', sub: 'offline mode' },
+            { label: 'Glasses Models', value: `${summary.modelsReady}/${summary.modelsTotal}`, sub: 'on compute module' },
+            { label: 'Features', value: `${summary.offlineFeaturesAvailable}/10`, sub: 'available on glasses' },
+            { label: 'Sync Queue', value: summary.pendingSyncItems.toString(), sub: 'pending to cloud' },
+            { label: 'Guardian', value: summary.guardianReady ? 'Ready' : 'Limited', sub: 'glasses edge AI' },
           ].map(s => (
             <div key={s.label} className="rounded-lg border border-gray-700/50 bg-gray-800/40 p-3">
               <div className="text-xs text-gray-400 mb-1">{s.label}</div>
@@ -210,7 +211,7 @@ export default function OfflineStatusPage() {
         {activeTab === 'status' && (
           <div className="space-y-4">
             <div className="rounded-xl border border-gray-700/50 bg-gray-800/30 p-5">
-              <h2 className="text-base font-semibold mb-3">Network Diagnostics</h2>
+              <h2 className="text-base font-semibold mb-3">Glasses Cloud Link Diagnostics</h2>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 {Object.entries(diag).map(([k, v]) => (
                   <div key={k} className="flex justify-between">
@@ -222,12 +223,12 @@ export default function OfflineStatusPage() {
             </div>
 
             <div className="rounded-xl border border-gray-700/50 bg-gray-800/30 p-5">
-              <h2 className="text-base font-semibold mb-3">Offline Readiness</h2>
+              <h2 className="text-base font-semibold mb-3">Glasses Offline Readiness</h2>
               <div className={`flex items-center gap-2 mb-3 text-sm font-medium ${readiness.ready ? 'text-green-400' : 'text-yellow-400'}`}>
-                {readiness.ready ? '✓ Ready for offline use' : '⚠ Some issues found'}
+                {readiness.ready ? '✓ Glasses ready for cloud-free operation' : '⚠ Some issues found'}
               </div>
               {readiness.issues.length === 0
-                ? <p className="text-sm text-gray-400">All systems ready for offline operation.</p>
+                ? <p className="text-sm text-gray-400">Glasses compute module ready — all edge models loaded.</p>
                 : <ul className="space-y-1">
                     {readiness.issues.map(i => (
                       <li key={i} className="text-sm text-yellow-300 flex items-start gap-2">
@@ -254,8 +255,8 @@ export default function OfflineStatusPage() {
         {activeTab === 'features' && (
           <div className="space-y-3">
             <p className="text-sm text-gray-400">
-              {available.length} of 10 features available offline.
-              {degraded.length > 0 && ` ${degraded.length} operating in degraded mode.`}
+              {available.length} of 10 features available on glasses without cloud.
+              {degraded.length > 0 && ` ${degraded.length} use edge AI only (no cloud enhancement).`}
             </p>
             {(Object.entries(state.capabilities) as [string, typeof state.capabilities[keyof typeof state.capabilities]][]).map(([key, cap]) => {
               const isAvail = available.includes(cap.feature);
@@ -265,7 +266,7 @@ export default function OfflineStatusPage() {
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium capitalize">{cap.feature.replace(/-/g, ' ')}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${isAvail ? (isDeg ? 'bg-yellow-700/40 text-yellow-300' : 'bg-green-700/40 text-green-300') : 'bg-gray-700/40 text-gray-400'}`}>
-                      {isAvail ? (isDeg ? 'Degraded' : 'Full') : 'Unavailable'}
+                      {isAvail ? (isDeg ? 'Edge only' : 'Full') : 'Unavailable'}
                     </span>
                   </div>
                   {cap.degraded && isDeg && (
@@ -284,7 +285,7 @@ export default function OfflineStatusPage() {
         {activeTab === 'guardian' && (
           <div className="space-y-4">
             <div className="rounded-xl border border-gray-700/50 bg-gray-800/30 p-5">
-              <h2 className="text-base font-semibold mb-2">Guardian Offline Mode</h2>
+              <h2 className="text-base font-semibold mb-2">Guardian — Glasses Edge AI Mode</h2>
               <p className="text-sm text-gray-300 mb-3">{getGuardianFallbackMessage(state)}</p>
               <div className="rounded-lg border border-blue-600/30 bg-blue-900/10 p-3 text-sm text-blue-300">
                 {OFFLINE_GUARDIAN_NOTE}
@@ -307,14 +308,15 @@ export default function OfflineStatusPage() {
         {activeTab === 'privacy' && (
           <div className="space-y-4">
             <div className="rounded-xl border border-gray-700/50 bg-gray-800/30 p-5">
-              <h2 className="text-base font-semibold mb-3">Sync Privacy</h2>
+              <h2 className="text-base font-semibold mb-3">Glasses Sync Privacy</h2>
               <p className="text-sm text-gray-300 mb-4">{SYNC_PRIVACY_NOTE}</p>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li>• Camera frames and audio are never stored or synced</li>
-                <li>• All sync data is anonymised before transmission</li>
+                <li>• Glasses camera frames are never stored or synced</li>
+                <li>• Glasses microphone audio is never stored or synced</li>
+                <li>• All sync data is anonymised before leaving the glasses</li>
                 <li>• Navigation history is summarised, not raw GPS tracks</li>
-                <li>• You can delete all pending sync data from the Sync page</li>
-                <li>• Edge models run entirely on-device — no cloud calls</li>
+                <li>• Edge AI inference runs on the glasses compute module — no cloud calls</li>
+                <li>• Phone companion receives only dashboard data, not raw sensor streams</li>
               </ul>
             </div>
             <div className="rounded-xl border border-gray-700/50 bg-gray-800/30 p-5">

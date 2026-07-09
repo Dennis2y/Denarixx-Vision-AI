@@ -1,6 +1,8 @@
 // ─── Sprint 14: Offline Engine ────────────────────────────────────────────────
 // Pure functions — no async, no I/O.
-// Main orchestrator for offline state, capability routing, and fallback guidance.
+// Glasses-first offline orchestrator: routes all safety features through the
+// glasses compute module. Phone app is secondary (dashboard + fallback only).
+// Architecture priority: Glasses edge AI → phone companion → cloud (optional).
 
 import type {
   OfflineState,

@@ -75,26 +75,27 @@ export default function ModelsPage() {
     <div className="min-h-screen bg-gray-950 text-gray-100 p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white mb-1">Edge Model Manager</h1>
+          <h1 className="text-2xl font-bold text-white mb-1">Glasses Edge Model Manager</h1>
           <p className="text-gray-400 text-sm">
-            Download and manage on-device AI models for offline operation.
+            Manage AI models stored on the Denarixx glasses compute module.
+            Models transfer: cloud → phone companion → glasses via BLE/USB.
           </p>
         </div>
 
         {/* Critical warning */}
         {criticalMissing && (
           <div className="mb-4 rounded-lg border border-red-600/40 bg-red-900/10 p-3 text-sm text-red-300">
-            ⚠ Critical models (vision, memory) not ready. Offline hazard detection will be basic.
+            ⚠ Critical glasses models (vision, memory) not ready. Offline hazard detection on glasses will be basic.
           </div>
         )}
 
         {/* Storage Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
-            { label: 'Installed', value: storageSummary.installedMb },
+            { label: 'Glasses Storage', value: storageSummary.installedMb },
             { label: 'Ready', value: `${storageSummary.readyCount}/${storageSummary.modelCount}` },
             { label: 'Pending DL', value: formatModelSize(pending) },
-            { label: 'Coverage', value: `${coverage.covered.length}/5 types` },
+            { label: 'AI Coverage', value: `${coverage.covered.length}/5 types` },
           ].map(s => (
             <div key={s.label} className="rounded-lg border border-gray-700/50 bg-gray-800/40 p-3">
               <div className="text-xs text-gray-400 mb-1">{s.label}</div>
@@ -214,7 +215,8 @@ export default function ModelsPage() {
         </div>
 
         <p className="mt-4 text-xs text-gray-500">
-          Edge models run entirely on-device. No data is transmitted during inference.
+          Edge models run entirely on the glasses compute module. No data is transmitted during inference.
+          Phone companion is used for model transfer only — not for runtime inference.
         </p>
       </div>
     </div>

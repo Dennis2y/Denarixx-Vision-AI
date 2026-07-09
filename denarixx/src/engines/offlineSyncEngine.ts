@@ -1,6 +1,8 @@
 // ─── Sprint 14: Offline Sync Engine ───────────────────────────────────────────
 // Pure functions — no async, no I/O.
-// Manages the sync queue, conflict resolution, and retry logic.
+// Queues data accumulated on the glasses compute module while offline.
+// Syncs to cloud via phone companion bridge when connectivity returns.
+// Glasses are the source of truth; cloud is a sync target, not the primary store.
 
 import type {
   SyncQueue,

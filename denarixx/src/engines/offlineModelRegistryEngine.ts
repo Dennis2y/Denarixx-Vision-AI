@@ -1,7 +1,8 @@
 // ─── Sprint 14: Offline Model Registry Engine ─────────────────────────────────
 // Pure functions — no async, no I/O.
-// Manages downloadable edge model lifecycle, versioning, and download queue.
-// (Complements V12 modelManagerEngine.ts — offline model registry.)
+// Manages AI model lifecycle on the Denarixx glasses compute module:
+// download (cloud → phone → glasses), OTA updates, integrity, and storage.
+// (Complements V12 modelManagerEngine.ts — glasses-native model registry.)
 
 import type { EdgeModel, EdgeModelType, ModelStatus } from '@/types/offline';
 import {

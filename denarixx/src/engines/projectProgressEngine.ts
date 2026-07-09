@@ -304,7 +304,7 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
   {
     id: 24,
     name: 'Offline Mode & Edge AI',
-    description: 'Network monitoring, on-device edge inference, sync queue with conflict resolution — all 10 features available offline.',
+    description: 'Glasses-first offline architecture: wearable edge AI on glasses compute module, sync queue, conflict resolution — all 10 features run on glasses without cloud.',
     phase: 5,
     testFile: 'offlineEngine.test.ts',
     engineCount: 5,
