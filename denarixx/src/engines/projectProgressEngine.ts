@@ -361,6 +361,16 @@ export const SPRINT_REGISTRY: SprintDefinition[] = [
     testCount: 35,
     milestone: 'Engineering specification ready for prototype PCB order',
   },
+  {
+    id: 30,
+    name: 'Prototype Hardware Integration Plan',
+    description: 'Complete integration plan linking the Denarixx Vision AI software stack to physical prototype hardware — 12-interface registry, firmware bridge, first-boot provisioning (7 steps), 4-stage deployment pipeline, and 8-scenario EVT test plan.',
+    phase: 6,
+    testFile: 'prototypeIntegration.test.ts',
+    engineCount: 4,
+    testCount: 75,
+    milestone: 'Software stack ready to run on prototype hardware without code changes',
+  },
 ];
 
 // ─── Phase registry ───────────────────────────────────────────────────────────
