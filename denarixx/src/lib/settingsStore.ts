@@ -60,6 +60,19 @@ export interface AppSettings {
   visionMode: 'simulation' | 'local-ai' | 'cloud-ai';
   /** Run Tesseract.js OCR on camera frames to read signs/labels */
   ocrEnabled: boolean;
+  // ── Sprint 22: Real Perception Integration settings ──────────────────────────
+  /** End-to-end perception pipeline mode */
+  perceptionMode: 'simulation' | 'live' | 'hybrid';
+  /** OCR provider: tesseract = on-device, none = disabled */
+  ocrProvider: 'tesseract' | 'none';
+  /** TTS provider: web-speech = browser Web Speech API, none = silent */
+  speechProvider: 'web-speech' | 'none';
+  /** STT provider: web-speech = browser SpeechRecognition, none = disabled */
+  sttProvider: 'web-speech' | 'none';
+  /** Enable wake word ("Hey Aria") to activate voice commands hands-free */
+  wakeWordEnabled: boolean;
+  /** Stream speech word-by-word (supported in web-speech provider) */
+  streamingSpeech: boolean;
 }
 
 const DEFAULTS: AppSettings = {
@@ -85,6 +98,13 @@ const DEFAULTS: AppSettings = {
   // Real AI Integration defaults
   visionMode: 'simulation',
   ocrEnabled: false,
+  // Sprint 22: Real Perception Integration defaults
+  perceptionMode: 'simulation',
+  ocrProvider: 'tesseract',
+  speechProvider: 'web-speech',
+  sttProvider: 'web-speech',
+  wakeWordEnabled: false,
+  streamingSpeech: false,
 };
 
 const STORAGE_KEY = 'denarixx_settings';

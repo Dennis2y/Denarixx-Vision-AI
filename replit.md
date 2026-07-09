@@ -41,6 +41,42 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/prototypeIntegration.test.ts` — Sprint 20 Prototype Hardware Integration tests (75/75)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
+## Real Perception Integration (Sprint 22)
+
+Full 5-phase sprint connecting OCR, speech engines, and live perception pipeline.
+
+**Phase 1 — OCR engines:**
+- `src/engines/ocrEngine.ts` — provider abstraction: TesseractProvider + NullProvider
+- `src/engines/textReadingEngine.ts` — domain-aware text reading (sign/menu/medicine/street/receipt/document)
+- `src/types/ocr.ts` — OCR types (OCRResult, TextReadingResult, OCRProvider, TextDomain, etc.)
+
+**Phase 2 — Speech engines:**
+- `src/engines/speechRecognitionEngine.ts` — STT provider, wake word detection, emergency transcript, streaming buffer
+- `src/engines/textToSpeechEngine.ts` — priority queue (critical/high/normal/low), interrupt, streaming, emergency bypass
+- `src/engines/voiceInteractionEngine.ts` — orchestrates STT + TTS + wake word + emergency mode
+- `src/types/speech.ts` — speech types (TtsQueueItem, WakeWordConfig, VoiceInteractionState, etc.)
+
+**Phase 3 — Live Perception Pipeline:**
+- `src/engines/livePerceptionEngine.ts` — Camera → Vision → OCR → Guardian → Navigation → Voice
+- `src/types/livePerception.ts` — pipeline types (LivePerceptionConfig, PerceptionFrameMetrics, etc.)
+
+**Phase 4 — Settings UI** (added to Settings page):
+- OCR provider selector (Tesseract.js / Disabled)
+- TTS provider selector (Web Speech API / Silent)
+- STT provider selector (Web Speech API / Disabled)
+- Wake word toggle ("Hey Aria")
+- Streaming speech toggle
+- New fields in `settingsStore.ts`: `perceptionMode`, `ocrProvider`, `speechProvider`, `sttProvider`, `wakeWordEnabled`, `streamingSpeech`
+
+**Phase 5 — Performance:**
+- `src/engines/perceptionLatencyEngine.ts` — per-stage timers, ring buffer (100 samples), P95/avg/min/max report, grade labels
+
+**Tests:** `tests/realPerception.test.ts` — 146 tests, 0 failed. Covers OCR, text reading, STT, TTS, voice interaction, pipeline, latency, provider switching, failure recovery.
+
+**Docs:** `docs/REAL_PERCEPTION_INTEGRATION.md` — pipeline diagram, provider table, phase docs, offline strategy.
+
+Test command: `cd denarixx && npx tsx tests/realPerception.test.ts`
+
 ## Real AI Integration (Sprint 21)
 
 Three vision modes selectable in Settings → AI Vision Mode:

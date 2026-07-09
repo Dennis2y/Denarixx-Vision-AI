@@ -1,0 +1,166 @@
+Start Real Perception Integration Program.
+
+This is NOT an architecture sprint.
+
+The goal is to replace remaining simulated perception with real AI capabilities.
+
+Do NOT duplicate existing engines.
+
+Reuse the current VisionEngine, provider architecture, Guardian, HAL, and Glasses Runtime.
+
+──────────────────────────────
+PHASE 1 — OCR
+──────────────────────────────
+
+Create:
+
+src/engines/
+ocrEngine.ts
+textReadingEngine.ts
+
+Support:
+
+• documents
+• signs
+• menus
+• medicine labels
+• street names
+• receipts
+
+Use a provider abstraction so OCR engines can be swapped later.
+
+──────────────────────────────
+PHASE 2 — SPEECH
+──────────────────────────────
+
+Create:
+
+speechRecognitionEngine.ts
+textToSpeechEngine.ts
+voiceInteractionEngine.ts
+
+Support:
+
+• wake word
+• offline placeholders
+• streaming speech
+• interrupt speech
+• emergency speech priority
+
+──────────────────────────────
+PHASE 3 — LIVE PERCEPTION
+──────────────────────────────
+
+Connect:
+
+Camera Pipeline
+
+↓
+
+Vision Provider
+
+↓
+
+OCR
+
+↓
+
+Guardian
+
+↓
+
+Navigation
+
+↓
+
+Voice Output
+
+Replace simulated scene events with live perception whenever Live Mode is enabled.
+
+Simulation Mode must remain available.
+
+──────────────────────────────
+PHASE 4 — SETTINGS
+──────────────────────────────
+
+Allow users to choose:
+
+Vision Provider
+
+OCR Provider
+
+Speech Provider
+
+Simulation
+
+Live Camera
+
+Hybrid Mode
+
+──────────────────────────────
+PHASE 5 — PERFORMANCE
+──────────────────────────────
+
+Measure:
+
+Camera latency
+
+Vision latency
+
+OCR latency
+
+Speech latency
+
+End-to-end alert latency
+
+──────────────────────────────
+TESTS
+──────────────────────────────
+
+Create behavioural tests for:
+
+OCR
+
+Speech
+
+Live perception pipeline
+
+Provider switching
+
+Failure recovery
+
+──────────────────────────────
+DOCUMENTATION
+──────────────────────────────
+
+Create:
+
+docs/REAL_PERCEPTION_INTEGRATION.md
+
+Explain:
+
+Pipeline
+
+Providers
+
+Fallbacks
+
+Offline strategy
+
+──────────────────────────────
+QUALITY
+──────────────────────────────
+
+Run:
+
+npm run type-check
+
+npm test
+
+npm run build
+
+Fix all issues.
+
+Update README.
+
+Push everything to GitHub.

@@ -191,6 +191,141 @@ export default function SettingsPage() {
         </Card>
       </section>
 
+      {/* ── Perception Providers (Phase 4) ───────────────────────────────── */}
+      <section className="mb-8" aria-labelledby="providers-heading">
+        <h2 id="providers-heading" className="text-lg font-bold text-white mb-1">
+          🔌 Perception Providers
+        </h2>
+        <p className="text-gray-400 text-xs mb-3">
+          Choose which AI providers power OCR, voice output, and voice commands.
+        </p>
+
+        {/* OCR Provider */}
+        <Card className="mb-3">
+          <p className="text-white font-semibold mb-1">OCR Provider</p>
+          <p className="text-gray-400 text-xs mb-2">Reads text from camera frames — signs, menus, labels.</p>
+          <div className="flex gap-2">
+            {(['tesseract', 'none'] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => update('ocrProvider', p)}
+                className={`flex-1 rounded-lg border py-2 px-3 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-yellow-400 ${
+                  settings.ocrProvider === p
+                    ? 'bg-yellow-950/40 border-yellow-600 text-yellow-300'
+                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
+                }`}
+                aria-pressed={settings.ocrProvider === p}
+              >
+                {p === 'tesseract' ? '⚡ Tesseract.js (on-device)' : '🚫 Disabled'}
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        {/* TTS Provider */}
+        <Card className="mb-3">
+          <p className="text-white font-semibold mb-1">Voice Output Provider</p>
+          <p className="text-gray-400 text-xs mb-2">Speaks guidance and alerts aloud.</p>
+          <div className="flex gap-2">
+            {(['web-speech', 'none'] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => update('speechProvider', p)}
+                className={`flex-1 rounded-lg border py-2 px-3 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-yellow-400 ${
+                  settings.speechProvider === p
+                    ? 'bg-yellow-950/40 border-yellow-600 text-yellow-300'
+                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
+                }`}
+                aria-pressed={settings.speechProvider === p}
+              >
+                {p === 'web-speech' ? '🔊 Web Speech API' : '🔇 Silent'}
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        {/* STT Provider */}
+        <Card className="mb-3">
+          <p className="text-white font-semibold mb-1">Voice Command Provider</p>
+          <p className="text-gray-400 text-xs mb-2">Listens for voice commands. Chrome and Edge only.</p>
+          <div className="flex gap-2">
+            {(['web-speech', 'none'] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => update('sttProvider', p)}
+                className={`flex-1 rounded-lg border py-2 px-3 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-yellow-400 ${
+                  settings.sttProvider === p
+                    ? 'bg-yellow-950/40 border-yellow-600 text-yellow-300'
+                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
+                }`}
+                aria-pressed={settings.sttProvider === p}
+              >
+                {p === 'web-speech' ? '🎙️ Web Speech API' : '🔕 Disabled'}
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        {/* Wake word toggle */}
+        <Card className="mb-3">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-white font-semibold mb-0.5">Wake Word — &quot;Hey Aria&quot;</p>
+              <p className="text-gray-400 text-xs">
+                Say &quot;Hey Aria&quot; to activate voice commands hands-free.
+                Requires voice command provider to be enabled.
+              </p>
+            </div>
+            <button
+              onClick={() => update('wakeWordEnabled', !settings.wakeWordEnabled)}
+              className={`relative w-12 h-6 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 shrink-0 ${
+                settings.wakeWordEnabled
+                  ? 'bg-yellow-500 border-yellow-600'
+                  : 'bg-gray-700 border-gray-600'
+              }`}
+              aria-checked={settings.wakeWordEnabled}
+              role="switch"
+              aria-label="Toggle wake word"
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  settings.wakeWordEnabled ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </Card>
+
+        {/* Streaming speech toggle */}
+        <Card>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-white font-semibold mb-0.5">Streaming Speech</p>
+              <p className="text-gray-400 text-xs">
+                Speak word-by-word as they are generated (lower latency). Supported in Web Speech API.
+              </p>
+            </div>
+            <button
+              onClick={() => update('streamingSpeech', !settings.streamingSpeech)}
+              className={`relative w-12 h-6 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 shrink-0 ${
+                settings.streamingSpeech
+                  ? 'bg-yellow-500 border-yellow-600'
+                  : 'bg-gray-700 border-gray-600'
+              }`}
+              aria-checked={settings.streamingSpeech}
+              role="switch"
+              aria-label="Toggle streaming speech"
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  settings.streamingSpeech ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </Card>
+      </section>
+
       {/* ── Guidance Personality ─────────────────────────────────────────── */}
       <section className="mb-8" aria-labelledby="personality-heading">
         <h2 id="personality-heading" className="text-lg font-bold text-white mb-3">
