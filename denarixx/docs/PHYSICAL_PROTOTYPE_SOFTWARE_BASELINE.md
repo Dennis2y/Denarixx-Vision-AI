@@ -44,6 +44,29 @@ Run all: `cd denarixx && npm test` (V1) then run individual sprint tests.
 
 ---
 
+## Complete Embedded ONNX Runtime Wiring (post-v0.2.0)
+
+Added as a follow-on to the Embedded Runtime Reality Check bring-up program:
+
+| Component | File | Description |
+|---|---|---|
+| Async processFrame | `src/runtime/embeddedVisionRuntime.ts` | processFrame now async; routes embedded-prototype mode through `provider.runInference(frame)` |
+| Provider in boot | `src/runtime/startPrototypeRuntime.ts` | BootSequenceOutcome includes provider; runOneTick async; startPrototypeRuntime awaits `provider.initialize()` |
+| Local inference clarification | `src/engines/localInferenceEngine.ts` | `runLocalInference` documented as simulation/test ONLY; embedded mode uses LocalInferenceProvider |
+| ONNX environment check | `scripts/check-onnx.ts` | Reports runtime installed/missing, model found/missing, model load result |
+| Pipeline integration tests | `tests/embeddedRuntime.integration.test.ts` | Section 5: 13 embedded pipeline tests (null pixel camera, provider→Guardian, EmbeddedSimulatedDetectionError, shutdown, emergency stop, network independence, etc.) |
+| Env vars documented | `.env.example` | DENARIXX_HAL_ADAPTER and DENARIXX_LOCAL_MODEL_PATH added with descriptions |
+| Optional dependency | `package.json` | onnxruntime-node declared as optionalDependencies |
+
+**Safety invariants confirmed:**
+1. Embedded-prototype mode NEVER falls back to simulation (EmbeddedSimulationFallbackError)
+2. isSimulated detections in embedded mode always throw EmbeddedSimulatedDetectionError
+3. Camera without pixel bytes → announces "Local vision is unavailable" — never fabricates
+4. No ONNX provider → announces "Local vision is unavailable" — never fabricates
+5. Network offline → local inference runs normally (independence confirmed)
+
+---
+
 ## Bring-Up Program Additions (v0.2.0)
 
 | Component | File | Description |

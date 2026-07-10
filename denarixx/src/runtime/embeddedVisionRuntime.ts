@@ -41,6 +41,8 @@ import {
   recordSample,
 } from '@/engines/hiltTestHarnessEngine';
 import type { HILTSession } from '@/engines/hiltTestHarnessEngine';
+import type { LocalInferenceProvider } from './inference/localInferenceProviderTypes';
+import { assertNoSimulatedDetectionsInEmbeddedMode } from './inference/createLocalInferenceProvider';
 
 // ─── Runtime Lifecycle State ─────────────────────────────────────────────────
 
@@ -273,18 +275,47 @@ export interface FrameProcessingResult {
   error: string | null;
 }
 
-export function processFrame(
+// Uniform detection shape used internally for Guardian processing.
+// Real path: populated from InferenceDetection (onnx-local, isSimulated: false).
+// Simulation path: populated from AnyDetection (isSimulated: true, only in simulation-test mode).
+interface EmbeddedDetection {
+  className: string;
+  confidence: number;
+  isSimulated: boolean;
+}
+
+// Announcement emitted when the local ONNX model or camera bytes are unavailable
+// in embedded-prototype mode. Instructs the user to stop — no synthetic fallback.
+const LOCAL_VISION_UNAVAILABLE_ANNOUNCEMENT =
+  'Local vision is unavailable. Please stop and seek assistance.';
+
+// processFrame is async because LocalInferenceProvider.runInference() is async.
+//
+// provider parameter:
+//   - Pass the initialized LocalInferenceProvider in embedded-prototype mode.
+//   - Pass null or omit in simulation-test or browser-development mode (uses runLocalInference).
+//   - If mode is embedded-prototype but provider is null/undefined: announces vision unavailable.
+//
+// Safety invariant: in embedded-prototype mode, any isSimulated detection reaching
+// this function throws EmbeddedSimulatedDetectionError.
+
+export async function processFrame(
   state: EmbeddedRuntimeState,
   adapters: HardwareAdapterSet,
   adapterConfig: HardwareAdapterConfig,
   modelState: LocalModelState,
   nowMs: number,
-): { state: EmbeddedRuntimeState; result: FrameProcessingResult; modelState: LocalModelState } {
+  provider?: LocalInferenceProvider | null,
+): Promise<{ state: EmbeddedRuntimeState; result: FrameProcessingResult; modelState: LocalModelState }> {
   if (state.phase !== 'running') {
     return {
       state,
       modelState,
-      result: { detectionCount: 0, inferenceLatencyMs: 0, guardianLatencyMs: 0, hazardAnnouncements: [], hapticPatterns: [], dropped: true, error: 'Runtime not in running state' },
+      result: {
+        detectionCount: 0, inferenceLatencyMs: 0, guardianLatencyMs: 0,
+        hazardAnnouncements: [], hapticPatterns: [], dropped: true,
+        error: 'Runtime not in running state',
+      },
     };
   }
 
@@ -295,25 +326,105 @@ export function processFrame(
     return {
       state: { ...state, droppedFrames: state.droppedFrames + 1, tick: state.tick + 1 },
       modelState,
-      result: { detectionCount: 0, inferenceLatencyMs: 0, guardianLatencyMs: 0, hazardAnnouncements: [error], hapticPatterns: ['device-failure'], dropped: true, error },
+      result: {
+        detectionCount: 0, inferenceLatencyMs: 0, guardianLatencyMs: 0,
+        hazardAnnouncements: [error], hapticPatterns: ['device-failure'],
+        dropped: true, error,
+      },
     };
   }
 
-  // 2. Run local inference (pure function — real call goes to ONNX/TFLite/NPU)
-  const inferenceStart = nowMs;
-  const inferenceResult = runLocalInference(adapterConfig, modelState, state.tick, nowMs);
-  const inferenceLatencyMs = nowMs - inferenceStart + inferenceResult.inferenceLatencyMs;
+  // 2. Run inference — path depends on adapter mode
+  const isEmbeddedMode = adapters.mode === 'embedded-prototype';
+  const inferenceStart = Date.now();
+  let detections: EmbeddedDetection[] = [];
+  let inferenceLatencyMs = 0;
+  let inferenceError: string | null = null;
+
+  if (isEmbeddedMode && provider) {
+    // ── Embedded-prototype path: real ONNX inference ──────────────────────────
+    // Requires real camera frame bytes. Never falls back to simulation.
+    if (!frame.pixels) {
+      // Camera returns a frame structure but no pixel bytes — physical camera not delivering data.
+      const error = LOCAL_VISION_UNAVAILABLE_ANNOUNCEMENT;
+      return {
+        state: {
+          ...state,
+          droppedFrames: state.droppedFrames + 1,
+          tick: state.tick + 1,
+          announcements: [...state.announcements, error],
+          hapticCommands: [...state.hapticCommands, 'device-failure'],
+        },
+        modelState,
+        result: {
+          detectionCount: 0, inferenceLatencyMs: 0, guardianLatencyMs: 0,
+          hazardAnnouncements: [error], hapticPatterns: ['device-failure'],
+          dropped: true, error,
+        },
+      };
+    }
+
+    const inferResult = await provider.runInference({
+      pixels: frame.pixels,
+      width: frame.width,
+      height: frame.height,
+      frameId: frame.frameId,
+      timestampMs: frame.timestampMs,
+    });
+    inferenceLatencyMs = Date.now() - inferenceStart;
+    inferenceError = inferResult.error;
+
+    // Safety invariant: reject any simulated detections that somehow entered the pipeline.
+    assertNoSimulatedDetectionsInEmbeddedMode('embedded-prototype', inferResult.detections);
+
+    detections = inferResult.detections.map(d => ({
+      className: d.className,
+      confidence: d.confidence,
+      isSimulated: d.isSimulated,
+    }));
+  } else if (isEmbeddedMode && !provider) {
+    // Embedded mode requested but no provider initialized.
+    // Announce and drop frame — never fabricate.
+    const error = LOCAL_VISION_UNAVAILABLE_ANNOUNCEMENT;
+    return {
+      state: {
+        ...state,
+        droppedFrames: state.droppedFrames + 1,
+        tick: state.tick + 1,
+        announcements: [...state.announcements, error],
+        hapticCommands: [...state.hapticCommands, 'device-failure'],
+      },
+      modelState,
+      result: {
+        detectionCount: 0, inferenceLatencyMs: 0, guardianLatencyMs: 0,
+        hazardAnnouncements: [error], hapticPatterns: ['device-failure'],
+        dropped: true, error,
+      },
+    };
+  } else {
+    // ── Simulation / browser path: uses runLocalInference (clearly labeled isSimulated) ──
+    // runLocalInference returns SimulatedDetection[] (isSimulated: true) in simulation-test mode.
+    // This path is NEVER reached in embedded-prototype mode (enforced above).
+    const inferenceResult = runLocalInference(adapterConfig, modelState, state.tick, nowMs);
+    inferenceLatencyMs = nowMs - inferenceStart + inferenceResult.inferenceLatencyMs;
+    inferenceError = inferenceResult.error;
+    detections = inferenceResult.detections.map(d => ({
+      className: d.className,
+      confidence: d.confidence,
+      isSimulated: d.isSimulated,
+    }));
+  }
 
   // 3. Guardian processing (reuses domain engines — no duplication from useVisionSession)
   // Real Guardian call: cognitiveGuardianEngine.assessRisk(detections, context)
   // For bring-up: derive basic hazard announcements from detections
-  const guardianStart = nowMs;
+  const guardianStart = Date.now();
   const hazardAnnouncements: string[] = [];
   const hapticPatterns: string[] = [];
 
-  for (const detection of inferenceResult.detections) {
+  for (const detection of detections) {
     if (detection.confidence >= 0.7) {
-      if (['vehicle', 'bicycle', 'motorcycle'].includes(detection.className)) {
+      if (['vehicle', 'bicycle', 'motorcycle', 'car', 'truck', 'bus'].includes(detection.className)) {
         hazardAnnouncements.push(`Warning. ${detection.className} detected ahead.`);
         hapticPatterns.push('obstacle-ahead');
       } else if (detection.className === 'person') {
@@ -325,7 +436,7 @@ export function processFrame(
     }
   }
 
-  const guardianLatencyMs = nowMs - guardianStart + 5;
+  const guardianLatencyMs = Date.now() - guardianStart + 5;
 
   // 4. Battery / thermal check every 30 ticks
   if (state.tick - state.lastHealthCheckTick >= 30) {
@@ -361,13 +472,13 @@ export function processFrame(
     state: newState,
     modelState,
     result: {
-      detectionCount: inferenceResult.detections.length,
+      detectionCount: detections.length,
       inferenceLatencyMs,
       guardianLatencyMs,
       hazardAnnouncements,
       hapticPatterns,
       dropped: false,
-      error: inferenceResult.error,
+      error: inferenceError,
     },
   };
 }

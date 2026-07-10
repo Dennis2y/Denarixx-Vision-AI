@@ -15,15 +15,21 @@
 
 | Status | Count |
 |---|---|
-| READY | 7 |
-| PARTIAL | 7 |
-| BLOCKED | 5 |
+| READY | 8 |
+| PARTIAL | 8 |
+| BLOCKED | 3 |
 
 > **Items 18–21 updated 2026-07-10** by Bring-Up Program: Embedded Runtime Reality Check.  
 > Previously-claimed "READY" items for physical adapter factory and real ONNX inference have been  
 > reclassified to BLOCKED — they were architecture stubs, not connected implementations.  
 > The bring-up program adds real infrastructure (adapter factory, ONNX provider, Linux drivers, tests)  
 > and honest documentation replacing prior overclaims.
+>
+> **Items 18–19 further updated 2026-07-10** by Complete Embedded ONNX Runtime Wiring program.  
+> Item 18 (adapter factory with safety assertions): reclassified BLOCKED → READY.  
+> Item 19 (ONNX inference wired to processFrame): reclassified BLOCKED → PARTIAL.  
+> processFrame is now async; embedded-prototype mode routes through `provider.runInference(frame)`;  
+> 13 new embedded pipeline integration tests added (total: 135/135 passing).
 
 ---
 

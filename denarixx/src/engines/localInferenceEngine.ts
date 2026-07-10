@@ -192,7 +192,19 @@ export function buildInferenceResult(
   };
 }
 
-// ─── Run Inference (pure mock — replaced by real runtime on device) ───────────
+// ─── Run Inference ────────────────────────────────────────────────────────────
+// SIMULATION AND TEST USE ONLY. Do NOT call from embedded-prototype mode.
+// In embedded-prototype mode, use LocalInferenceProvider.runInference() from
+// src/runtime/inference/createLocalInferenceProvider.ts instead.
+//
+// This function returns SimulatedDetection[] (isSimulated: true) in simulation-test
+// mode and stub detections in other modes. It is kept for:
+//   - simulation-test adapter (useVisionSession in simulation mode)
+//   - domain tests that exercise Guardian/AlertQuality without physical hardware
+//   - backward-compatible callers in browser-development mode
+//
+// Any detection reaching the Guardian from embedded-prototype mode via this function
+// would have been caught and rejected by assertNoSimulatedDetectionsInEmbeddedMode.
 
 export function runLocalInference(
   adapter: HardwareAdapterConfig,

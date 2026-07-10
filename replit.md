@@ -41,11 +41,13 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/prototypeIntegration.test.ts` — Sprint 20 Prototype Hardware Integration tests (75/75)
 - `cd denarixx && npx tsx tests/livePerceptionE2E.test.ts` — Sprint 23 + Live Pipeline Completion E2E tests (96/96)
 - `cd denarixx && npx tsx tests/hardwareBringup.mock.test.ts` — Hardware Bring-Up mocked behavioral tests (75/75)
-- `cd denarixx && npx tsx tests/embeddedRuntime.integration.test.ts` — Embedded Runtime integration tests: adapter factory, ONNX provider, Linux driver checks (87/87) — no physical device required
+- `cd denarixx && npx tsx tests/embeddedRuntime.integration.test.ts` — Embedded Runtime integration tests: adapter factory, ONNX provider, Linux driver checks, embedded pipeline (135/135) — no physical device required
 - `cd denarixx && DENARIXX_RUN_PHYSICAL_HARDWARE_TESTS=true DENARIXX_LOCAL_MODEL_PATH=/opt/denarixx/models/hazard-detection.onnx npx tsx tests/hardwareOnDevice.test.ts` — On-device hardware tests (SKIPPED unless physical prototype connected)
 - `cd denarixx && npm run start:prototype` — Start embedded runtime headless (sets DENARIXX_HAL_ADAPTER env)
 - `cd denarixx && npm run test:embedded` — Run embedded integration tests (alias for embeddedRuntime.integration.test.ts)
+- `cd denarixx && npm run check:onnx` — Check onnxruntime-node availability + model path + model load (hardware readiness check)
 - `cd denarixx && npm run validate:prototype` — Full quality gate: type-check + embedded integration tests
+- `cd denarixx && npm run validate:embedded-pipeline` — Alias for validate:prototype (type-check + embedded integration tests)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
 
 ## Live Pipeline Completion Program (Post-Sprint 23)

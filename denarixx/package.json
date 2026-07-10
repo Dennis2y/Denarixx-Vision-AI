@@ -11,7 +11,9 @@
     "test": "npx tsx tests/engines.test.ts",
     "start:prototype": "npx tsx src/runtime/startPrototypeRuntime.ts",
     "test:embedded": "npx tsx tests/embeddedRuntime.integration.test.ts",
+    "check:onnx": "npx tsx scripts/check-onnx.ts",
     "validate:prototype": "npm run type-check && npm run test:embedded",
+    "validate:embedded-pipeline": "npm run type-check && npm run test:embedded",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "npx tsx prisma/seed.ts",
@@ -29,6 +31,9 @@
     "tesseract.js": "^7.0.0",
     "uuid": "^14.0.1",
     "zod": "^4.4.3"
+  },
+  "optionalDependencies": {
+    "onnxruntime-node": "^1.18.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

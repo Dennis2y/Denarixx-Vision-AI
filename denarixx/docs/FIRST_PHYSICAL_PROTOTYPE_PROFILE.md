@@ -20,7 +20,7 @@ Camera × 4 (MIPI-CSI2)
     ↓
 Compute Module (ARM64, embedded Linux)
     ↓ ONNX Runtime / TFLite / NPU SDK
-Local Object Detection (real inference — not simulation)
+Local Object Detection (requires ONNX model loaded + real camera frames)
     ↓
 Cognitive Guardian
     ↓

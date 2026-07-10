@@ -1,13 +1,21 @@
 // ─── Bring-Up Program: Prototype Runtime Entry Point ─────────────────────────
 // Headless embedded runtime starter for Denarixx Vision Glasses compute module.
 // Does NOT depend on React, browser APIs, or Next.js.
-// Wires adapters → model state → embedded runtime lifecycle.
+// Wires adapters → inference provider → embedded runtime lifecycle.
 //
 // Usage (bring-up, Linux):
 //   DENARIXX_HAL_ADAPTER=simulation-test npx tsx src/runtime/startPrototypeRuntime.ts
 //   DENARIXX_HAL_ADAPTER=embedded-prototype npx tsx src/runtime/startPrototypeRuntime.ts
 //
 // In production: compiled to native binary via esbuild + Node.js static bundle.
+//
+// Embedded-prototype startup flow:
+//   create hardware adapters
+//   → initialize camera
+//   → create local inference provider
+//   → load ONNX model (await provider.initialize)
+//   → verify model ready (status === 'ready')
+//   → begin frame processing loop
 
 import {
   createEmbeddedRuntimeState,
@@ -41,8 +49,13 @@ import { selectHardwareAdapter, createModelState } from '@/engines/localInferenc
 import { createPressSequenceState, createEmergencyButtonState } from '@/engines/hardwareButtonEngine';
 import {
   createHardwareAdapterSet,
+  parseAdapterMode,
   EmbeddedSimulationFallbackError,
 } from './adapters/createHardwareAdapterSet';
+import {
+  createLocalInferenceProvider,
+} from './inference/createLocalInferenceProvider';
+import type { LocalInferenceProvider } from './inference/localInferenceProviderTypes';
 
 // ─── Adapter Assembly ─────────────────────────────────────────────────────────
 // assembleSimulationAdapters: kept for backward compatibility with unit tests.
@@ -77,8 +90,8 @@ export interface PrototypeRuntimeConfig {
 export function defaultConfig(): PrototypeRuntimeConfig {
   return {
     sessionId: `runtime-${Date.now()}`,
-    modelPath: '/opt/denarixx/models/hazard-detection.onnx',
-    halAdapterEnv: 'simulation-test',
+    modelPath: process.env.DENARIXX_LOCAL_MODEL_PATH ?? '/opt/denarixx/models/hazard-detection.onnx',
+    halAdapterEnv: process.env.DENARIXX_HAL_ADAPTER ?? 'simulation-test',
     maxFrames: null,
     healthCheckIntervalTicks: 30,
     framePeriodMs: 100,   // 10 FPS target
@@ -93,6 +106,9 @@ export interface BootSequenceOutcome {
   adapters: HardwareAdapterSet;
   adapterConfig: ReturnType<typeof selectHardwareAdapter>;
   modelState: ReturnType<typeof createModelState>;
+  // provider is created here but NOT yet initialized (initialize() is async).
+  // Call await provider.initialize(modelPath) after runFullBootSequence in async contexts.
+  provider: LocalInferenceProvider;
   errors: string[];
   announcements: string[];
 }
@@ -102,6 +118,11 @@ export function runFullBootSequence(
   nowMs: number,
 ): BootSequenceOutcome {
   const adapterConfig = selectHardwareAdapter(config.halAdapterEnv);
+
+  // Create the inference provider for the active adapter mode.
+  // In embedded-prototype mode: OnnxLocalInferenceProvider (real; never mock).
+  // In simulation-test mode: MockOnnxInferenceProvider (isSimulated: true).
+  const provider = createLocalInferenceProvider(parseAdapterMode(config.halAdapterEnv));
 
   // Use the real adapter factory — enforces the embedded-prototype safety invariant.
   // For simulation-test (CI/dev): returns synthetic adapters.
@@ -120,6 +141,7 @@ export function runFullBootSequence(
         adapters: assembleSimulationAdapters(false),  // return something typed; never used
         adapterConfig,
         modelState: createModelState(adapterConfig.inferenceRuntime),
+        provider,
         errors: [err.message],
         announcements: ['Safety check failed. Cannot start in embedded mode with simulation adapters.'],
       };
@@ -141,7 +163,7 @@ export function runFullBootSequence(
   allErrors.push(...bootResult.result.errors);
 
   if (!bootResult.result.success) {
-    return { success: false, state, adapters, adapterConfig, modelState, errors: allErrors, announcements: allAnnouncements };
+    return { success: false, state, adapters, adapterConfig, modelState, provider, errors: allErrors, announcements: allAnnouncements };
   }
 
   // Phase: sensor-init
@@ -150,7 +172,7 @@ export function runFullBootSequence(
   // Phase: camera-init
   state = runCameraInit(state, adapters, nowMs);
   if (state.phase === 'failed') {
-    return { success: false, state, adapters, adapterConfig, modelState, errors: allErrors, announcements: allAnnouncements };
+    return { success: false, state, adapters, adapterConfig, modelState, provider, errors: allErrors, announcements: allAnnouncements };
   }
 
   // Phase: model-load
@@ -160,7 +182,7 @@ export function runFullBootSequence(
   allAnnouncements.push(...state.announcements.slice(allAnnouncements.length));
 
   if (state.phase === 'failed') {
-    return { success: false, state, adapters, adapterConfig, modelState, errors: allErrors, announcements: allAnnouncements };
+    return { success: false, state, adapters, adapterConfig, modelState, provider, errors: allErrors, announcements: allAnnouncements };
   }
 
   // Phase: session-start
@@ -173,6 +195,7 @@ export function runFullBootSequence(
     adapters,
     adapterConfig,
     modelState,
+    provider,
     errors: allErrors,
     announcements: allAnnouncements,
   };
@@ -188,16 +211,18 @@ export interface TickResult {
   shouldContinue: boolean;
 }
 
-export function runOneTick(
+// runOneTick is async because processFrame is async (ONNX inference is async).
+export async function runOneTick(
   state: EmbeddedRuntimeState,
   adapters: HardwareAdapterSet,
   adapterConfig: ReturnType<typeof selectHardwareAdapter>,
   modelState: ReturnType<typeof createModelState>,
   pressSequenceState: ReturnType<typeof createPressSequenceState>,
   emergencyButtonState: ReturnType<typeof createEmergencyButtonState>,
+  provider: LocalInferenceProvider | null,
   config: PrototypeRuntimeConfig,
   nowMs: number,
-): TickResult {
+): Promise<TickResult> {
   // Button events
   const buttonResult = handleButtonEvents(state, adapters, pressSequenceState, emergencyButtonState, nowMs);
   let currentState = buttonResult.state;
@@ -212,8 +237,8 @@ export function runOneTick(
     return { state: currentState, modelState, announcements: [], hapticCommands: [], shouldContinue: false };
   }
 
-  // Frame processing
-  const frameResult = processFrame(currentState, adapters, adapterConfig, modelState, nowMs);
+  // Frame processing (async — ONNX inference)
+  const frameResult = await processFrame(currentState, adapters, adapterConfig, modelState, nowMs, provider);
   currentState = frameResult.state;
   let currentModelState = frameResult.modelState;
 
@@ -268,6 +293,30 @@ export async function startPrototypeRuntime(
     console.log('[ANNOUNCE]', msg);
   }
 
+  // Initialize the ONNX inference provider (async step — loads model file).
+  // This is separate from runFullBootSequence (which is sync) because
+  // model loading requires async I/O.
+  const provider = bootOutcome.provider;
+  let activeProvider: LocalInferenceProvider | null = null;
+
+  if (config.halAdapterEnv === 'embedded-prototype') {
+    console.log('[RUNTIME] Initializing ONNX inference provider:', config.modelPath);
+    const providerStatus = await provider.initialize(config.modelPath);
+    if (providerStatus !== 'ready') {
+      const msg = 'Local vision is unavailable. Please stop and seek assistance.';
+      console.error('[RUNTIME] ONNX provider initialization failed:', providerStatus);
+      console.error('[ANNOUNCE]', msg);
+      // Do not fall back to simulation. Announce and exit safely.
+      return;
+    }
+    activeProvider = provider;
+    console.log('[RUNTIME] ONNX inference provider ready.');
+  } else {
+    // Simulation or browser mode: initialize mock provider (immediate, returns ready)
+    await provider.initialize('simulation');
+    activeProvider = provider;
+  }
+
   let state = bootOutcome.state;
   let modelState = bootOutcome.modelState;
   const adapters = bootOutcome.adapters;
@@ -279,9 +328,9 @@ export async function startPrototypeRuntime(
   console.log('[RUNTIME] Processing loop started. Session:', config.sessionId);
 
   while (shouldContinue) {
-    const tickResult = runOneTick(
+    const tickResult = await runOneTick(
       state, adapters, adapterConfig, modelState,
-      pressSequence, emergencyState, config, Date.now(),
+      pressSequence, emergencyState, activeProvider, config, Date.now(),
     );
 
     state = tickResult.state;
@@ -296,10 +345,15 @@ export async function startPrototypeRuntime(
     }
 
     // In real deployment: await next camera frame or setTimeout(framePeriodMs)
-    // For test/sim: use sync loop with tick counter
     if (config.maxFrames !== null && state.frameCount >= config.maxFrames) {
       shouldContinue = false;
     }
+  }
+
+  // Shutdown: release ONNX session and camera
+  if (activeProvider) {
+    await activeProvider.shutdown();
+    console.log('[RUNTIME] Inference provider shut down.');
   }
 
   console.log('[RUNTIME] Session ended. Frames:', state.frameCount, 'Dropped:', state.droppedFrames);

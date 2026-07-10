@@ -1,0 +1,246 @@
+Complete Embedded ONNX Runtime Wiring.
+
+This is not a new phase.
+
+Do not add more architecture or unrelated engines.
+
+Goal:
+Connect the existing physical camera and ONNX provider to the actual embedded runtime so embedded-prototype mode performs real local inference and never produces synthetic safety detections.
+
+1. CONNECT THE ONNX PROVIDER TO THE EMBEDDED RUNTIME
+
+Update:
+
+- src/runtime/startPrototypeRuntime.ts
+- src/runtime/embeddedVisionRuntime.ts
+- src/runtime/inference/createLocalInferenceProvider.ts
+
+The embedded runtime must create the inference provider using:
+
+DENARIXX_LOCAL_MODEL_PATH
+
+Required startup flow:
+
+create hardware adapters
+→ initialize camera
+→ create local inference provider
+→ load ONNX model
+→ verify model ready
+→ begin frame processing
+
+Do not use the older mock localInferenceEngine for embedded-prototype perception.
+
+The older engine may remain for domain tests or simulation only, but document that clearly.
+
+2. INSTALL OR DECLARE ONNX RUNTIME
+
+Add:
+
+onnxruntime-node
+
+as an optional dependency or a clearly documented embedded dependency.
+
+If Replit cannot install it:
+
+- keep dynamic import;
+- make Replit tests use an injected mock ONNX session;
+- document that native execution must be installed and tested on Linux hardware;
+- never claim real ONNX execution passed in Replit.
+
+Add a script:
+
+npm run check:onnx
+
+It should report:
+
+- runtime installed or unavailable
+- model path found or missing
+- model load result
+- input names
+- output names
+
+3. COMPLETE CAMERA FRAME FLOW
+
+Ensure the embedded camera adapter returns real frame bytes with:
+
+- data
+- pixel format
+- width
+- height
+- stride
+- timestamp
+- frame ID
+
+Connect:
+
+camera.captureFrame()
+→ inferenceProvider.infer(frame)
+→ real detections
+→ Guardian-compatible input
+
+If no frame bytes are received:
+
+- return explicit camera failure;
+- do not fabricate detections.
+
+4. IMPLEMENT THE EMBEDDED PROCESSING LOOP
+
+For every frame:
+
+- capture real frame;
+- measure capture latency;
+- run local inference;
+- measure inference latency;
+- translate detections into Guardian inputs;
+- run Guardian;
+- run alert quality;
+- run alert coordination;
+- deliver audio or haptic output;
+- update runtime health.
+
+Every embedded detection must include:
+
+isSimulated=false
+
+If a detection has `isSimulated=true` in embedded-prototype mode, throw a safety error.
+
+5. REMOVE SYNTHETIC FALLBACK FROM EMBEDDED MODE
+
+Required embedded behavior:
+
+Local model available:
+→ real local inference continues.
+
+Cloud unavailable:
+→ local inference continues.
+
+Local model unavailable:
+→ announce:
+“Local vision is unavailable. Please stop and seek assistance.”
+
+Do not switch to simulation.
+
+Simulation is allowed only when:
+
+DENARIXX_HAL_ADAPTER=simulation-test
+
+6. CLEAN UP OLD MOCK PATHS
+
+Review:
+
+- src/engines/localInferenceEngine.ts
+- tests/hardwareBringup.test.ts
+- tests/hardwareBringup.mock.test.ts
+
+Remove fake embedded detections such as hardcoded:
+
+- person
+- obstacle
+- fixed confidence scores
+- fixed latency values
+
+Keep synthetic detections only inside explicit simulation or mock test providers.
+
+Delete or rename the old duplicate hardware test so mocked tests cannot be mistaken for physical tests.
+
+7. FIX BASELINE DOCUMENTATION
+
+Use one version everywhere:
+
+DENARIXX_VISION_PROTOTYPE_BASELINE=v0.2.0-hardware-bringup
+
+Update:
+
+- README.md
+- .env.example
+- docs/PHYSICAL_PROTOTYPE_SOFTWARE_BASELINE.md
+- docs/PROTOTYPE_READINESS_REPORT.md
+- docs/FIRST_PHYSICAL_PROTOTYPE_PROFILE.md
+
+Replace inaccurate claims.
+
+Use:
+
+“The Guardian decision pipeline runs locally. Embedded hazard perception requires a successfully loaded local ONNX model and real camera frames.”
+
+Do not say hazard detection is fully local until physically tested.
+
+8. ADD EMBEDDED PIPELINE TESTS
+
+Expand:
+
+tests/embeddedRuntime.integration.test.ts
+
+Test:
+
+- embedded mode selects embedded adapters
+- simulation mode selects simulation adapters
+- embedded mode never falls back to simulation
+- missing ONNX runtime fails explicitly
+- missing model fails explicitly
+- invalid model fails explicitly
+- mock ONNX session receives real frame-shaped input
+- decoded detections reach Guardian
+- `isSimulated=true` is rejected in embedded mode
+- camera without frame bytes fails explicitly
+- shutdown releases camera and ONNX session
+- emergency stop interrupts processing
+- network loss does not disable local inference
+
+Keep physical tests separately gated by:
+
+DENARIXX_RUN_PHYSICAL_HARDWARE_TESTS=true
+
+9. CREATE AN EXECUTABLE VALIDATION COMMAND
+
+Add:
+
+npm run validate:embedded-pipeline
+
+It must run:
+
+- adapter selection validation
+- ONNX availability check
+- model-file validation
+- embedded integration tests
+- type-check
+
+It must clearly distinguish:
+
+PASS
+FAIL
+SKIPPED — PHYSICAL HARDWARE REQUIRED
+
+10. QUALITY GATE
+
+Run:
+
+npm install
+npm run type-check
+npm test
+npm run test:embedded
+npm run validate:embedded-pipeline
+npm run build
+
+Do not mark completion until:
+
+- the embedded runtime instantiates the ONNX provider;
+- camera frames reach local inference;
+- detections reach the Guardian;
+- no simulation fallback exists in embedded mode;
+- all version documents agree;
+- inaccurate safety claims are removed;
+- all available software checks pass.
+
+Push everything to GitHub.
+
+Return:
+
+- commit hash
+- ONNX dependency status
+- embedded pipeline status
+- tests passed
+- tests skipped
+- what runs in Replit
+- what still requires physical Linux hardware
+- blockers before component selection and assembly

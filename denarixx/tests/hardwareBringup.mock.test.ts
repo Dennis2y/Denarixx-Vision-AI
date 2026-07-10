@@ -91,6 +91,9 @@ function assert(condition: boolean, msg: string): void {
   if (!condition) { console.error('FAIL:', msg); failed++; } else { passed++; }
 }
 
+// All test blocks that use await processFrame must be inside async main().
+async function main() {
+
 // ─── Test 1: Embedded Runtime Boot (MOCKED HARDWARE) ─────────────────────────
 
 console.log('\n─── Test 1: Embedded runtime boot (MOCKED) ───');
@@ -219,7 +222,7 @@ console.log('\n─── Test 6: Camera failure (MOCKED) ───');
   const running = { ...state, phase: 'running' as const, runtimeState: 'running' as const };
   const adapterConfig = selectHardwareAdapter('simulation-test');
   const modelState = modelStateAfterLoad(createModelState('simulation-test'), 'simulation', NOW);
-  const frameResult = processFrame(running, adapters, adapterConfig, modelState, NOW);
+  const frameResult = await processFrame(running, adapters, adapterConfig, modelState, NOW);
   assert(frameResult.result.dropped === true, 'Frame dropped when camera unavailable');
   assert(
     frameResult.result.hapticPatterns.includes('device-failure'),
@@ -278,7 +281,7 @@ console.log('\n─── Test 8: Low battery degradation (MOCKED) ───');
   const state = { ...createEmbeddedRuntimeState('battery-test'), phase: 'running' as const, runtimeState: 'running' as const, tick: 31, lastHealthCheckTick: 0 };
   const adapterConfig = selectHardwareAdapter('simulation-test');
   const modelState = modelStateAfterLoad(createModelState('simulation-test'), 'simulation', NOW);
-  const frameResult = processFrame(state, adapters, adapterConfig, modelState, NOW);
+  const frameResult = await processFrame(state, adapters, adapterConfig, modelState, NOW);
   assert(frameResult.result.hapticPatterns.includes('low-battery'), 'low-battery haptic triggered');
   assert(frameResult.state.announcements.some(a => a.toLowerCase().includes('battery')), 'Battery announcement issued');
   console.log('PASS: Critical battery triggers announcement and low-battery haptic');
@@ -313,7 +316,7 @@ console.log('\n─── Test 9: Thermal shutdown simulation (MOCKED) ───'
   const state = { ...createEmbeddedRuntimeState('thermal-test'), phase: 'running' as const, runtimeState: 'running' as const, tick: 31, lastHealthCheckTick: 0 };
   const adapterConfig = selectHardwareAdapter('simulation-test');
   const modelState = modelStateAfterLoad(createModelState('simulation-test'), 'simulation', NOW);
-  const frameResult = processFrame(state, overheatAdapters, adapterConfig, modelState, NOW);
+  const frameResult = await processFrame(state, overheatAdapters, adapterConfig, modelState, NOW);
   assert(frameResult.state.announcements.some(a => a.toLowerCase().includes('overheat')), 'Overheating announcement issued');
   assert(frameResult.result.hapticPatterns.includes('device-failure'), 'device-failure haptic on overheating');
   console.log('PASS: Overheating → announcement + device-failure haptic');
@@ -417,11 +420,17 @@ console.log('\n─── Test 13: Clean shutdown (MOCKED) ───');
   console.log('PASS: Clean shutdown records reason and issues announcement; full session cycle works');
 }
 
-// ─── Summary ──────────────────────────────────────────────────────────────────
+} // end async function main()
 
-console.log(`\n── Mock Hardware Tests: ${passed} passed, ${failed} failed ──`);
-if (failed > 0) {
-  console.error(`${failed} test(s) failed.`);
+main().then(() => {
+  // ─── Summary ────────────────────────────────────────────────────────────────
+  console.log(`\n── Mock Hardware Tests: ${passed} passed, ${failed} failed ──`);
+  if (failed > 0) {
+    console.error(`${failed} test(s) failed.`);
+    process.exit(1);
+  }
+  console.log('[NOTE] All tests above use mocked/simulated hardware. Physical bring-up requires tests/hardwareOnDevice.test.ts on real device.');
+}).catch(err => {
+  console.error('Unhandled error in mock tests:', err);
   process.exit(1);
-}
-console.log('[NOTE] All tests above use mocked/simulated hardware. Physical bring-up requires tests/hardwareOnDevice.test.ts on real device.');
+});
