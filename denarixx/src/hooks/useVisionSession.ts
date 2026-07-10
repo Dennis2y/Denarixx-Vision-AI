@@ -43,6 +43,20 @@ import {
   createNavigationSession,
 } from '@/engines/navigationIntelligenceEngine';
 import type { NavigationSession, NavigationMode } from '@/types/navigation';
+import {
+  createNetworkReading,
+  goOnline,
+  goOffline,
+  goWeak,
+  isOffline as isNetworkOffline,
+} from '@/engines/networkMonitorEngine';
+import type { NetworkReading, NetworkStatus } from '@/types/offline';
+import {
+  buildInitialFallbackConfig,
+  updateFallbackConfig,
+  consumeAnnouncement,
+} from '@/engines/connectivityFallbackEngine';
+import type { ConnectivityFallbackConfig } from '@/types/streetSafety';
 
 export type { CameraStatus };
 
@@ -81,6 +95,10 @@ export interface SessionState {
   // Real AI Integration: capture-to-speech latency in ms
   lastLatencyMs: number | null;
   avgLatencyMs: number | null;
+  // Network & provider state
+  networkStatus: NetworkStatus;
+  activeProvider: 'cloud' | 'local' | 'simulation';
+  providerSwitchReason: string | null;
 }
 
 const FRAME_INTERVAL_MS = 3000;
@@ -139,6 +157,29 @@ export function useVisionSession() {
   const localDetectionsRef = useRef<Detection[]>([]);
   const latencySamplesRef = useRef<number[]>([]); // rolling 10-sample window
 
+  // Network monitoring refs (integrated from networkMonitorEngine + connectivityFallbackEngine)
+  const networkReadingRef = useRef<NetworkReading>(createNetworkReading());
+  const fallbackConfigRef = useRef<ConnectivityFallbackConfig>(buildInitialFallbackConfig());
+  const lastAnnouncedNetworkRef = useRef<string | null>(null);
+  const providerHealthRef = useRef<{
+    activeProvider: 'cloud' | 'local' | 'simulation';
+    lastSwitchReason: string | null;
+    lastSuccessfulInferenceAt: number | null;
+    lastProviderError: string | null;
+    fallbackLevel: number; // 0=cloud, 1=weak/degraded, 2=offline/local
+  }>({
+    activeProvider: 'simulation',
+    lastSwitchReason: null,
+    lastSuccessfulInferenceAt: null,
+    lastProviderError: null,
+    fallbackLevel: 0,
+  });
+
+  // Stable refs so network event handlers can call these without stale closures.
+  // Initialized with no-ops; synced via useEffect after the real functions are defined.
+  const speakCoordinatedRef = useRef<(alert: CoordinatedAlert) => boolean>(() => false);
+  const addLogRef = useRef<(msg: string) => void>(() => {});
+
   // Session refs (stale-closure proof)
   const sessionIdRef = useRef<string | null>(null);
   const sessionSettingsRef = useRef(loadSettings());
@@ -163,6 +204,100 @@ export function useVisionSession() {
     captureFrameRef.current = camera.captureFrame;
   }, [camera.status, camera.captureFrame]);
 
+  // ── Network event integration ──────────────────────────────────────────────
+  // Subscribe to real browser online/offline events.
+  // Announcements are suppressed if the network status has not changed.
+  // Provider is switched immediately on offline; cloud restored only after a
+  // successful health check on reconnection.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    function handleOnline() {
+      const now = Date.now();
+      // Check connection quality if the Network Information API is available
+      type NavConn = { effectiveType?: string; downlink?: number; addEventListener?: (e: string, fn: () => void) => void; removeEventListener?: (e: string, fn: () => void) => void };
+      const conn = (navigator as unknown as { connection?: NavConn }).connection;
+      const isWeak = conn && (conn.effectiveType === '2g' || (conn.downlink !== undefined && conn.downlink < 0.15));
+
+      if (isWeak) {
+        networkReadingRef.current = goWeak(networkReadingRef.current, conn!.downlink ? conn!.downlink * 1000 : 100, 2000);
+        if (lastAnnouncedNetworkRef.current !== 'weak') {
+          lastAnnouncedNetworkRef.current = 'weak';
+          speakCoordinatedRef.current(buildSystemAlert('Connection is weak. Local safety remains active.', false));
+          addLogRef.current('[network] Weak connection — local safety active, cloud paused');
+        }
+        providerHealthRef.current = { ...providerHealthRef.current, activeProvider: 'simulation', lastSwitchReason: 'weak-connection', fallbackLevel: 1 };
+        setState(s => ({ ...s, networkStatus: 'weak', activeProvider: 'simulation', providerSwitchReason: 'weak-connection' }));
+        return;
+      }
+
+      networkReadingRef.current = goOnline(networkReadingRef.current, now);
+      const updated = updateFallbackConfig(fallbackConfigRef.current, networkReadingRef.current, now);
+      const { config } = consumeAnnouncement(updated);
+      fallbackConfigRef.current = config;
+
+      if (lastAnnouncedNetworkRef.current !== 'online') {
+        lastAnnouncedNetworkRef.current = 'online';
+        // Keep local safety active; restore cloud only after health check
+        speakCoordinatedRef.current(buildSystemAlert('Online enhancement has returned.', false));
+        addLogRef.current('[network] Online restored — running cloud health check');
+        // Async health check — restore cloud provider only on success
+        fetch('/api/vision/analyze-frame', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: 'health-check', source: 'simulation' }),
+        }).then(r => {
+          if (r.ok) {
+            providerHealthRef.current = { ...providerHealthRef.current, activeProvider: 'cloud', lastSwitchReason: 'cloud-restored', lastSuccessfulInferenceAt: Date.now(), fallbackLevel: 0 };
+            setState(s => ({ ...s, networkStatus: 'online', activeProvider: 'cloud', providerSwitchReason: 'cloud-restored' }));
+            addLogRef.current('[network] Cloud health check passed — cloud enhancement active');
+          } else {
+            providerHealthRef.current = { ...providerHealthRef.current, lastProviderError: `health-check-${r.status}`, activeProvider: 'simulation', fallbackLevel: 1 };
+            setState(s => ({ ...s, networkStatus: 'online', activeProvider: 'simulation', providerSwitchReason: 'cloud-health-failed' }));
+            addLogRef.current(`[network] Cloud health check failed (${r.status}) — local safety remains active`);
+          }
+        }).catch(e => {
+          providerHealthRef.current = { ...providerHealthRef.current, lastProviderError: String(e), activeProvider: 'simulation', fallbackLevel: 1 };
+          setState(s => ({ ...s, networkStatus: 'online', activeProvider: 'simulation', providerSwitchReason: 'cloud-health-failed' }));
+          addLogRef.current('[network] Cloud health check error — local safety remains active');
+        });
+      }
+    }
+
+    function handleOffline() {
+      const now = Date.now();
+      networkReadingRef.current = goOffline(networkReadingRef.current, now);
+      const updated = updateFallbackConfig(fallbackConfigRef.current, networkReadingRef.current, now);
+      const { config } = consumeAnnouncement(updated);
+      fallbackConfigRef.current = config;
+
+      if (lastAnnouncedNetworkRef.current !== 'offline') {
+        lastAnnouncedNetworkRef.current = 'offline';
+        // Critical priority — user must know immediately
+        speakCoordinatedRef.current(buildSystemAlert('Internet is unavailable. Offline safety mode is active.', true));
+        addLogRef.current('[network] Offline — switching to local safety provider');
+      }
+      // Immediately switch safety-critical analysis to local/simulation
+      providerHealthRef.current = { ...providerHealthRef.current, activeProvider: 'simulation', lastSwitchReason: 'internet-lost', fallbackLevel: 2 };
+      setState(s => ({ ...s, networkStatus: 'offline', activeProvider: 'simulation', providerSwitchReason: 'internet-lost' }));
+    }
+
+    // Set initial state from current browser connectivity
+    if (!navigator.onLine) {
+      networkReadingRef.current = goOffline(networkReadingRef.current, Date.now());
+      fallbackConfigRef.current = updateFallbackConfig(fallbackConfigRef.current, networkReadingRef.current, Date.now());
+      providerHealthRef.current = { ...providerHealthRef.current, activeProvider: 'simulation', lastSwitchReason: 'started-offline', fallbackLevel: 2 };
+      setState(s => ({ ...s, networkStatus: 'offline', activeProvider: 'simulation', providerSwitchReason: 'started-offline' }));
+    }
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []); // no deps — handlers use stable refs only
+
   const [state, setState] = useState<SessionState>({
     sessionId: null,
     isActive: false,
@@ -183,6 +318,9 @@ export function useVisionSession() {
     sensorContext: null,
     lastLatencyMs: null,
     avgLatencyMs: null,
+    networkStatus: 'online',
+    activeProvider: 'simulation',
+    providerSwitchReason: null,
   });
 
   const addLog = useCallback((msg: string) => {
@@ -262,6 +400,11 @@ export function useVisionSession() {
     return true;
   }, [speak, stopAudio, vibrate, addLog, setGuidance]);
 
+  // Keep stable handler refs in sync — placed here so they run AFTER both
+  // addLog and speakCoordinated have been declared above.
+  useEffect(() => { speakCoordinatedRef.current = speakCoordinated; }, [speakCoordinated]);
+  useEffect(() => { addLogRef.current = addLog; }, [addLog]);
+
   const runFrame = useCallback(async () => {
     const sid = sessionIdRef.current;
     if (!sid) return;
@@ -278,7 +421,16 @@ export function useVisionSession() {
     }
     lastFrameTimeRef.current = now;
 
-    const visionMode = sessionSettingsRef.current.visionMode ?? 'simulation';
+    const settingsVisionMode = sessionSettingsRef.current.visionMode ?? 'simulation';
+    // Automatic provider switching: if network is offline/weak and cloud was requested,
+    // immediately fall back to local/simulation — critical alerts never wait for cloud recovery.
+    const networkOffline = isNetworkOffline(networkReadingRef.current);
+    const networkWeak = networkReadingRef.current.status === 'weak';
+    const cloudRequested = settingsVisionMode !== 'local-ai' && settingsVisionMode !== 'simulation';
+    const visionMode: string = (networkOffline || networkWeak) && cloudRequested
+      ? 'simulation'
+      : settingsVisionMode;
+
     const isCamera = cameraStatusRef.current === 'active';
     const imageData = isCamera ? captureFrameRef.current() : null;
     const source = imageData ? 'camera' : 'simulation';
@@ -307,6 +459,8 @@ export function useVisionSession() {
         const body = (await visionRes.json()) as { data: ServerVisionData };
         serverVisionData = body.data;
         detections = serverVisionData?.detections ?? [];
+        // Track successful cloud inference
+        providerHealthRef.current.lastSuccessfulInferenceAt = Date.now();
       }
 
       setState((s) => {
@@ -635,6 +789,15 @@ export function useVisionSession() {
       navSessionRef.current = null;
       navTickRef.current = 0;
       navLastSpokenRef.current = 0;
+      // Reset network / provider health tracking
+      lastAnnouncedNetworkRef.current = null;
+      providerHealthRef.current = {
+        activeProvider: 'simulation',
+        lastSwitchReason: null,
+        lastSuccessfulInferenceAt: null,
+        lastProviderError: null,
+        fallbackLevel: 0,
+      };
 
       setState((s) => ({
         ...s,

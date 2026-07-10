@@ -1,44 +1,121 @@
-# Denarixx Vision AI — Phases 1–18
+# Denarixx Vision AI
 
-An assistive AI perception platform for blind and visually impaired users. Provides real-time hazard awareness, scene understanding, spatial intelligence, and audio guidance via a simulation MVP.
+An assistive AI perception platform for blind and visually impaired users.
+Provides real-time hazard awareness, scene understanding, spatial intelligence, and audio guidance.
 
-> Assistive support only. Not medically certified. Always use your own judgement.
+> **Assistive support only. Not medically certified. Always use your own judgement.**
 
 ---
 
-## Project Scale
+## Prototype Baseline
+
+**DENARIXX_VISION_PROTOTYPE_BASELINE=v0.1.0**
+
+This is a software prototype, not a consumer or production release.
+
+---
+
+## Actual Project Scale (verified 2026-07-10)
 
 | Item | Count |
 |---|---|
-| Pages | 17 |
-| API routes | 26 |
-| Engine files | 77 |
-| Test files | 17 |
-| Total tests | 1,777 |
-| Phases implemented | 1–18 |
-
-All phases are implemented as simulation, planning, and architecture layers. No real camera models or external AI providers are required to run the application.
+| Pages (`page.tsx`) | 30 |
+| API routes (`route.ts`) | 30 |
+| Engine files | 152 |
+| Hooks | 11 |
+| Test suites | 39 |
+| Total tests | 3,096+ |
+| Docs | 65 |
+| UI Components | 20 |
 
 ---
 
-## How to Run Locally
+## Implementation Status
 
-```bash
-cp .env.example .env.local
-npm install --ignore-scripts
-npm run dev
+### REAL AND CONNECTED
+- Alert quality engine (dedup, directional wording, confidence hedging)
+- 7-level alert coordination priority queue (vision / OCR / nav / companion / system)
+- Network events (`window` online/offline) → automatic provider switching
+- Web Speech API TTS (browser)
+- Web Speech API STT (browser, where supported)
+- Browser DeviceMotion / DeviceOrientation (IMU, compass)
+- Browser Geolocation API (GPS)
+- Browser Battery API
+- `navigator.vibrate` haptics
+- OCR via Tesseract.js (when enabled in settings)
+- Guardian + hazard detection (fully local — no cloud required)
+
+### REAL BUT ENVIRONMENT-DEPENDENT
+- Cloud vision (OpenAI gpt-4o, Gemini 1.5 flash) — requires API key
+- Live camera feed — requires browser `getUserMedia` permission
+- Local TFJS COCO-SSD — requires browser with WASM/WebGL
+
+### SIMULATED
+- Glasses hardware (cameras, bone-conduction audio, haptic actuators)
+- Edge compute module inference
+- Vision detections in simulation mode
+- Navigation map tiles and routing
+- Battery / thermal readings when hardware API is unavailable
+
+### HARDWARE PLACEHOLDER (HAL implemented, hardware not connected)
+- `glassesCameraEngine.ts` — 4-camera HAL
+- `hardwareBridgeEngine.ts` — I/O routing HAL
+- `denarixxGlassesEngine.ts` — device profile + state machine
+- `hardwarePrototypeEngine.ts` — prototype mode classification
+- `powerManagementEngine.ts` — battery / thermal HAL
+- `audioWearableEngine.ts` — bone-conduction HAL
+- `hapticWearableEngine.ts` — haptic actuator HAL
+
+### NOT VALIDATED (requires physical users or hardware)
+- Real-user safety validation (pilot testing not yet completed)
+- Bone-conduction audio intelligibility
+- Haptic pattern recognition in real conditions
+
+---
+
+## Glasses-First Architecture
+
+```
+Denarixx Vision Glasses (primary)
+  └── glasses camera (front + peripheral)
+  └── glasses compute module (local Guardian, local inference)
+  └── bone-conduction audio
+  └── haptic feedback
+
+Phone / web UI (optional — development, diagnostics, caregiver settings only)
 ```
 
-Open http://localhost:3000. No API keys needed — runs in simulation mode by default.
+The Guardian, alert quality, alert coordination, and audio pipeline run entirely locally.
+No cloud connection is required for safety-critical hazard detection.
+
+See `docs/LIVE_RUNTIME_OWNERSHIP.md` for full pipeline ownership.
 
 ---
 
-## How to Run on Replit
+## Network & Provider Switching
 
-1. Import this repository (Node.js template)
-2. In Replit Secrets: `SESSION_SECRET=<random string>`
-3. Shell: `npm install --ignore-scripts && npm run dev`
-4. No external services required.
+| Event | Behavior |
+|---|---|
+| `window offline` | Immediate switch to simulation; announces once |
+| Weak connection (2G / <150Kbps) | Pause cloud; announce once; local safety continues |
+| `window online` | Cloud health check → restore only if check passes |
+| Cloud health check fails | Stay on simulation; log error; no re-announcement |
+| Critical alert | Never waits for cloud — fires from local Guardian |
+
+---
+
+## How to Run
+
+```bash
+# Replit — just start the "Start application" workflow. No setup required.
+
+# Local
+cp .env.example .env.local
+npm install --ignore-scripts
+npm run dev   # from denarixx/
+```
+
+Open http://localhost:3000. No API keys needed — simulation mode by default.
 
 ---
 
@@ -48,174 +125,72 @@ Open http://localhost:3000. No API keys needed — runs in simulation mode by de
 |---|---|---|
 | `SESSION_SECRET` | — | Session signing secret |
 | `VISION_PROVIDER` | `simulation` | `simulation` \| `openai` \| `gemini` \| `local` |
-| `DATABASE_URL` | — | PostgreSQL connection string (optional) |
+| `OPENAI_API_KEY` | — | Required when `VISION_PROVIDER=openai` |
+| `GEMINI_API_KEY` | — | Required when `VISION_PROVIDER=gemini` |
+| `DENARIXX_VISION_PROTOTYPE_BASELINE` | `v0.1.0` | Baseline marker |
+
+---
+
+## Key Documents
+
+| Document | Description |
+|---|---|
+| `docs/LIVE_RUNTIME_OWNERSHIP.md` | Runtime orchestrator, pipeline ownership, glasses-first architecture |
+| `docs/PHYSICAL_PROTOTYPE_SOFTWARE_BASELINE.md` | v0.1.0 baseline definition |
+| `docs/PROTOTYPE_READINESS_REPORT.md` | READY / PARTIAL / BLOCKED readiness per subsystem |
+| `docs/LIVE_PIPELINE_WIRING_AUDIT.md` | Full pipeline audit and latency budget |
+| `docs/LIVE_ACCESSIBILITY_VALIDATION.md` | Accessibility requirements validation |
+| `docs/HARDWARE_PROTOTYPE_SPEC.md` | Physical hardware specification |
 
 ---
 
 ## Test Suites
 
 ```bash
-npm test                                          # V1  — 24 tests
-npx tsx tests/cognitiveGuardian.test.ts           # V2  — 37 tests
-npx tsx tests/v3reasoning.test.ts                 # V3  — 27 tests
-npx tsx tests/voiceCompanion.test.ts              # V5  — 72 tests
-npx tsx tests/spatial.test.ts                     # V6  — 86 tests
-npx tsx tests/sensorFusion.test.ts                # V7  — 69 tests
-npx tsx tests/hardwareBridge.test.ts              # V8  — 97 tests
-npx tsx tests/humanBehaviour.test.ts              # V9  — 134 tests
-npx tsx tests/mobileReadiness.test.ts             # V10 — 47 tests
-npx tsx tests/pilotTesting.test.ts                # V11 — 117 tests
-npx tsx tests/visionPipeline.test.ts              # V12 — 148 tests
-npx tsx tests/navigationEngine.test.ts            # V13 — 151 tests
-npx tsx tests/multiCameraSupport.test.ts          # V14 — 164 tests
-npx tsx tests/onDeviceAI.test.ts                  # V15 — 170 tests
-npx tsx tests/denarixxGlassesPrototype.test.ts    # V16 — 176 tests
-npx tsx tests/fieldTrial.test.ts                  # V17 — 161 tests
-npx tsx tests/manufacturingReadiness.test.ts      # V18 — 144 tests
-```
-
-**Total: 1,777 / 1,777 passing. TypeScript: zero errors.**
-
----
-
-## Pages (17)
-
-| Path | Phase | Description |
-|---|---|---|
-| `/` | V1 | Landing page with 7-step demo flow |
-| `/session` | V1 | Live vision session with guided walkthrough |
-| `/guardian` | V2 | Cognitive Guardian pipeline debugger |
-| `/reasoning` | V3 | Cognitive Reasoning Engine explorer |
-| `/hazards` | V1 | Standalone hazard detection tester |
-| `/memory` | V1 | AI memory store with seed data |
-| `/navigation` | V13 | Indoor & outdoor navigation engine |
-| `/vision` | V12 | Real-time AI vision pipeline viewer |
-| `/devices` | V8/V14 | Smart glasses & wearable device manager |
-| `/performance` | V15 | On-device AI latency & battery dashboard |
-| `/pilot` | V11 | Supervised pilot testing system |
-| `/field-trials` | V17 | Real-world field trial manager |
-| `/manufacturing` | V18 | Manufacturing readiness dashboard |
-| `/settings` | V10 | Accessibility & PWA settings |
-| `/privacy` | V1 | Privacy policy |
-| `/admin` | V1 | Admin panel |
-| `/docs` | V1 | Developer documentation |
-
----
-
-## API Routes (26)
-
-| Route | Method | Phase | Description |
-|---|---|---|---|
-| `/api/health` | GET | V1 | Health check |
-| `/api/sessions` | GET | V1 | List sessions |
-| `/api/sessions/start` | POST | V1 | Start a vision session |
-| `/api/sessions/end` | POST | V1 | End session and return metrics |
-| `/api/vision/analyze-frame` | POST | V1 | Analyse a simulated vision frame |
-| `/api/hazards/evaluate` | POST | V1 | Run hazard detection |
-| `/api/safety/decide` | POST | V1 | Run safety decision engine |
-| `/api/scene/describe` | POST | V1 | Generate scene description |
-| `/api/conversation/ask` | POST | V1 | Natural-language Q&A |
-| `/api/audio/speak` | POST | V1 | Request audio guidance text |
-| `/api/memory` | GET/POST | V1 | Retrieve / save memory items |
-| `/api/memory/save` | POST | V1 | Save memory item (alias) |
-| `/api/navigation` | GET | V1 | Navigation guidance stub |
-| `/api/navigation/start` | POST | V13 | Start navigation session |
-| `/api/navigation/update` | POST | V13 | Update heading and detections |
-| `/api/navigation/end` | POST | V13 | End navigation session |
-| `/api/navigation/landmark` | POST | V13 | Add landmark |
-| `/api/navigation/crossing-decision` | POST | V13 | Evaluate pedestrian crossing |
-| `/api/pilot/session` | POST/GET/PATCH/DELETE | V11 | Pilot test session CRUD |
-| `/api/pilot/feedback` | POST/GET | V11 | Pilot feedback |
-| `/api/field-trials/session` | POST/GET/PATCH/DELETE | V17 | Field trial session CRUD |
-| `/api/field-trials/feedback` | POST/GET | V17 | Field trial feedback |
-| `/api/field-trials/report` | POST/GET/DELETE | V17 | Trial report management |
-| `/api/manufacturing/readiness` | GET | V18 | Full manufacturing report |
-| `/api/manufacturing/risk` | GET | V18 | Product risk assessment |
-| `/api/manufacturing/certification` | GET | V18 | Certification roadmap |
-
----
-
-## Engine Files (77)
-
-All engines are pure TypeScript — no async I/O, fully testable in isolation.
-
-| Phase | Engines |
-|---|---|
-| V1 | VisionEngine, HazardDetectionEngine, SafetyDecisionEngine, SceneReasoningEngine, MemoryEngine, ConversationEngine, NavigationEngine |
-| V2 | cognitiveGuardianEngine, proactiveAlertEngine, silenceDecisionEngine, predictiveRiskEngine, companionContextEngine, routineLearningEngine, alertThrottleEngine |
-| V3 | environmentUnderstandingEngine, cognitiveReasoningEngine, riskPredictionEngine, actionDecisionEngine, humanGuideEngine |
-| V4 | visionProviderFactory, providers/SimulationVisionProvider, providers/OpenAIVisionProvider, providers/GeminiVisionProvider, providers/LocalVisionProvider, providers/MockVisionProvider |
-| V5 | voiceCommandEngine, guidancePersonalityEngine |
-| V6 | spatialReasoningEngine, pathPlanningEngine, mobilityEngine, worldModelEngine |
-| V7 | sensorFusionEngine, locationPrivacyEngine |
-| V8 | wearableConnectionEngine, deviceCapabilityEngine, hardwareBridgeEngine |
-| V9 | humanBehaviourEngine, crowdUnderstandingEngine, interactionPredictionEngine, socialAwarenessEngine |
-| V10 | (PWA lib — pwa.ts) |
-| V11 | pilotTestingEngine |
-| V12 | visionInferenceEngine, depthReasoningEngine, objectTrackingEngine, sceneUnderstandingEngine, cameraPipelineEngine, modelManagerEngine |
-| V13 | navigationIntelligenceEngine, indoorNavigationEngine, outdoorNavigationEngine, routeSafetyEngine, landmarkGuidanceEngine, crossingDecisionEngine |
-| V14 | glassesCameraEngine, cameraHealthEngine, fieldOfViewEngine, multiCameraFusionEngine, wearableSensorFusionEngine |
-| V15 | onDeviceAIEngine, modelOptimizationEngine, edgeInferenceEngine, latencyBudgetEngine, batteryOptimizationEngine |
-| V16 | denarixxGlassesEngine, hardwarePrototypeEngine, powerManagementEngine, audioWearableEngine, hapticWearableEngine |
-| V17 | fieldTrialEngine, safetyValidationEngine, userFeedbackEngine, trialReportEngine |
-| V18 | manufacturingReadinessEngine, compliancePlanningEngine, productRiskEngine, certificationRoadmapEngine |
-
----
-
-## Architecture
-
-```
-Camera Input → Vision Engine → Hazard Detection → Safety Decision
-                             → Scene Reasoning
-                             → Memory Engine
-                             → Conversation Engine → Audio Guidance
-
-             ┌──────────────────────────────────────────────┐
-             │             V2 Cognitive Guardian             │
-             │  ProactiveAlert · Silence · PredictiveRisk   │
-             │  CompanionContext · RoutineLearning · Throttle│
-             └──────────────────────────────────────────────┘
-
-             ┌──────────────────────────────────────────────┐
-             │          V6–V8 Hardware & Sensors            │
-             │  Spatial · PathPlanning · SensorFusion       │
-             │  WearableConnection · HardwareBridge         │
-             └──────────────────────────────────────────────┘
-
-             ┌──────────────────────────────────────────────┐
-             │       V12–V15 Vision & On-Device AI          │
-             │  VisionInference · ObjectTracking · Depth    │
-             │  EdgeInference · LatencyBudget · Battery     │
-             └──────────────────────────────────────────────┘
+cd denarixx
+npm test                                                 # V1 core       — 24
+npx tsx tests/cognitiveGuardian.test.ts                  # V2            — 37
+npx tsx tests/guardianAlertQuality.test.ts               # Sprint 5      — 60
+npx tsx tests/v3reasoning.test.ts                        # V3            — 27
+npx tsx tests/voiceCompanion.test.ts                     # V5            — 72
+npx tsx tests/spatial.test.ts                            # V6            — 86
+npx tsx tests/sensorFusion.test.ts                       # V7            — 69
+npx tsx tests/hardwareBridge.test.ts                     # V8            — 97
+npx tsx tests/humanBehaviour.test.ts                     # V9            — 134
+npx tsx tests/mobileReadiness.test.ts                    # V10           — 47
+npx tsx tests/pilotTesting.test.ts                       # V11           — 117
+npx tsx tests/visionPipeline.test.ts                     # V12           — 148
+npx tsx tests/navigationEngine.test.ts                   # V13           — 151
+npx tsx tests/multiCameraSupport.test.ts                 # V14           — 164
+npx tsx tests/onDeviceAI.test.ts                         # V15           — 170
+npx tsx tests/denarixxGlassesPrototype.test.ts           # V16           — 176
+npx tsx tests/fieldTrial.test.ts                         # V17           — 161
+npx tsx tests/manufacturingReadiness.test.ts             # V18           — 144
+npx tsx tests/longTermMemory.test.ts                     # Sprint 8      — 100
+npx tsx tests/explainableAI.test.ts                      # Sprint 9      — 90
+npx tsx tests/companionPersonality.test.ts               # Sprint 10     — 92
+npx tsx tests/accessibilityEngine.test.ts                # Sprint 11     — 127
+npx tsx tests/privacyDashboard.test.ts                   # Sprint 12     — 103
+npx tsx tests/languageEngine.test.ts                     # Sprint 13     — 118
+npx tsx tests/offlineEngine.test.ts                      # Sprint 14     — 152
+npx tsx tests/streetSafety.test.ts                       # Sprint 15     — 143
+npx tsx tests/glassesRuntime.test.ts                     # Sprint 16     — 160
+npx tsx tests/hardwareAbstraction.test.ts                # Sprint 17     — 161
+npx tsx tests/glassesSimulator.test.ts                   # Sprint 18     — 127
+npx tsx tests/hardwareSpecification.test.ts              # Sprint 19     — 48
+npx tsx tests/prototypeIntegration.test.ts               # Sprint 20     — 75
+npx tsx tests/livePerceptionE2E.test.ts                  # Sprint 23     — 96
+npx tsx tests/realPerception.test.ts                     # Sprint 22     — 146
+npx tsx tests/visionProvider.test.ts                     # Sprint 4      — 72
+npx tsx tests/networkProviderSwitching.test.ts           # Network       — 10
+npm run type-check                                       # 0 errors
+npm run build                                            # ✓ Compiled
 ```
 
 ---
 
-## What Is Simulated (Phase 1–18)
+## Safety Constraints (hardcoded OFF)
 
-- Camera frame analysis (SimulationVisionProvider cycles preset detections)
-- Scene descriptions (template-based)
-- Hazard detections (rule-based on simulated labels)
-- GPS coordinates (fuzzy grid snapping for privacy)
-- Navigation routes (deterministic indoor/outdoor simulation)
-- Multi-camera feeds (simulated latency and battery drain)
-- On-device inference (simulated latency grades per runtime)
-- Smart glasses connection (simulated heartbeat and subsystem health)
-- Field trial and pilot sessions (full in-memory lifecycle)
-- Manufacturing readiness (planning-layer scores, not production data)
-
-All simulation behaviour is deterministic and fully tested. Swap any provider by implementing its TypeScript interface.
-
----
-
-## Known Risks
-
-| Risk | Notes |
-|---|---|
-| No real-world validation | Must test with real blind/low-vision users before any safety-critical use |
-| In-memory session stores | Reset on server restart — no database persistence yet |
-| No authentication | Single demo-user mode only |
-| Web Speech API | Best support in Chrome/Edge |
-| Face recognition | Intentionally disabled — requires GDPR DPIA + BIPA consent flow |
-| Emergency streaming | Intentionally disabled — requires jurisdiction-specific legal review |
-| Crossing safety | Engine never asserts certainty — always hedged language by design |
+- `FACE_RECOGNITION_ENABLED=false`
+- `EMERGENCY_STREAMING_ENABLED=false`
+- Crossing guidance: never "safe to cross" — "appears clear, but please check carefully"

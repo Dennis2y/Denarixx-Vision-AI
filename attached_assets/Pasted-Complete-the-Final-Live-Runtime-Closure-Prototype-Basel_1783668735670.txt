@@ -1,0 +1,273 @@
+Complete the Final Live Runtime Closure & Prototype Baseline Program.
+
+The previous task was not fully implemented.
+
+Do NOT add new features.
+Do NOT create another roadmap phase.
+Do NOT create duplicate engines.
+
+Use the existing codebase and close the exact missing items below.
+
+==================================================
+1. CONNECT REAL NETWORK EVENTS TO THE LIVE SESSION
+==================================================
+
+Fully integrate:
+
+- src/engines/networkMonitorEngine.ts
+- src/engines/connectivityFallbackEngine.ts
+
+into the active live vision session, especially:
+
+- src/hooks/useVisionSession.ts
+- the live camera/perception runtime
+- provider selection
+
+Subscribe to actual browser/runtime connectivity events:
+
+- online
+- offline
+- weak connection
+- reconnecting
+- restored
+
+Do not rely only on a periodic frame loop.
+
+Announce state changes once:
+
+“Internet is unavailable. Offline safety mode is active.”
+
+“Connection is weak. Local safety remains active.”
+
+“Online enhancement has returned.”
+
+Suppress duplicate announcements.
+
+==================================================
+2. IMPLEMENT AUTOMATIC PROVIDER SWITCHING
+==================================================
+
+The active runtime must actually change providers.
+
+Required behavior:
+
+Cloud active + internet lost
+→ immediately switch safety-critical analysis to local provider
+
+Cloud active + weak connection
+→ allow a short timeout
+→ switch to local on failure
+
+Internet restored
+→ keep local safety active
+→ run cloud health check
+→ restore cloud enhancement only after success
+
+Critical alerts must never wait for cloud recovery.
+
+Track:
+
+- active provider
+- provider health
+- switch reason
+- fallback level
+- last successful inference
+- last provider error
+
+Add integration tests proving that provider switching genuinely occurs.
+
+==================================================
+3. MAKE GLASSES-FIRST RUNTIME EXPLICIT
+==================================================
+
+Normal operation must represent:
+
+Denarixx Vision Glasses
+→ glasses camera
+→ local compute
+→ local Guardian
+→ bone-conduction audio
+→ haptic feedback
+
+A phone must not be required.
+
+Phone/web UI is optional only for:
+
+- development
+- diagnostics
+- caregiver settings
+- firmware management
+- testing
+
+Update runtime state, README, comments, and documentation accordingly.
+
+==================================================
+4. DEFINE ONE RUNTIME ORCHESTRATOR
+==================================================
+
+Decide and document the true production-prototype orchestrator.
+
+If `useVisionSession.ts` remains the active orchestrator:
+
+- state this clearly
+- integrate all required engines there
+- mark `livePerceptionEngine` as a domain/reference pipeline if it is not the runtime orchestrator
+
+Do not leave two competing pipelines without explanation.
+
+Create:
+
+docs/LIVE_RUNTIME_OWNERSHIP.md
+
+==================================================
+5. CREATE THE MISSING PROTOTYPE BASELINE
+==================================================
+
+Create:
+
+docs/PHYSICAL_PROTOTYPE_SOFTWARE_BASELINE.md
+
+Include:
+
+- baseline name:
+  DENARIXX_VISION_PROTOTYPE_BASELINE=v0.1.0
+- exact Git commit
+- required runtime modules
+- optional modules
+- environment variables
+- local/cloud provider behavior
+- offline behavior
+- hardware interfaces
+- test commands
+- known limitations
+- rollback procedure
+- what is real
+- what is simulated
+
+Also add the baseline marker to `.env.example` or an appropriate version/config file.
+
+Do not call this a consumer or production release.
+
+==================================================
+6. CREATE THE MISSING READINESS REPORT
+==================================================
+
+Create:
+
+docs/PROTOTYPE_READINESS_REPORT.md
+
+Assess each item as:
+
+- READY
+- PARTIAL
+- BLOCKED
+
+Include:
+
+- camera pipeline
+- Guardian
+- OCR
+- speech output
+- speech input
+- alert coordination
+- offline safety
+- provider fallback
+- navigation
+- haptics
+- GPS/IMU
+- physical HAL adapters
+- firmware bridge
+- wearable battery/thermal integration
+- real-user validation
+- safety validation
+- manufacturing
+
+Do not mark something READY because a file merely exists.
+
+==================================================
+7. FIX README AND PROJECT COUNTS
+==================================================
+
+The current README is outdated.
+
+Count the actual project programmatically.
+
+Update:
+
+- denarixx/README.md
+- root replit.md
+- Build Roadmap UI if it displays counts
+
+Verify actual counts for:
+
+- page.tsx files
+- API route.ts files
+- engine/provider files
+- hooks
+- test files
+- docs files
+
+Do not keep the old 17 pages / 26 routes / 77 engines / 17 tests claims.
+
+Add an honest implementation table:
+
+REAL AND CONNECTED
+REAL BUT ENVIRONMENT-DEPENDENT
+SIMULATED
+HARDWARE PLACEHOLDER
+NOT VALIDATED
+
+==================================================
+8. ADD BEHAVIORAL INTEGRATION TESTS
+==================================================
+
+Expand tests to cover:
+
+- online → offline provider switch
+- weak connection → local fallback
+- failed cloud health check
+- local safety remains active during reconnection
+- cloud restoration after successful health check
+- duplicate network announcements suppressed
+- critical alert during provider switch
+- emergency stop during reconnection
+- runtime works without phone dependency
+- project-count script produces accurate results
+
+Tests must verify runtime behavior, not file existence.
+
+==================================================
+9. QUALITY GATE
+==================================================
+
+Run:
+
+npm run type-check
+npm test
+npx tsx tests/realPerception.test.ts
+npx tsx tests/visionProvider.test.ts
+npx tsx tests/livePerceptionE2E.test.ts
+npm run build
+
+Fix every error and meaningful warning.
+
+Do not claim completion until:
+
+- live network events are wired
+- provider switching happens in the real session
+- local safety remains active offline
+- README counts are accurate
+- both missing prototype documents exist
+- glasses-first operation is documented
+- all tests/build pass
+
+Push all changes to GitHub.
+
+Return:
+
+- commit hash
+- verified project counts
+- test results
+- provider-switching behavior
+- readiness summary
+- remaining blockers before physical prototype bring-up
