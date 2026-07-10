@@ -9,9 +9,8 @@
 - [Stale closures stop](stale-closures-stop.md) — useRef pattern for values read at session-stop time
 - [V3 reasoning pipeline](v3-reasoning-pipeline.md) — environmentUnderstandingEngine → cognitiveReasoningEngine → actionDecisionEngine
 - [V8 HAL imports](v8-hal-imports.md) — HardwareBridgeEngine, WearableConnectionEngine, DeviceCapabilityEngine import paths
-<<<<<<< HEAD
 - [Sprint 8 memory types separation](sprint8-memory-types.md) — longTermMemory.ts separate from V1 MemoryItem in index.ts; never merge
 - [Sprint 9 trust types separation](sprint9-trust-types.md) — trust.ts is separate from all other type files; DecisionSource/ExplanationCategory only here
 - [Next.js .next cache corruption](next-cache-corruption.md) — stale chunks after build → 500s; fix: rm -rf denarixx/.next then restart workflow.
-=======
->>>>>>> github/main
+- [Network event hook order](network-hook-order.md) — speakCoordinatedRef/addLogRef must init as no-ops; sync effects must come AFTER the useCallback declarations they reference.
+- [GitHub force-push pattern](github-force-push.md) — task agents push directly to remote; after merges use --force to avoid "fetch first" rejection.
