@@ -39,7 +39,31 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/glassesSimulator.test.ts` — Sprint 18 Digital Twin tests (127/127)
 - `cd denarixx && npx tsx tests/hardwareSpecification.test.ts` — Sprint 19 Hardware Specification tests (48/48)
 - `cd denarixx && npx tsx tests/prototypeIntegration.test.ts` — Sprint 20 Prototype Hardware Integration tests (75/75)
+- `cd denarixx && npx tsx tests/livePerceptionE2E.test.ts` — Sprint 23 Live Perception E2E behavioural tests (80/80)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
+
+## Live Perception Hardening (Sprint 23)
+
+10-item hardening program covering alert coordination, failure recovery, human-friendly wording, pipeline audit, accessibility validation, and E2E behavioural tests.
+
+**New engines:**
+- `src/engines/alertCoordinationEngine.ts` — 7-level priority queue (critical_hazard → companion_info), deduplication by key + cooldown, critical interrupt logic, multi-source (vision/ocr/navigation/companion/system)
+- `src/engines/systemAnnouncementEngine.ts` — human-friendly messages for all system events (session start, mode switches, provider failures, battery, camera status); no technical jargon in speech
+- `src/engines/failureRecoveryEngine.ts` — 12 failure scenarios (camera-permission-denied, camera-disconnected, model-load-failure, cloud-provider-timeout, no-internet, weak-internet, ocr-worker-crash, stt-unavailable, tts-unavailable, location-unavailable, battery-critical, overheating); each has recovery level, announcement, fallback action, user hint; safety core maintained in all scenarios
+
+**Wording fix:** `guardianWordingEngine.ts` crossing language confirmed clean — never says "safe to cross"; uses "appears clear, but please check carefully"
+
+**Tests:** `tests/livePerceptionE2E.test.ts` — 80 behavioural tests covering all 13 real scenarios (obstacle, stairs, vehicle, bicycle, sign, medicine, provider outage, internet loss, camera loss, critical interrupt, dedup suppression, hybrid fallback, offline continuation) + wording validation + coordination system + failure recovery system
+
+**Docs:**
+- `docs/LIVE_PIPELINE_WIRING_AUDIT.md` — full audit of connected/disconnected stages with evidence from source; latency budget table; safety guarantees; pipeline diagram
+- `docs/LIVE_ACCESSIBILITY_VALIDATION.md` — 9 requirements validated (screen reader, keyboard, voice-first, emergency control, one-action start, reduced motion, high contrast, haptic fallback, offline accessibility)
+
+**Wiring summary (from audit):** Vision→Hazard→Safety→speak() fully connected; AlertThrottleEngine, GuidancePersonalityEngine, MobilityEngine, SensorFusion all in runFrame. livePerceptionEngine.ts and voiceInteractionEngine.ts (Sprint 22) remain isolated engines — session hook is the pipeline.
+
+**Total test count: 38 suites, 3,070+ tests passing, 0 regressions**
+
+Test command: `cd denarixx && npx tsx tests/livePerceptionE2E.test.ts`
 
 ## Real Perception Integration (Sprint 22)
 
