@@ -1,6 +1,6 @@
 # Prototype Readiness Report
 
-**DENARIXX_VISION_PROTOTYPE_BASELINE=v0.1.0**  
+**DENARIXX_VISION_PROTOTYPE_BASELINE=v0.2.0-hardware-bringup**  
 **Date:** 2026-07-10  
 **Scope:** Software readiness for first physical prototype bring-up  
 **Assessors:** Automated test coverage + source audit  

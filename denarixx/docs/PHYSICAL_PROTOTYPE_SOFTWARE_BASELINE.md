@@ -1,8 +1,8 @@
 # Physical Prototype Software Baseline
 
-**DENARIXX_VISION_PROTOTYPE_BASELINE=v0.1.0**  
+**DENARIXX_VISION_PROTOTYPE_BASELINE=v0.2.0-hardware-bringup**  
 **Date:** 2026-07-10  
-**Status:** Prototype — Not a consumer or production release
+**Status:** Hardware Bring-Up — Not a consumer or production release
 
 ---
 
@@ -11,10 +11,10 @@
 | Field | Value |
 |---|---|
 | Baseline name | DENARIXX_VISION_PROTOTYPE_BASELINE |
-| Version | v0.1.0 |
+| Version | v0.2.0-hardware-bringup |
 | Git commit | Run `git -C denarixx rev-parse HEAD` to get the current hash |
 | Branch | main |
-| Purpose | First bring-up baseline for Denarixx Vision Glasses prototype hardware |
+| Purpose | Hardware bring-up baseline — embedded runtime, adapters, local inference, HILT |
 
 ---
 
@@ -44,6 +44,31 @@ Run all: `cd denarixx && npm test` (V1) then run individual sprint tests.
 
 ---
 
+## Bring-Up Program Additions (v0.2.0)
+
+| Component | File | Description |
+|---|---|---|
+| Hardware profile | `config/prototype-hardware-profile.json` | Machine-readable target hardware spec |
+| Hardware profile doc | `docs/FIRST_PHYSICAL_PROTOTYPE_PROFILE.md` | Human-readable hardware profile |
+| Local inference types | `src/types/localInference.ts` | Capability honesty model, adapter types |
+| Local inference engine | `src/engines/localInferenceEngine.ts` | Real embedded inference path (not simulation) |
+| Hardware button engine | `src/engines/hardwareButtonEngine.ts` | Button events, emergency stop, voice-first |
+| Sensor calibration engine | `src/engines/sensorCalibrationEngine.ts` | First-boot and maintenance calibration |
+| Hardware output test engine | `src/engines/hardwareOutputTestEngine.ts` | Audio + haptic bring-up test flows |
+| HILT test harness engine | `src/engines/hiltTestHarnessEngine.ts` | 12 HILT scenarios, metric recording |
+| Adapter types | `src/runtime/adapters/hardwareAdapterTypes.ts` | Composite adapter interface |
+| Simulation adapter | `src/runtime/adapters/simulationTestAdapter.ts` | CI / test — all inputs synthetic |
+| Browser development adapter | `src/runtime/adapters/browserDevelopmentAdapter.ts` | Phone/laptop browser APIs |
+| Embedded prototype adapter | `src/runtime/adapters/embeddedPrototypeAdapter.ts` | Physical HAL stubs (I2C, SPI, V4L2, ALSA, GPIO) |
+| Embedded vision runtime | `src/runtime/embeddedVisionRuntime.ts` | Headless runtime — no browser, no React |
+| Runtime entry point | `src/runtime/startPrototypeRuntime.ts` | Boot sequence + processing loop |
+| HILT test plan | `docs/HARDWARE_IN_THE_LOOP_TEST_PLAN.md` | 12 supervised engineering test plans |
+| Bring-up tests | `tests/hardwareBringup.test.ts` | 14 behavioral tests (all mocked) |
+
+Run bring-up tests: `cd denarixx && npx tsx tests/hardwareBringup.test.ts`
+
+---
+
 ## Optional Modules (Enhancement Only)
 
 | Module | Purpose | Dependency |
@@ -64,7 +89,9 @@ Run all: `cd denarixx && npm test` (V1) then run individual sprint tests.
 | `VISION_PROVIDER` | `simulation` | No | `simulation` \| `openai` \| `gemini` \| `local` |
 | `OPENAI_API_KEY` | — | No | Cloud vision (OpenAI gpt-4o) |
 | `GEMINI_API_KEY` | — | No | Cloud vision (Gemini 1.5 flash) |
-| `DENARIXX_VISION_PROTOTYPE_BASELINE` | `v0.1.0` | Recommended | Baseline marker for firmware/software pairing |
+| `DENARIXX_VISION_PROTOTYPE_BASELINE` | `v0.2.0-hardware-bringup` | Recommended | Baseline marker for firmware/software pairing |
+| `DENARIXX_HAL_ADAPTER` | `simulation-test` | No | `simulation-test` \| `browser-development` \| `embedded-prototype` |
+| `DENARIXX_LOCAL_MODEL_PATH` | — | Embedded only | Path to ONNX/TFLite model on compute module flash |
 | `FACE_RECOGNITION_ENABLED` | `false` | Fixed | Always false — privacy constraint |
 | `EMERGENCY_STREAMING_ENABLED` | `false` | Fixed | Always false — privacy constraint |
 

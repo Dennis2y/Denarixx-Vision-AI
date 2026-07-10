@@ -1,19 +1,39 @@
 # Live Runtime Ownership
 
 **Status: Authoritative**  
-**Baseline: DENARIXX_VISION_PROTOTYPE_BASELINE=v0.1.0**
+**Baseline: DENARIXX_VISION_PROTOTYPE_BASELINE=v0.2.0-hardware-bringup**
 
 ---
 
-## The Production-Prototype Orchestrator
+## Runtime Orchestrators
 
-**`useVisionSession.ts` is the active runtime orchestrator.**
-
-This is the single source of truth for the live perception pipeline on the prototype. Every sensor reading, vision frame, audio output, and network event flows through this React hook. It is not a UI helper — it is the production-prototype pipeline controller.
+There are now **two** runtime orchestrators. They serve different deployment contexts and must not be confused.
 
 ---
 
-## What `useVisionSession.ts` Owns
+### 1. `useVisionSession.ts` — Browser Orchestrator (phone / laptop / caregiver UI)
+
+**`useVisionSession.ts` is the active browser runtime orchestrator.**
+
+This is the single source of truth for the live perception pipeline running in a browser. Every sensor reading, vision frame, audio output, and network event flows through this React hook. It is not a UI helper — it is the browser-side pipeline controller.
+
+---
+
+### 2. `src/runtime/embeddedVisionRuntime.ts` — Embedded Glasses Runtime (compute module)
+
+**`embeddedVisionRuntime.ts` is the headless runtime for the glasses compute module.**
+
+Entry point: `src/runtime/startPrototypeRuntime.ts`  
+No React, no browser APIs, no Next.js. Uses the same domain engines as `useVisionSession.ts` — no duplication. Selected via `DENARIXX_HAL_ADAPTER` environment variable.
+
+Hardware adapters:
+- `simulationTestAdapter.ts` — CI / unit tests
+- `browserDevelopmentAdapter.ts` — phone/laptop browser
+- `embeddedPrototypeAdapter.ts` — physical prototype hardware (I2C, SPI, V4L2, ALSA, GPIO)
+
+---
+
+## What `useVisionSession.ts` Owns (Browser Context Only)
 
 | Stage | Engine | Status |
 |---|---|---|

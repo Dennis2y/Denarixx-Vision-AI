@@ -1,0 +1,169 @@
+{
+  "_comment": "Denarixx Vision Glasses — First Physical Prototype Hardware Profile",
+  "_baseline": "DENARIXX_VISION_PROTOTYPE_BASELINE=v0.2.0-hardware-bringup",
+  "_status": "bring-up — not mass-production, not final component selection",
+  "_date": "2026-07-10",
+
+  "profile": {
+    "name": "Denarixx Vision Prototype P0",
+    "revision": "P0",
+    "purpose": "First bring-up validation of standalone wearable vision pipeline"
+  },
+
+  "compute": {
+    "os": "Linux (Yocto-based minimal rootfs or Raspberry Pi OS Lite 64-bit)",
+    "cpu": {
+      "architecture": "ARM64 (aarch64)",
+      "cores": 4,
+      "example_soc": "Rockchip RK3588S or Raspberry Pi CM4 (vendor TBD)",
+      "clock_mhz": 1800,
+      "_note": "No final SoC selected. Target: 4-core ARM64, ≥1.5 GHz, TDP ≤ 3W at sustained load"
+    },
+    "npu": {
+      "present": true,
+      "tops": 4,
+      "runtime": "RKNN or vendor NPU SDK (TBD)",
+      "_note": "NPU optional for P0 bring-up; CPU inference fallback required"
+    },
+    "ram_gb": 4,
+    "ram_type": "LPDDR4X",
+    "storage_gb": 32,
+    "storage_type": "eMMC 5.1"
+  },
+
+  "cameras": {
+    "count": 4,
+    "interface": "MIPI-CSI2 2-lane per camera",
+    "positions": ["front-center", "side-left", "side-right", "downward-left"],
+    "resolution_max": "1920x1080 @ 30fps per camera",
+    "operating_resolution": "640x480 @ 15fps (inference), 1280x720 @ 30fps (scene)",
+    "fov_deg": {
+      "front": 90,
+      "side": 120,
+      "downward": 100
+    },
+    "_note": "Front camera is primary safety sensor. All cameras are optional for P0; front alone is minimum viable."
+  },
+
+  "microphone": {
+    "type": "MEMS digital PDM or I2S",
+    "count": 2,
+    "array": "beamforming capable",
+    "interface": "I2S / PDM",
+    "purpose": "Wake word detection and voice commands",
+    "_note": "Dual-mic beamforming preferred but single-mic acceptable for P0"
+  },
+
+  "audio_output": {
+    "type": "Bone-conduction transducer",
+    "interface": "I2S codec → Class-D amplifier",
+    "channels": 1,
+    "sample_rate_hz": 16000,
+    "_note": "Bone-conduction is the primary output for non-disruptive ambient-aware audio. Wired 3.5mm jack fallback."
+  },
+
+  "haptic": {
+    "type": "ERM (Eccentric Rotating Mass) or LRA (Linear Resonant Actuator)",
+    "interface": "PWM or I2C haptic driver IC (e.g. DRV2605L or equivalent)",
+    "patterns_defined": ["stop-immediately", "hazard-left", "hazard-right", "obstacle-ahead", "device-failure", "low-battery"],
+    "_note": "LRA preferred for precise pattern control. PWM fallback for P0."
+  },
+
+  "imu": {
+    "type": "6-DOF or 9-DOF IMU (accel + gyro + optional magnetometer)",
+    "interface": "SPI or I2C",
+    "example_part": "ICM-42688-P or LSM6DSO (vendor TBD)",
+    "output_rate_hz": 100,
+    "_note": "Separate magnetometer recommended for heading accuracy"
+  },
+
+  "gnss": {
+    "type": "GNSS receiver (GPS + GLONASS minimum)",
+    "interface": "UART at 9600–115200 baud",
+    "fix_time_cold_s": 60,
+    "accuracy_m": 2.5,
+    "_note": "GNSS optional for indoor P0 testing; required for outdoor navigation"
+  },
+
+  "connectivity": {
+    "wifi": {
+      "standard": "802.11ac (Wi-Fi 5) minimum, 802.11ax (Wi-Fi 6) preferred",
+      "bands": ["2.4GHz", "5GHz"],
+      "interface": "SDIO or PCIe"
+    },
+    "bluetooth": {
+      "version": "5.2",
+      "profiles": ["BLE", "A2DP (audio streaming to companion)"],
+      "interface": "UART or USB"
+    },
+    "lte_esim": {
+      "present": false,
+      "_note": "LTE/eSIM optional M.2 slot — not populated in P0 bring-up"
+    }
+  },
+
+  "battery": {
+    "chemistry": "LiPo",
+    "capacity_mah": 1200,
+    "monitoring": {
+      "ic": "I2C fuel gauge (e.g. MAX17048 or BQ27220 equivalent)",
+      "provides": ["voltage", "state-of-charge-%", "estimated-time-remaining"]
+    },
+    "expected_runtime_hours": {
+      "full_operation": 3,
+      "guardian_only": 6
+    },
+    "thresholds": {
+      "low_pct": 20,
+      "critical_pct": 10,
+      "emergency_pct": 5
+    }
+  },
+
+  "thermal": {
+    "sensor": "I2C temperature sensor on compute module and near battery",
+    "example_part": "TMP117 or NCT7751 (vendor TBD)",
+    "thresholds_c": {
+      "warn": 70,
+      "throttle": 80,
+      "shutdown": 90
+    }
+  },
+
+  "buttons": {
+    "count": 3,
+    "layout": [
+      {"id": "main", "position": "right-temple-top", "actions": ["single-press: repeat last", "long-press: start/stop", "triple-press: emergency"]},
+      {"id": "volume-up", "position": "right-temple-mid-upper"},
+      {"id": "volume-down", "position": "right-temple-mid-lower"}
+    ],
+    "interface": "GPIO with hardware debounce"
+  },
+
+  "hal": {
+    "adapters_defined": ["browser-development", "embedded-prototype", "simulation-test"],
+    "active_adapter_env_var": "DENARIXX_HAL_ADAPTER",
+    "default_adapter": "simulation-test",
+    "_note": "Guardian and navigation engines must not know which adapter is active"
+  },
+
+  "inference": {
+    "runtime_priority": ["embedded-npu", "embedded-cpu-onnx", "embedded-cpu-tflite", "browser-tfjs"],
+    "classes_supported": [
+      "person", "vehicle", "bicycle", "motorcycle", "obstacle",
+      "chair", "doorway", "traffic-light", "construction-barrier", "dog"
+    ],
+    "classes_experimental": ["stairs"],
+    "capability_honesty": "Every detection class declares: model-supported | heuristic | experimental | unavailable",
+    "simulation_mode": "development-only — never active during real-user operation"
+  },
+
+  "replaceable_without_engine_change": [
+    "SoC vendor (ARM64 → ARM64)",
+    "Camera sensor (same MIPI-CSI2 interface)",
+    "IMU vendor (same I2C/SPI interface)",
+    "GNSS module (same UART NMEA interface)",
+    "Haptic driver IC (same PWM/I2C interface)",
+    "Audio codec (same I2S interface)"
+  ]
+}

@@ -1,0 +1,427 @@
+Start the First Physical Denarixx Vision Glasses Prototype Bring-Up Program.
+
+This is NOT another architecture phase.
+
+Do not create duplicate engines.
+Do not add unrelated dashboards.
+Do not claim that physical hardware has been tested unless it actually has.
+
+Use:
+
+DENARIXX_VISION_PROTOTYPE_BASELINE=v0.1.0
+
+as the software baseline.
+
+MISSION
+
+Prepare the existing Denarixx Vision AI codebase to run on the first real standalone wearable prototype.
+
+The glasses must be the primary device.
+
+A phone must not be required for normal operation.
+
+Target runtime:
+
+Glasses camera
+→ embedded compute module
+→ real local object detection
+→ Guardian
+→ alert coordination
+→ bone-conduction audio
+→ haptic feedback
+
+Cloud AI is optional enhancement only.
+
+==================================================
+1. CREATE A HARDWARE BRING-UP PROFILE
+==================================================
+
+Create a concrete prototype device profile.
+
+The profile must define:
+
+- operating system: Linux or Android-based embedded runtime
+- CPU architecture
+- optional NPU/GPU
+- RAM
+- storage
+- camera interfaces
+- microphone interface
+- audio output interface
+- haptic output interface
+- IMU interface
+- GNSS interface
+- Wi-Fi/Bluetooth
+- optional LTE/eSIM
+- battery monitoring
+- thermal monitoring
+
+Do not choose final mass-production components.
+
+Create:
+
+config/prototype-hardware-profile.json
+
+and:
+
+docs/FIRST_PHYSICAL_PROTOTYPE_PROFILE.md
+
+The configuration must be replaceable without changing the Guardian or core AI engines.
+
+==================================================
+2. REPLACE OFFLINE SIMULATION WITH REAL LOCAL INFERENCE
+==================================================
+
+The current offline baseline must not depend on synthetic simulation for safety.
+
+Implement or complete a real local inference path using the existing provider abstraction.
+
+Supported first-prototype options may include:
+
+- ONNX Runtime
+- TensorFlow Lite
+- TensorFlow.js only for development fallback
+- future NPU runtime adapter
+
+Required local detection classes:
+
+- person
+- vehicle
+- bicycle
+- motorcycle or scooter
+- obstacle
+- chair
+- stairs or step indication where technically possible
+- doorway
+- traffic light
+- construction barrier
+- dog
+
+Do not claim reliable stair, crossing, or depth detection unless measured.
+
+Add an honest capability field for every detection:
+
+- model-supported
+- heuristic
+- experimental
+- unavailable
+
+Simulation must remain available only as a development mode.
+
+Offline safety mode must prefer:
+
+1. real embedded local inference
+2. degraded sensor-based guidance
+3. explicit limited-function warning
+
+Never silently switch to fake detections during real-user mode.
+
+==================================================
+3. BUILD NON-BROWSER HARDWARE ADAPTERS
+==================================================
+
+The current browser APIs are not sufficient for standalone glasses.
+
+Create physical-prototype adapters behind the existing HAL for:
+
+- camera
+- microphone
+- bone-conduction or wired audio
+- haptic motor
+- IMU
+- GNSS
+- battery
+- temperature
+- hardware buttons
+- network state
+
+Do not replace browser adapters.
+
+Support adapter selection:
+
+- browser-development
+- embedded-prototype
+- simulation-test
+
+The Guardian and navigation engines must not know which adapter is active.
+
+==================================================
+4. CREATE A STANDALONE RUNTIME ENTRY POINT
+==================================================
+
+The prototype cannot depend on React hooks as its only runtime.
+
+Keep `useVisionSession.ts` as the browser orchestrator.
+
+Create a separate headless embedded runtime entry point that reuses the same domain engines:
+
+Camera/HAL
+→ local inference
+→ spatial context
+→ Guardian
+→ alert quality
+→ alert coordination
+→ audio/haptics
+
+Create something equivalent to:
+
+src/runtime/embeddedVisionRuntime.ts
+
+and:
+
+src/runtime/startPrototypeRuntime.ts
+
+The embedded runtime must support:
+
+- boot
+- sensor initialization
+- camera initialization
+- model loading
+- session start
+- continuous processing
+- health monitoring
+- emergency stop
+- clean shutdown
+- restart after recoverable failure
+
+Do not duplicate Guardian logic from `useVisionSession.ts`.
+
+Extract shared orchestration functions where necessary.
+
+==================================================
+5. HARDWARE BUTTON AND VOICE-FIRST OPERATION
+==================================================
+
+Normal use must not require a screen.
+
+Support prototype controls:
+
+- single press: repeat last guidance
+- long press: start or stop vision
+- emergency press sequence: silence noncritical speech and enter emergency state
+- voice wake command
+- volume control
+- language selection during setup
+
+Every essential action must work through:
+
+- voice
+- hardware button
+- automatic startup
+
+Visual dashboards remain for engineers and caregivers only.
+
+==================================================
+6. AUDIO AND HAPTIC BRING-UP
+==================================================
+
+Implement physical output adapters for:
+
+- speech playback
+- audio interruption
+- critical-priority speech
+- haptic patterns
+
+Define distinct haptic patterns for:
+
+- stop immediately
+- hazard left
+- hazard right
+- obstacle ahead
+- device failure
+- low battery
+
+Do not rely on haptics alone for complex instructions.
+
+Add a hardware output test mode that engineers can run without starting live navigation.
+
+==================================================
+7. SENSOR CALIBRATION
+==================================================
+
+Create first-boot and maintenance calibration flows for:
+
+- camera orientation
+- IMU bias
+- compass heading
+- wearer forward direction
+- audio level
+- haptic strength
+- GNSS availability
+
+Calibration must be accessible through voice and hardware buttons.
+
+Store calibration locally.
+
+Do not upload it by default.
+
+==================================================
+8. DEVICE HEALTH AND SAFE DEGRADATION
+==================================================
+
+The runtime must detect:
+
+- camera unavailable
+- model failed to load
+- microphone unavailable
+- speaker unavailable
+- haptic unavailable
+- IMU unavailable
+- GNSS unavailable
+- low battery
+- critical battery
+- overheating
+- storage full
+- local inference too slow
+
+Provide clear spoken guidance.
+
+Examples:
+
+“Camera input is unavailable. Please stop and check carefully.”
+
+“Location guidance is unavailable. Obstacle awareness remains active.”
+
+“Battery is critically low. Safety guidance will stop soon.”
+
+Never fail silently.
+
+==================================================
+9. HARDWARE-IN-THE-LOOP TEST HARNESS
+==================================================
+
+Create a hardware-in-the-loop test mode.
+
+It must record structured diagnostic metrics without storing raw video by default:
+
+- camera frame rate
+- inference latency
+- Guardian latency
+- speech queue delay
+- total warning latency
+- CPU usage
+- memory usage
+- battery drain
+- temperature
+- sensor health
+- dropped frames
+- provider failures
+
+Create:
+
+docs/HARDWARE_IN_THE_LOOP_TEST_PLAN.md
+
+and machine-readable diagnostic output.
+
+==================================================
+10. FIRST PROTOTYPE TEST SCENARIOS
+==================================================
+
+Prepare supervised engineering tests only:
+
+- stationary indoor object detection
+- walking toward a large obstacle
+- person approaching
+- parked vehicle
+- moving bicycle in controlled area
+- doorway detection
+- low-light degradation
+- internet loss
+- camera disconnection
+- low battery
+- overheating simulation
+- audio failure with haptic fallback
+
+Do not test public-road crossing guidance with a blind user during initial bring-up.
+
+Do not market the prototype as safe for unsupervised mobility.
+
+==================================================
+11. UPDATE THE BASELINE DOCUMENTS
+==================================================
+
+Update:
+
+docs/PHYSICAL_PROTOTYPE_SOFTWARE_BASELINE.md
+docs/PROTOTYPE_READINESS_REPORT.md
+docs/LIVE_RUNTIME_OWNERSHIP.md
+README.md
+
+Correct the offline statement.
+
+It must clearly distinguish:
+
+- synthetic simulation
+- browser-local TFJS inference
+- embedded real local inference
+- cloud enhancement
+
+Do not claim real offline safety until embedded local detections have been tested on physical hardware.
+
+Create a new provisional marker only after implementation:
+
+DENARIXX_VISION_PROTOTYPE_BASELINE=v0.2.0-hardware-bringup
+
+Do not call it a production release.
+
+==================================================
+12. TESTS
+==================================================
+
+Add behavioural tests for:
+
+- embedded runtime boot
+- physical adapter selection
+- local model load success
+- local model load failure
+- no synthetic fallback in real-user mode
+- camera failure
+- audio failure and haptic fallback
+- low battery degradation
+- thermal shutdown
+- emergency hardware button
+- offline operation
+- runtime restart
+- clean shutdown
+- browser and embedded engines producing compatible Guardian inputs
+
+Use mocks for hardware tests until a physical device is connected.
+
+Clearly label mocked tests.
+
+==================================================
+13. QUALITY GATE
+==================================================
+
+Run:
+
+npm run type-check
+npm test
+npm run build
+
+Also add and run a dedicated embedded-runtime test command.
+
+Do not mark the program complete until:
+
+- embedded runtime exists
+- local inference is no longer represented only by simulation
+- physical HAL adapters have defined interfaces
+- no-phone operation is supported
+- voice and hardware-button control exist
+- health degradation is implemented
+- documentation honestly separates real and mocked hardware
+- all software checks pass
+
+Push everything to GitHub.
+
+Provide:
+
+- commit hash
+- hardware profile created
+- embedded runtime status
+- local inference status
+- adapters implemented
+- tests passed
+- what was tested only with mocks
+- exact hardware still required
+- blockers before assembling the first wearable prototype
