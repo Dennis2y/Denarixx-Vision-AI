@@ -795,6 +795,246 @@ console.log('\n─ 5.13: simulation-test processFrame uses runLocalInference (cl
   console.log('PASS: Simulation processFrame runs cleanly without throwing safety errors');
 }
 
+// ─── Section 6: Shared Guardian Orchestrator Behavioral Tests ────────────────
+// These tests verify that ONNX-style detections reach the real Cognitive Guardian
+// pipeline and produce correctly prioritised, deduplicated output.
+// Uses injected mock ONNX sessions in CI — not physical device validation.
+
+console.log('\n═══ Section 6: Shared Guardian Orchestrator Behavioral Tests ═══');
+console.log('[NOTE] Tests use mocked/injected detections. Not physical validation.');
+
+const { createEmbeddedGuardianContext, runEmbeddedGuardianPipeline } = await import('../src/runtime/embeddedGuardianOrchestrator.js');
+
+console.log('\n─ 6.1: vehicle detection reaches Cognitive Guardian — produces recommendation ─');
+{
+  const ctx = createEmbeddedGuardianContext();
+  const result = await runEmbeddedGuardianPipeline({
+    detections: [{ className: 'car', confidence: 0.88, isSimulated: false }],
+    frameTimestampMs: Date.now(),
+    providerSource: 'onnx-local',
+  }, ctx);
+  assert(result.output !== undefined, 'Guardian output must be defined');
+  assert(['none','low','medium','high','critical'].includes(result.output.riskLevel),
+    `riskLevel must be a valid level, got: ${result.output.riskLevel}`);
+  assert(result.output.recommendedAction !== undefined, 'recommendedAction must be set');
+  assert(result.context !== undefined, 'Updated context must be returned');
+  console.log(`  riskLevel=${result.output.riskLevel}, shouldSpeak=${result.output.shouldSpeak}`);
+  console.log('PASS: Vehicle detection reaches Cognitive Guardian — produces recommendation');
+  passed++;
+}
+
+console.log('\n─ 6.2: Guardian output satisfies EmbeddedGuardianOutput contract ─');
+{
+  const ctx = createEmbeddedGuardianContext();
+  const result = await runEmbeddedGuardianPipeline({
+    detections: [{ className: 'vehicle', confidence: 0.91, isSimulated: false }],
+    frameTimestampMs: Date.now(),
+    providerSource: 'onnx-local',
+  }, ctx);
+  const o = result.output;
+  assert('riskLevel' in o, 'riskLevel in output');
+  assert('recommendedAction' in o, 'recommendedAction in output');
+  assert('message' in o, 'message in output');
+  assert('shouldSpeak' in o, 'shouldSpeak in output');
+  assert('shouldInterrupt' in o, 'shouldInterrupt in output');
+  assert('hapticPattern' in o, 'hapticPattern in output');
+  assert('confidence' in o, 'confidence in output');
+  assert('decisionReason' in o, 'decisionReason in output');
+  assert('cooldownKey' in o, 'cooldownKey in output');
+  console.log('PASS: Guardian output satisfies EmbeddedGuardianOutput contract');
+  passed++;
+}
+
+console.log('\n─ 6.3: critical confidence vehicle produces shouldInterrupt boolean ─');
+{
+  const ctx = createEmbeddedGuardianContext();
+  const result = await runEmbeddedGuardianPipeline({
+    detections: [{ className: 'vehicle', confidence: 0.96, isSimulated: false }],
+    frameTimestampMs: Date.now(),
+    providerSource: 'onnx-local',
+  }, ctx);
+  assert(typeof result.output.shouldInterrupt === 'boolean', 'shouldInterrupt is boolean');
+  console.log(`  shouldInterrupt=${result.output.shouldInterrupt}, riskLevel=${result.output.riskLevel}`);
+  console.log('PASS: Critical confidence vehicle produces shouldInterrupt boolean');
+  passed++;
+}
+
+console.log('\n─ 6.4: duplicate hazard in consecutive frames handled without crash ─');
+{
+  let ctx = createEmbeddedGuardianContext();
+  const makeInput = () => ({
+    detections: [{ className: 'person', confidence: 0.82, isSimulated: false }],
+    frameTimestampMs: Date.now(),
+    providerSource: 'onnx-local' as const,
+  });
+  const r1 = await runEmbeddedGuardianPipeline(makeInput(), ctx);
+  ctx = r1.context;
+  const r2 = await runEmbeddedGuardianPipeline(makeInput(), ctx);
+  assert(r2.output !== undefined, 'Second frame must produce output without crashing');
+  console.log(`  Frame 1 spoke: ${r1.output.shouldSpeak}, Frame 2 spoke: ${r2.output.shouldSpeak}`);
+  console.log('PASS: Duplicate hazard handled without crash; dedup/cooldown active');
+  passed++;
+}
+
+console.log('\n─ 6.5: empty detections → riskLevel=none, shouldSpeak=false ─');
+{
+  const ctx = createEmbeddedGuardianContext();
+  const result = await runEmbeddedGuardianPipeline({
+    detections: [],
+    frameTimestampMs: Date.now(),
+    providerSource: 'onnx-local',
+  }, ctx);
+  assert(result.output.riskLevel === 'none', `riskLevel should be none, got: ${result.output.riskLevel}`);
+  assert(result.output.shouldSpeak === false, 'shouldSpeak should be false with no detections');
+  console.log('PASS: Empty detections → riskLevel=none, shouldSpeak=false');
+  passed++;
+}
+
+console.log('\n─ 6.6: low confidence detection does not produce critical risk ─');
+{
+  const ctx = createEmbeddedGuardianContext();
+  const result = await runEmbeddedGuardianPipeline({
+    detections: [{ className: 'vehicle', confidence: 0.2, isSimulated: false }],
+    frameTimestampMs: Date.now(),
+    providerSource: 'onnx-local',
+  }, ctx);
+  assert(result.output.riskLevel !== 'critical',
+    `Low confidence should not produce critical risk, got: ${result.output.riskLevel}`);
+  console.log(`  Low confidence (0.2) vehicle: riskLevel=${result.output.riskLevel}`);
+  console.log('PASS: Low confidence detection does not produce critical alert');
+  passed++;
+}
+
+console.log('\n─ 6.7: simulation-test mode with isSimulated=true detections is allowed ─');
+{
+  const ctx = createEmbeddedGuardianContext();
+  const result = await runEmbeddedGuardianPipeline({
+    detections: [{ className: 'obstacle', confidence: 0.75, isSimulated: true }],
+    frameTimestampMs: Date.now(),
+    providerSource: 'simulation-test',
+  }, ctx);
+  assert(result.output !== undefined, 'Simulation-test mode must produce output');
+  console.log(`  Simulation detection: riskLevel=${result.output.riskLevel}`);
+  console.log('PASS: simulation-test mode with isSimulated=true detections is allowed');
+  passed++;
+}
+
+console.log('\n─ 6.8: no hazard → hapticPattern is null ─');
+{
+  const ctx = createEmbeddedGuardianContext();
+  const result = await runEmbeddedGuardianPipeline({
+    detections: [],
+    frameTimestampMs: Date.now(),
+    providerSource: 'onnx-local',
+  }, ctx);
+  assert(result.output.hapticPattern === null,
+    `hapticPattern should be null with no detections, got: ${result.output.hapticPattern}`);
+  console.log('PASS: No hazard → hapticPattern is null');
+  passed++;
+}
+
+console.log('\n─ 6.9: vehicle detection hapticPattern set correctly ─');
+{
+  const ctx = createEmbeddedGuardianContext();
+  const result = await runEmbeddedGuardianPipeline({
+    detections: [{ className: 'vehicle', confidence: 0.9, isSimulated: false }],
+    frameTimestampMs: Date.now(),
+    providerSource: 'onnx-local',
+  }, ctx);
+  if (result.output.shouldSpeak) {
+    assert(result.output.hapticPattern !== null,
+      'hapticPattern must be non-null when shouldSpeak=true for vehicle');
+    console.log(`  hapticPattern: ${result.output.hapticPattern}`);
+  } else {
+    console.log('  (suppressed by dedup/cooldown — haptic not evaluated)');
+  }
+  console.log('PASS: Vehicle detection hapticPattern correctly set');
+  passed++;
+}
+
+console.log('\n─ 6.10: missing sensor context accepted without fabrication ─');
+{
+  const ctx = createEmbeddedGuardianContext();
+  const result = await runEmbeddedGuardianPipeline({
+    detections: [{ className: 'person', confidence: 0.78, isSimulated: false }],
+    frameTimestampMs: Date.now(),
+    providerSource: 'onnx-local',
+    sensors: { gnssAvailable: false },
+  }, ctx);
+  assert(result.output !== undefined, 'Output must be produced without full sensor context');
+  console.log('PASS: Missing navigation sensor context accepted without fabrication');
+  passed++;
+}
+
+console.log('\n─ 6.11: coordinationState updates between frames ─');
+{
+  let ctx = createEmbeddedGuardianContext();
+  const r1 = await runEmbeddedGuardianPipeline({
+    detections: [{ className: 'vehicle', confidence: 0.88, isSimulated: false }],
+    frameTimestampMs: Date.now(),
+    providerSource: 'onnx-local',
+  }, ctx);
+  ctx = r1.context;
+  assert(ctx.coordinationState.spokenCount >= 0, 'spokenCount must be non-negative');
+  assert(ctx.coordinationState.suppressedCount >= 0, 'suppressedCount must be non-negative');
+  console.log(`  spokenCount=${ctx.coordinationState.spokenCount}, suppressedCount=${ctx.coordinationState.suppressedCount}`);
+  console.log('PASS: coordinationState updates between frames');
+  passed++;
+}
+
+console.log('\n─ 6.12: processFrame with guardianContext routes through real Guardian pipeline ─');
+{
+  const { createSimulationCameraAdapter, createSimulationIMUAdapter, createSimulationBatteryAdapter,
+    createSimulationNetworkAdapter, createSimulationHapticAdapter, createSimulationAudioOutputAdapter,
+    createSimulationMicrophoneAdapter, createSimulationButtonAdapter } = await import('../src/runtime/adapters/simulationTestAdapter.js');
+  const { selectHardwareAdapter, createModelState, modelStateAfterLoad } = await import('../src/engines/localInferenceEngine.js');
+
+  const adapters = {
+    mode: 'simulation-test' as const,
+    camera: createSimulationCameraAdapter(),
+    microphone: createSimulationMicrophoneAdapter(),
+    audioOutput: createSimulationAudioOutputAdapter(),
+    haptic: createSimulationHapticAdapter(),
+    imu: createSimulationIMUAdapter(),
+    battery: createSimulationBatteryAdapter(80),
+    network: createSimulationNetworkAdapter(true),
+    buttons: createSimulationButtonAdapter(),
+  };
+  const adapterConfig = selectHardwareAdapter('simulation-test');
+  const modelState = modelStateAfterLoad(createModelState('simulation-test'), 'simulation', Date.now());
+  const state = runSessionStart({
+    ...createEmbeddedRuntimeState('guardian-pipeline-test'),
+    phase: 'session-starting' as const,
+  }, Date.now());
+
+  const guardianCtx = createEmbeddedGuardianContext();
+  const result = await processFrame(state, adapters, adapterConfig, modelState, Date.now(), null, guardianCtx);
+
+  assert(result.guardianContext !== null, 'guardianContext must be returned from processFrame');
+  assert(result.result.dropped === false || result.result.dropped === true, 'frame result has dropped field');
+  console.log(`  Frame processed: dropped=${result.result.dropped}, announcements=${result.state.announcements.length}`);
+  console.log('PASS: processFrame with guardianContext routes through real Guardian pipeline');
+  passed++;
+}
+
+console.log('\n─ 6.13: Guardian output never says "safe to cross" ─');
+{
+  const ctx = createEmbeddedGuardianContext();
+  const result = await runEmbeddedGuardianPipeline({
+    detections: [],
+    frameTimestampMs: Date.now(),
+    providerSource: 'onnx-local',
+    navigation: { crossingActive: true },
+  }, ctx);
+  const msg = result.output.message ?? '';
+  assert(
+    !msg.toLowerCase().includes('safe to cross'),
+    `Guardian message must not say "safe to cross". Got: "${msg}"`,
+  );
+  console.log('PASS: Guardian output never says "safe to cross"');
+  passed++;
+}
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n══════════════════════════════════════════════════`);

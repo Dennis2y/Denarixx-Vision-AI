@@ -56,6 +56,10 @@ import {
   createLocalInferenceProvider,
 } from './inference/createLocalInferenceProvider';
 import type { LocalInferenceProvider } from './inference/localInferenceProviderTypes';
+import {
+  createEmbeddedGuardianContext,
+} from './embeddedGuardianOrchestrator';
+import type { EmbeddedGuardianContext } from './embeddedGuardianOrchestrator';
 
 // ─── Adapter Assembly ─────────────────────────────────────────────────────────
 // assembleSimulationAdapters: kept for backward compatibility with unit tests.
@@ -206,6 +210,7 @@ export function runFullBootSequence(
 export interface TickResult {
   state: EmbeddedRuntimeState;
   modelState: ReturnType<typeof createModelState>;
+  guardianContext: EmbeddedGuardianContext | null;
   announcements: string[];
   hapticCommands: string[];
   shouldContinue: boolean;
@@ -222,25 +227,29 @@ export async function runOneTick(
   provider: LocalInferenceProvider | null,
   config: PrototypeRuntimeConfig,
   nowMs: number,
+  guardianContext?: EmbeddedGuardianContext | null,
 ): Promise<TickResult> {
   // Button events
   const buttonResult = handleButtonEvents(state, adapters, pressSequenceState, emergencyButtonState, nowMs);
   let currentState = buttonResult.state;
 
+  const currentGuardianCtx = guardianContext ?? null;
+
   if (currentState.phase === 'shutdown') {
     const { state: s, announcements } = consumeAnnouncements(currentState);
     const { state: s2, hapticCommands } = consumeHapticCommands(s);
-    return { state: s2, modelState, announcements, hapticCommands, shouldContinue: false };
+    return { state: s2, modelState, guardianContext: currentGuardianCtx, announcements, hapticCommands, shouldContinue: false };
   }
 
   if (currentState.phase !== 'running') {
-    return { state: currentState, modelState, announcements: [], hapticCommands: [], shouldContinue: false };
+    return { state: currentState, modelState, guardianContext: currentGuardianCtx, announcements: [], hapticCommands: [], shouldContinue: false };
   }
 
-  // Frame processing (async — ONNX inference)
-  const frameResult = await processFrame(currentState, adapters, adapterConfig, modelState, nowMs, provider);
+  // Frame processing (async — ONNX inference + real Guardian pipeline)
+  const frameResult = await processFrame(currentState, adapters, adapterConfig, modelState, nowMs, provider, currentGuardianCtx);
   currentState = frameResult.state;
   let currentModelState = frameResult.modelState;
+  let updatedGuardianCtx = frameResult.guardianContext;
 
   // Health check
   if (currentState.tick - currentState.lastHealthCheckTick >= config.healthCheckIntervalTicks) {
@@ -251,14 +260,14 @@ export async function runOneTick(
       currentState = runShutdown(currentState, 'Critical hardware failure', nowMs);
       const { state: s, announcements } = consumeAnnouncements(currentState);
       const { state: s2, hapticCommands } = consumeHapticCommands(s);
-      return { state: s2, modelState: currentModelState, announcements, hapticCommands, shouldContinue: false };
+      return { state: s2, modelState: currentModelState, guardianContext: updatedGuardianCtx, announcements, hapticCommands, shouldContinue: false };
     }
 
     if (healthResult.result.shouldRestart) {
       currentState = runRestart(currentState, nowMs);
       const { state: s, announcements } = consumeAnnouncements(currentState);
       const { state: s2, hapticCommands } = consumeHapticCommands(s);
-      return { state: s2, modelState: currentModelState, announcements, hapticCommands, shouldContinue: false };
+      return { state: s2, modelState: currentModelState, guardianContext: updatedGuardianCtx, announcements, hapticCommands, shouldContinue: false };
     }
   }
 
@@ -267,7 +276,7 @@ export async function runOneTick(
   const { state: s2, hapticCommands } = consumeHapticCommands(s);
 
   const maxReached = config.maxFrames !== null && s2.frameCount >= config.maxFrames;
-  return { state: s2, modelState: currentModelState, announcements, hapticCommands, shouldContinue: !maxReached };
+  return { state: s2, modelState: currentModelState, guardianContext: updatedGuardianCtx, announcements, hapticCommands, shouldContinue: !maxReached };
 }
 
 // ─── Main Entry (Node.js / embedded Linux) ────────────────────────────────────
@@ -323,6 +332,8 @@ export async function startPrototypeRuntime(
   const adapterConfig = bootOutcome.adapterConfig;
   let pressSequence = createPressSequenceState();
   let emergencyState = createEmergencyButtonState();
+  // Create the shared Guardian context (holds CognitiveGuardianEngine + CoordinationState)
+  let guardianCtx = createEmbeddedGuardianContext();
   let shouldContinue = true;
 
   console.log('[RUNTIME] Processing loop started. Session:', config.sessionId);
@@ -331,10 +342,12 @@ export async function startPrototypeRuntime(
     const tickResult = await runOneTick(
       state, adapters, adapterConfig, modelState,
       pressSequence, emergencyState, activeProvider, config, Date.now(),
+      guardianCtx,
     );
 
     state = tickResult.state;
     modelState = tickResult.modelState;
+    if (tickResult.guardianContext) guardianCtx = tickResult.guardianContext;
     shouldContinue = tickResult.shouldContinue;
 
     for (const msg of tickResult.announcements) {

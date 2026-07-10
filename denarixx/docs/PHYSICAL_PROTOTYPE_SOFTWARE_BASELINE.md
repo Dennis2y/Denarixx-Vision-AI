@@ -275,7 +275,11 @@ cd denarixx && npm test && npx tsx tests/livePerceptionE2E.test.ts
 This baseline is tagged in `.env.example`:
 
 ```
-DENARIXX_VISION_PROTOTYPE_BASELINE=v0.1.0
+DENARIXX_VISION_PROTOTYPE_BASELINE=v0.2.0-hardware-bringup
 ```
 
 Future software releases that run on the physical prototype must update this value and create a new baseline document.
+
+> **Note (2026-07-10):** The Guardian decision pipeline runs locally. Embedded hazard perception
+> requires a successfully loaded ONNX model, real camera frames and validated target hardware.
+> Development mode may use simulation. Embedded real-user mode must never switch to synthetic detections.

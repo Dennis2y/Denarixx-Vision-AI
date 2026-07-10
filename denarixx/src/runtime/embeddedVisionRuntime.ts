@@ -43,6 +43,12 @@ import {
 import type { HILTSession } from '@/engines/hiltTestHarnessEngine';
 import type { LocalInferenceProvider } from './inference/localInferenceProviderTypes';
 import { assertNoSimulatedDetectionsInEmbeddedMode } from './inference/createLocalInferenceProvider';
+import type { EmbeddedInferenceDetection, EmbeddedGuardianInput } from '@/types/embeddedGuardian';
+import {
+  runEmbeddedGuardianPipeline,
+  buildBatteryThermalAlert,
+} from './embeddedGuardianOrchestrator';
+import type { EmbeddedGuardianContext } from './embeddedGuardianOrchestrator';
 
 // ─── Runtime Lifecycle State ─────────────────────────────────────────────────
 
@@ -275,14 +281,11 @@ export interface FrameProcessingResult {
   error: string | null;
 }
 
-// Uniform detection shape used internally for Guardian processing.
+// Detection shape used internally — same as EmbeddedInferenceDetection from @/types/embeddedGuardian.
 // Real path: populated from InferenceDetection (onnx-local, isSimulated: false).
 // Simulation path: populated from AnyDetection (isSimulated: true, only in simulation-test mode).
-interface EmbeddedDetection {
-  className: string;
-  confidence: number;
-  isSimulated: boolean;
-}
+// Using the shared type directly keeps both paths compatible with the Guardian orchestrator.
+type EmbeddedDetection = EmbeddedInferenceDetection;
 
 // Announcement emitted when the local ONNX model or camera bytes are unavailable
 // in embedded-prototype mode. Instructs the user to stop — no synthetic fallback.
@@ -299,6 +302,7 @@ const LOCAL_VISION_UNAVAILABLE_ANNOUNCEMENT =
 // Safety invariant: in embedded-prototype mode, any isSimulated detection reaching
 // this function throws EmbeddedSimulatedDetectionError.
 
+// processFrame return also carries the updated guardianContext so callers can thread it forward.
 export async function processFrame(
   state: EmbeddedRuntimeState,
   adapters: HardwareAdapterSet,
@@ -306,11 +310,20 @@ export async function processFrame(
   modelState: LocalModelState,
   nowMs: number,
   provider?: LocalInferenceProvider | null,
-): Promise<{ state: EmbeddedRuntimeState; result: FrameProcessingResult; modelState: LocalModelState }> {
+  guardianContext?: EmbeddedGuardianContext | null,
+): Promise<{
+  state: EmbeddedRuntimeState;
+  result: FrameProcessingResult;
+  modelState: LocalModelState;
+  guardianContext: EmbeddedGuardianContext | null;
+}> {
+  const ctx = guardianContext ?? null;
+
   if (state.phase !== 'running') {
     return {
       state,
       modelState,
+      guardianContext: ctx,
       result: {
         detectionCount: 0, inferenceLatencyMs: 0, guardianLatencyMs: 0,
         hazardAnnouncements: [], hapticPatterns: [], dropped: true,
@@ -326,6 +339,7 @@ export async function processFrame(
     return {
       state: { ...state, droppedFrames: state.droppedFrames + 1, tick: state.tick + 1 },
       modelState,
+      guardianContext: ctx,
       result: {
         detectionCount: 0, inferenceLatencyMs: 0, guardianLatencyMs: 0,
         hazardAnnouncements: [error], hapticPatterns: ['device-failure'],
@@ -356,6 +370,7 @@ export async function processFrame(
           hapticCommands: [...state.hapticCommands, 'device-failure'],
         },
         modelState,
+        guardianContext: ctx,
         result: {
           detectionCount: 0, inferenceLatencyMs: 0, guardianLatencyMs: 0,
           hazardAnnouncements: [error], hapticPatterns: ['device-failure'],
@@ -395,6 +410,7 @@ export async function processFrame(
         hapticCommands: [...state.hapticCommands, 'device-failure'],
       },
       modelState,
+      guardianContext: ctx,
       result: {
         detectionCount: 0, inferenceLatencyMs: 0, guardianLatencyMs: 0,
         hazardAnnouncements: [error], hapticPatterns: ['device-failure'],
@@ -415,43 +431,94 @@ export async function processFrame(
     }));
   }
 
-  // 3. Guardian processing (reuses domain engines — no duplication from useVisionSession)
-  // Real Guardian call: cognitiveGuardianEngine.assessRisk(detections, context)
-  // For bring-up: derive basic hazard announcements from detections
+  // 3. Real Cognitive Guardian pipeline.
+  // Detections flow through the shared orchestrator: HazardDetectionEngine →
+  //   SafetyDecisionEngine → CognitiveGuardianEngine (AlertQualityEngine) →
+  //   AlertCoordinationEngine → EmbeddedGuardianOutput.
+  // No duplicate engine logic in this file — see embeddedGuardianOrchestrator.ts.
   const guardianStart = Date.now();
   const hazardAnnouncements: string[] = [];
   const hapticPatterns: string[] = [];
+  let updatedCtx: EmbeddedGuardianContext | null = ctx;
+  let guardianLatencyMs = 5;
 
-  for (const detection of detections) {
-    if (detection.confidence >= 0.7) {
-      if (['vehicle', 'bicycle', 'motorcycle', 'car', 'truck', 'bus'].includes(detection.className)) {
-        hazardAnnouncements.push(`Warning. ${detection.className} detected ahead.`);
-        hapticPatterns.push('obstacle-ahead');
-      } else if (detection.className === 'person') {
-        hazardAnnouncements.push('Person ahead.');
-      } else if (detection.className === 'obstacle') {
-        hazardAnnouncements.push('Obstacle ahead. Please slow down.');
-        hapticPatterns.push('obstacle-ahead');
+  if (ctx) {
+    // Build sensor context from available adapters (mark unavailable rather than fabricate)
+    const battery = adapters.battery.isAvailable()
+      ? adapters.battery.getLastReading(state.tick)
+      : null;
+
+    const guardianInput: EmbeddedGuardianInput = {
+      detections,
+      frameTimestampMs: nowMs,
+      providerSource: isEmbeddedMode ? 'onnx-local' : 'simulation-test',
+      sensors: {
+        imuMovementState: adapters.imu.isAvailable() ? 'unknown' : undefined,
+        gnssAvailable: false,
+      },
+      deviceHealth: {
+        batteryPct: battery?.percentagePct,
+        temperatureC: battery?.temperatureC,
+      },
+    };
+
+    const orchestratorResult = await runEmbeddedGuardianPipeline(guardianInput, ctx);
+    updatedCtx = orchestratorResult.context;
+    const guardianOutput = orchestratorResult.output;
+    guardianLatencyMs = Date.now() - guardianStart;
+
+    if (guardianOutput.message) {
+      hazardAnnouncements.push(guardianOutput.message);
+    }
+    if (guardianOutput.hapticPattern) {
+      hapticPatterns.push(guardianOutput.hapticPattern);
+    }
+
+    // 4. Battery/thermal alerts every 30 ticks (system-priority; bypass Guardian dedup)
+    if (state.tick - state.lastHealthCheckTick >= 30 && battery) {
+      const batteryResult = buildBatteryThermalAlert(
+        battery.percentagePct,
+        battery.temperatureC,
+        updatedCtx.coordinationState,
+      );
+      if (batteryResult.alert) {
+        hazardAnnouncements.push(batteryResult.alert.message);
+        hapticPatterns.push(batteryResult.alert.hapticPattern);
+        updatedCtx = { ...updatedCtx, coordinationState: batteryResult.coordinationState };
       }
     }
-  }
-
-  const guardianLatencyMs = Date.now() - guardianStart + 5;
-
-  // 4. Battery / thermal check every 30 ticks
-  if (state.tick - state.lastHealthCheckTick >= 30) {
-    const battery = adapters.battery.getLastReading(state.tick);
-    if (battery) {
-      if (battery.percentagePct <= 5) {
-        hazardAnnouncements.push('Battery is critically low. Safety guidance will stop soon.');
-        hapticPatterns.push('low-battery');
-      } else if (battery.percentagePct <= 10) {
-        hazardAnnouncements.push('Battery is low. Please charge soon.');
-        hapticPatterns.push('low-battery');
+  } else {
+    // No guardian context — basic fallback (backward compatibility with older tests).
+    // In production, always pass a guardian context created by createEmbeddedGuardianContext().
+    for (const detection of detections) {
+      if (detection.confidence >= 0.7) {
+        if (['vehicle', 'bicycle', 'motorcycle', 'car', 'truck', 'bus'].includes(detection.className)) {
+          hazardAnnouncements.push(`Warning. ${detection.className} detected ahead.`);
+          hapticPatterns.push('obstacle-ahead');
+        } else if (detection.className === 'person') {
+          hazardAnnouncements.push('Person ahead.');
+        } else if (detection.className === 'obstacle') {
+          hazardAnnouncements.push('Obstacle ahead. Please slow down.');
+          hapticPatterns.push('obstacle-ahead');
+        }
       }
-      if (battery.temperatureC >= 90) {
-        hazardAnnouncements.push('Device is overheating. Shutting down for safety.');
-        hapticPatterns.push('device-failure');
+    }
+
+    // Battery/thermal check every 30 ticks (no context: basic fallback)
+    if (state.tick - state.lastHealthCheckTick >= 30) {
+      const battery = adapters.battery.getLastReading(state.tick);
+      if (battery) {
+        if (battery.percentagePct <= 5) {
+          hazardAnnouncements.push('Battery is critically low. Safety guidance will stop soon.');
+          hapticPatterns.push('low-battery');
+        } else if (battery.percentagePct <= 10) {
+          hazardAnnouncements.push('Battery is low. Please charge soon.');
+          hapticPatterns.push('low-battery');
+        }
+        if (battery.temperatureC >= 90) {
+          hazardAnnouncements.push('Device is overheating. Shutting down for safety.');
+          hapticPatterns.push('device-failure');
+        }
       }
     }
   }
@@ -471,6 +538,7 @@ export async function processFrame(
   return {
     state: newState,
     modelState,
+    guardianContext: updatedCtx,
     result: {
       detectionCount: detections.length,
       inferenceLatencyMs,

@@ -1,0 +1,353 @@
+Start Final Embedded Guardian Integration & Baseline Cleanup.
+
+This is NOT a new architecture phase.
+
+Do not add unrelated engines.
+Do not create duplicate Guardian systems.
+Use the existing embedded ONNX runtime and the existing cognitive/safety engines.
+
+GOAL
+
+Complete the embedded processing pipeline so real ONNX detections flow through the same intelligent Guardian, alert-quality, coordination, navigation, audio and haptic systems used by Denarixx Vision AI.
+
+Also remove all outdated and contradictory baseline documentation.
+
+==================================================
+1. REPLACE BASIC HARDCODED HAZARD WORDING
+==================================================
+
+The current embeddedVisionRuntime.ts manually creates messages such as:
+
+- “Person ahead.”
+- “Warning. vehicle detected ahead.”
+- “Obstacle ahead.”
+
+Replace this simplified branch logic with the existing domain pipeline.
+
+Real embedded detections must flow through:
+
+ONNX detections
+→ normalized spatial detections
+→ Cognitive Guardian
+→ risk prediction
+→ safety decision
+→ alert quality
+→ duplicate/cooldown control
+→ alert coordination
+→ audio/haptic delivery
+
+Reuse existing engines wherever possible:
+
+- cognitiveGuardianEngine
+- cognitiveReasoningEngine
+- spatialReasoningEngine
+- predictiveRiskEngine
+- safetyDecisionEngine
+- alertQualityEngine
+- guardianWordingEngine
+- alertCoordinationEngine
+- navigationIntelligenceEngine
+- audioGuidanceEngine
+
+Do not copy their logic into embeddedVisionRuntime.ts.
+
+Extract a shared, runtime-neutral orchestration function if required.
+
+Both browser and embedded runtimes should use the same Guardian decision contract.
+
+==================================================
+2. CREATE A SHARED GUARDIAN INPUT CONTRACT
+==================================================
+
+Create or standardize a common input structure containing:
+
+- detection class
+- confidence
+- bounding box
+- direction
+- estimated distance when available
+- movement state
+- tracking ID when available
+- frame timestamp
+- camera orientation
+- user movement state
+- navigation state
+- device health
+- provider source
+- isSimulated
+
+Create one shared output structure containing:
+
+- risk level
+- recommended action
+- message
+- shouldSpeak
+- shouldInterrupt
+- haptic pattern
+- confidence
+- uncertainty statement
+- decision reason
+- cooldown key
+
+Embedded mode must reject any input where:
+
+isSimulated === true
+
+==================================================
+3. CONNECT ALERT QUALITY AND COORDINATION
+==================================================
+
+Embedded runtime speech must use the same rules as the live browser system.
+
+Required priority:
+
+1. Critical hazard
+2. High-risk navigation warning
+3. Hardware/system failure
+4. Important OCR
+5. Normal navigation
+6. Scene description
+7. Companion information
+
+Implement:
+
+- duplicate suppression
+- severity cooldowns
+- risk-increase bypass
+- distance-decrease bypass
+- speech interruption
+- clearing lower-priority queued speech
+- haptic fallback
+
+Critical alerts must never wait behind normal narration.
+
+==================================================
+4. CONNECT NAVIGATION AND SENSOR CONTEXT
+==================================================
+
+Feed available embedded data into the Guardian:
+
+- IMU movement
+- heading
+- GNSS
+- camera direction
+- user speed
+- route state
+- landmark state
+- crossing state
+
+When a sensor is unavailable, mark it unavailable rather than fabricating data.
+
+Navigation guidance must use cautious language.
+
+Never say:
+
+“Safe to cross.”
+
+Use:
+
+“The crossing appears clear, but please check carefully.”
+
+==================================================
+5. CONNECT AUDIO AND HAPTIC ADAPTERS
+==================================================
+
+Guardian output must reach the active embedded adapters.
+
+Audio requirements:
+
+- play speech
+- interrupt current speech
+- stop noncritical speech
+- repeat last guidance
+- adjust volume
+- report playback failure
+
+Haptic requirements:
+
+- stop immediately
+- hazard left
+- hazard right
+- obstacle ahead
+- hardware failure
+- low battery
+
+If audio fails:
+
+- use haptic fallback;
+- announce through restored audio when available;
+- never silently discard critical warnings.
+
+==================================================
+6. CORRECT ALL BASELINE DOCUMENTATION
+==================================================
+
+Use exactly one baseline everywhere:
+
+DENARIXX_VISION_PROTOTYPE_BASELINE=v0.2.0-hardware-bringup
+
+Update:
+
+- README.md
+- root README if present
+- .env.example
+- docs/PHYSICAL_PROTOTYPE_SOFTWARE_BASELINE.md
+- docs/PROTOTYPE_READINESS_REPORT.md
+- docs/FIRST_PHYSICAL_PROTOTYPE_PROFILE.md
+- replit.md
+
+Remove old references to:
+
+- v0.1.0
+- offline simulation as a real-user safety fallback
+- “hazard detection fully local” without conditions
+- physical hardware being validated
+
+Use accurate wording:
+
+“The Guardian decision pipeline runs locally. Embedded hazard perception requires a successfully loaded ONNX model, real camera frames and validated target hardware.”
+
+Development mode may use simulation.
+
+Embedded real-user mode must never switch to synthetic detections.
+
+==================================================
+7. CLEAN UP CONTRADICTORY BASELINE SECTIONS
+==================================================
+
+Review the full physical baseline document.
+
+Remove or update older sections that still say:
+
+- vision uses simulation in embedded mode;
+- the baseline is v0.1.0;
+- no ONNX path exists;
+- network loss switches real-user operation to simulation.
+
+The document must have one coherent current status.
+
+==================================================
+8. UPDATE READINESS REPORT HONESTLY
+==================================================
+
+Expected status before physical-device testing:
+
+READY:
+- adapter selection
+- embedded lifecycle
+- ONNX provider wiring
+- camera-byte requirement
+- simulated-detection safety guard
+- shared Guardian orchestration after this task
+
+PARTIAL:
+- Linux drivers
+- embedded audio output
+- embedded haptics
+- navigation sensors
+- local model capability
+
+BLOCKED:
+- physical camera validation
+- physical ONNX latency validation
+- bone-conduction validation
+- haptic validation
+- IMU/GNSS validation
+- battery and thermal validation
+- unsupervised blind-user trials
+- certification
+
+Do not mark physical items READY from mocked tests.
+
+==================================================
+9. ADD BEHAVIORAL EMBEDDED TESTS
+==================================================
+
+Expand embeddedRuntime.integration.test.ts.
+
+Test:
+
+- real ONNX-style detection reaches Cognitive Guardian
+- Guardian produces normalized recommendation
+- critical alert interrupts normal speech
+- duplicate hazard is suppressed
+- approaching hazard bypasses cooldown
+- left-side hazard creates left haptic pattern
+- audio failure causes haptic fallback
+- missing navigation sensor remains unavailable
+- embedded mode rejects simulated detections
+- network loss does not activate simulation
+- unavailable local model stops real-user operation safely
+- emergency stop clears speech
+- shared browser/embedded Guardian contracts remain compatible
+
+Use injected mock ONNX sessions for CI.
+
+Clearly label them as mocked inference-session tests, not physical validation.
+
+==================================================
+10. ADD A PHYSICAL MODEL COMPATIBILITY CHECK
+==================================================
+
+Enhance:
+
+npm run check:onnx
+
+It should report:
+
+- runtime available
+- model file present
+- model checksum
+- model input dimensions
+- pixel format required
+- input names
+- output names
+- supported class list
+- confidence threshold
+- whether decoder configuration matches the model
+- whether a test frame can execute
+- measured test-frame latency when execution is possible
+
+Do not report success if only the file exists but inference cannot run.
+
+==================================================
+11. QUALITY GATE
+==================================================
+
+Run:
+
+npm install
+npm run type-check
+npm test
+npm run test:embedded
+npm run check:onnx
+npm run validate:embedded-pipeline
+npm run build
+
+If no valid ONNX model or physical device exists:
+
+- mark relevant checks SKIPPED or BLOCKED;
+- do not report them as passed;
+- ensure all software and injected-session tests still pass.
+
+Do not mark complete until:
+
+- embedded detections use the real Cognitive Guardian pipeline;
+- alert quality and coordination control embedded output;
+- navigation/sensor context is accepted without fabricated values;
+- all baseline documents use v0.2.0-hardware-bringup;
+- development simulation and embedded real-user modes are clearly separated;
+- available software tests and build pass.
+
+Push all changes to GitHub.
+
+Return:
+
+- commit hash
+- shared Guardian pipeline status
+- ONNX runtime status
+- model compatibility result
+- test results
+- skipped physical tests
+- corrected baseline documents
+- exact blockers before choosing and buying prototype hardware
