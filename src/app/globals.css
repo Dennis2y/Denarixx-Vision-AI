@@ -1,0 +1,85 @@
+@import "tailwindcss";
+@source "../../**/*.{js,ts,jsx,tsx,mdx}";
+
+:root {
+  --background: #030712;
+  --foreground: #f9fafb;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* High contrast focus ring for accessibility */
+*:focus-visible {
+  outline: 3px solid #facc15;
+  outline-offset: 2px;
+}
+
+/* ── High contrast mode (system or explicit toggle) ──────────────────────── */
+@media (prefers-contrast: more) {
+  body { background: #000; color: #fff; }
+  a, button { outline: 2px solid currentColor; }
+}
+
+.high-contrast-mode body,
+.high-contrast-mode {
+  --background: #000000;
+  --foreground: #ffffff;
+  background: #000 !important;
+  color: #fff !important;
+}
+
+.high-contrast-mode .text-gray-400,
+.high-contrast-mode .text-gray-500,
+.high-contrast-mode .text-gray-600 {
+  color: #d1d5db !important;
+}
+
+/* ── Reduced motion (system or explicit toggle) ───────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.reduced-motion *, .reduced-motion *::before, .reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* ── Minimum touch target ─────────────────────────────────────────────────── */
+.touch-target {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Screen reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.focus\:not-sr-only:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: revert;
+  margin: revert;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
