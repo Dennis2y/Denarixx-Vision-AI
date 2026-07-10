@@ -17,6 +17,32 @@ import type { Detection, HazardAlert, SceneDescription, SafetyDecision } from '@
 import type { VisionAnalysisV4, VisionHazardResult } from '@/types/vision';
 import type { WorldModelSnapshot } from '@/types/spatial';
 import type { SensorContext, VibrationPattern } from '@/types/sensors';
+import { AlertQualityEngine } from '@/engines/alertQualityEngine';
+import type { AlertQualityInput } from '@/engines/alertQualityEngine';
+import type { RiskLevel } from '@/types/cognitive';
+import {
+  createCoordinationState,
+  enqueueAlert,
+  dequeueNextAlert,
+  buildAlert,
+  buildVisionAlert,
+  buildOCRAlert,
+  buildNavigationAlert,
+  buildSystemAlert,
+  buildCompanionAlert,
+  shouldInterrupt,
+  applyInterrupt,
+} from '@/engines/alertCoordinationEngine';
+import type { CoordinationState, CoordinatedAlert } from '@/engines/alertCoordinationEngine';
+import { formatOCRAnnouncement } from '@/engines/systemAnnouncementEngine';
+import { detectActiveFailures, getFailureAnnouncement } from '@/engines/failureRecoveryEngine';
+import type { FailureType } from '@/engines/failureRecoveryEngine';
+import {
+  processNavigationTick,
+  isRouteActive,
+  createNavigationSession,
+} from '@/engines/navigationIntelligenceEngine';
+import type { NavigationSession, NavigationMode } from '@/types/navigation';
 
 export type { CameraStatus };
 
@@ -98,6 +124,17 @@ export function useVisionSession() {
   const mobilityEngineRef = useRef(new MobilityEngine());
   const worldModelEngineRef = useRef(new WorldModelEngine());
 
+  // Sprint 23: connected engines
+  const alertQualityEngineRef = useRef(new AlertQualityEngine());
+  const coordinationStateRef = useRef<CoordinationState>(createCoordinationState());
+  const prevRiskLevelRef = useRef<RiskLevel>('none');
+  const prevUserActivityRef = useRef<string | undefined>(undefined);
+  const announcedFailuresRef = useRef<Set<FailureType>>(new Set());
+  const ocrPendingRef = useRef<{ text: string; domain: string; isHazard: boolean } | null>(null);
+  const navSessionRef = useRef<NavigationSession | null>(null);
+  const navTickRef = useRef(0);
+  const navLastSpokenRef = useRef(0);
+
   // Real AI Integration refs
   const localDetectionsRef = useRef<Detection[]>([]);
   const latencySamplesRef = useRef<number[]>([]); // rolling 10-sample window
@@ -160,6 +197,70 @@ export function useVisionSession() {
     if (!sessionSettingsRef.current.vibrationEnabled) return false;
     return vibrateRaw(pattern);
   }, [vibrateRaw]);
+
+  // Sprint 23: Single coordinated speech path — 7-level priority queue
+  // All spoken output must flow through here (vision, OCR, navigation, companion, system).
+  const speakCoordinated = useCallback((alert: CoordinatedAlert): boolean => {
+    const cur = coordinationStateRef.current;
+
+    // Interrupt lower-priority speech when this alert demands it
+    if (shouldInterrupt(cur, alert)) {
+      stopAudio();
+      coordinationStateRef.current = applyInterrupt(cur, alert.priority);
+    }
+
+    // Enqueue — deduplicated by key + cooldown
+    const { state: s2, suppressed, reason } = enqueueAlert(coordinationStateRef.current, alert);
+    if (suppressed) {
+      silencedAlertsRef.current += 1;
+      setState((s) => ({ ...s, silencedAlerts: s.silencedAlerts + 1 }));
+      addLog(`[coord-dedup] ${reason ?? 'suppressed'}: ${alert.text.slice(0, 60)}`);
+      return false;
+    }
+    coordinationStateRef.current = s2;
+
+    // Dequeue next ready alert and speak it
+    const { state: s3, alert: toSpeak } = dequeueNextAlert(coordinationStateRef.current);
+    coordinationStateRef.current = s3;
+    if (!toSpeak) return false;
+
+    const spPriority: 'critical' | 'high' | 'normal' | 'low' =
+      toSpeak.priority === 'critical_hazard' || toSpeak.priority === 'system_failure' ? 'critical' :
+      toSpeak.priority === 'high_navigation'  || toSpeak.priority === 'important_ocr'  ? 'high'     :
+      toSpeak.priority === 'normal_navigation' || toSpeak.priority === 'scene_description' ? 'normal' :
+      'low';
+
+    speak(toSpeak.text, spPriority, toSpeak.interrupt);
+
+    // Haptic for critical / high
+    if (toSpeak.priority === 'critical_hazard') vibrate('critical');
+    else if (toSpeak.priority === 'high_navigation' || toSpeak.priority === 'system_failure') vibrate('high');
+
+    audioCountRef.current += 1;
+    lastAlertTimeRef.current = Date.now();
+
+    const riskLvl =
+      toSpeak.priority === 'critical_hazard'  ? 'critical' :
+      toSpeak.priority === 'high_navigation'  || toSpeak.priority === 'system_failure' ? 'high' :
+      toSpeak.priority === 'important_ocr'    ? 'medium' : 'low';
+
+    setGuidance({
+      text: toSpeak.text,
+      riskLevel: riskLvl,
+      confidence: 0.8,
+      reason: `${toSpeak.source} via coordination (${toSpeak.priority})`,
+      priority: spPriority,
+      timestamp: new Date(),
+    });
+
+    setState((s) => {
+      const steps = [...s.completedSteps];
+      steps[4] = true;
+      return { ...s, audioCount: s.audioCount + 1, completedSteps: steps };
+    });
+
+    return true;
+  }, [speak, stopAudio, vibrate, addLog, setGuidance]);
 
   const runFrame = useCallback(async () => {
     const sid = sessionIdRef.current;
@@ -334,126 +435,137 @@ export function useVisionSession() {
         };
       });
 
-      // 5. Audio output — throttle + personality aware
-      if (decision.shouldAlert && decision.message) {
-        const topAlert = alerts[0];
+      // 5. Audio output — AlertQualityEngine → AlertCoordinationEngine → speak()
+      // AlertQualityEngine decides speak/silent, generates directional wording, and
+      // deduplicates across frames — replacing the old alertThrottleRef path.
+      const qualityInput: AlertQualityInput = {
+        detections,
+        categories: serverVisionData?.visionAnalysis?.categories,
+        aiHazards: visionAnalysis?.hazards,
+        alerts,
+        baseDecision: decision,
+        prevRiskLevel: prevRiskLevelRef.current,
+        prevUserActivity: prevUserActivityRef.current,
+        currentUserActivity: sensorCtx?.motionState,
+      };
+      const qualityDecision = alertQualityEngineRef.current.process(qualityInput);
+      prevRiskLevelRef.current = qualityDecision.riskLevel;
+      prevUserActivityRef.current = sensorCtx?.motionState;
+
+      if (qualityDecision.shouldSpeak && qualityDecision.message) {
         const riskLevel = toPersonalityRisk(decision.urgency);
-
-        if (topAlert) {
-          const throttleResult = alertThrottleRef.current.shouldSpeak({
-            hazardType: topAlert.type,
-            severity: topAlert.severity,
-            confidence: topAlert.confidence,
-            message: decision.message,
-          });
-
-          if (throttleResult.shouldSpeak) {
-            if (!personalityEngine.shouldSpeak(riskLevel, personality)) {
-              silencedAlertsRef.current += 1;
-              setState((s) => ({ ...s, silencedAlerts: s.silencedAlerts + 1 }));
-              addLog(`[${personality}] Silenced: ${personalityEngine.getSilenceReason(riskLevel, personality)}`);
-            } else {
-              const priority =
-                decision.urgency === 'critical' ? 'critical' :
-                decision.urgency === 'high' ? 'high' : 'normal';
-
-              const formattedMessage = personalityEngine.formatMessage(
-                decision.message, personality, riskLevel
-              );
-
-              speak(formattedMessage, priority, decision.interruptNarration);
-
-              // V7: haptic feedback for high/critical alerts
-              if (decision.urgency === 'critical') vibrate('critical');
-              else if (decision.urgency === 'high') vibrate('high');
-              else if (decision.urgency === 'medium') vibrate('medium');
-
-              alertThrottleRef.current.record(
-                topAlert.type, topAlert.severity, topAlert.confidence, formattedMessage
-              );
-
-              lastAlertTimeRef.current = Date.now();
-              audioCountRef.current += 1;
-
-              setGuidance({
-                text: formattedMessage,
-                riskLevel: decision.urgency,
-                confidence: topAlert.confidence,
-                reason: `${topAlert.type} hazard detected`,
-                priority,
-                timestamp: new Date(),
-              });
-
-              setState((s) => {
-                const steps = [...s.completedSteps];
-                steps[4] = true;
-                return { ...s, audioCount: s.audioCount + 1, completedSteps: steps };
-              });
-              addLog(`ALERT [${decision.urgency}]: ${formattedMessage}`);
-            }
-          } else {
-            silencedAlertsRef.current += 1;
-            setState((s) => ({ ...s, silencedAlerts: s.silencedAlerts + 1 }));
-            addLog(`[quiet] ${topAlert.type} · ${throttleResult.reason}`);
-          }
+        if (!personalityEngine.shouldSpeak(riskLevel, personality)) {
+          silencedAlertsRef.current += 1;
+          setState((s) => ({ ...s, silencedAlerts: s.silencedAlerts + 1 }));
+          addLog(`[${personality}] Silenced: ${personalityEngine.getSilenceReason(riskLevel, personality)}`);
         } else {
-          const priority = decision.urgency === 'critical' ? 'critical' : decision.urgency === 'high' ? 'high' : 'normal';
-          speak(decision.message, priority, decision.interruptNarration);
-
-          // V7: haptic for no-top-alert path too
-          if (decision.urgency === 'critical') vibrate('critical');
-          else if (decision.urgency === 'high') vibrate('high');
-
-          audioCountRef.current += 1;
-          setGuidance({
-            text: decision.message,
-            riskLevel: decision.urgency,
-            confidence: 0.7,
-            reason: 'Safety decision triggered',
-            priority,
-            timestamp: new Date(),
-          });
-          setState((s) => {
-            const steps = [...s.completedSteps];
-            steps[4] = true;
-            return { ...s, audioCount: s.audioCount + 1, completedSteps: steps };
-          });
-          addLog(`ALERT [${decision.urgency}]: ${decision.message}`);
+          speakCoordinated(
+            buildVisionAlert(
+              qualityDecision.message,
+              decision.urgency as 'critical' | 'high' | 'medium' | 'low',
+            ),
+          );
+          addLog(`ALERT [${decision.urgency}] (${qualityDecision.speakTrigger ?? 'quality'}): ${qualityDecision.message}`);
         }
       } else {
-        // No hazard alert — V6 spatial guidance or companion reassurance
+        // Quality engine decided to stay silent, or no active hazard
+        if (qualityDecision.silenceReason && qualityDecision.silenceReason !== 'no active hazard') {
+          silencedAlertsRef.current += 1;
+          setState((s) => ({ ...s, silencedAlerts: s.silencedAlerts + 1 }));
+          addLog(`[quiet] ${qualityDecision.silenceReason}`);
+        }
+
+        // No hazard — companion reassurance or spatial/scene guidance
         const secondsSinceAlert = lastAlertTimeRef.current
           ? (Date.now() - lastAlertTimeRef.current) / 1000
           : 999;
 
         if (personalityEngine.shouldReassure(personality, secondsSinceAlert)) {
           const reassurance = personalityEngine.getReassurance(personality);
-          speak(reassurance, 'low');
-          lastAlertTimeRef.current = Date.now();
+          speakCoordinated(buildCompanionAlert(reassurance));
           addLog(`[companion] ${reassurance}`);
         } else {
-          // V6 spatial mobility guidance (advisory only)
-          // V7: prepend motion note when relevant
           const motionNote = sensorCtx
             ? sensorFusionEngineRef.current.motionNote(sensorCtx.motionState)
             : null;
 
           const spatialGuidance = mobilityEngineRef.current.generateGuidance(
             enrichedSpatial,
-            prevSpatialInstructionRef.current
+            prevSpatialInstructionRef.current,
           );
           if (spatialGuidance) {
             prevSpatialInstructionRef.current = enrichedSpatial.recommendation.instruction;
-            const fullGuidance = motionNote
-              ? `${motionNote} ${spatialGuidance}`
-              : spatialGuidance;
-            speak(fullGuidance, 'low');
+            const fullGuidance = motionNote ? `${motionNote} ${spatialGuidance}` : spatialGuidance;
+            speakCoordinated(buildNavigationAlert(fullGuidance, false));
             addLog(`[spatial] ${fullGuidance}`);
           } else if (!scene.isUncertain && sceneChanged) {
-            speak(scene.summary, 'low');
+            speakCoordinated(buildAlert(scene.summary, 'scene_description', 'vision', {
+              deduplicationKey: `scene:${scene.summary.slice(0, 40)}`,
+              cooldownMs: 15_000,
+            }));
           } else if (scene.uncertaintyMessage && sceneChanged) {
-            speak(scene.uncertaintyMessage, 'normal');
+            speakCoordinated(buildAlert(scene.uncertaintyMessage, 'normal_navigation', 'vision', {
+              deduplicationKey: `uncertain:${scene.uncertaintyMessage.slice(0, 40)}`,
+              cooldownMs: 10_000,
+            }));
             addLog(`Uncertainty: ${scene.uncertaintyMessage}`);
+          }
+        }
+      }
+
+      // 5b. OCR → Guardian → alert coordination
+      // OCR results are pushed in via reportOCRResult(); processed here per frame.
+      if (ocrPendingRef.current) {
+        const { text, domain, isHazard } = ocrPendingRef.current;
+        ocrPendingRef.current = null;
+        const formattedOCR = formatOCRAnnouncement(domain, text, isHazard ? 'high' : 'medium', isHazard);
+        speakCoordinated(buildOCRAlert(formattedOCR, isHazard));
+        addLog(`[OCR→guardian] ${domain}: ${formattedOCR}`);
+      }
+
+      // 5c. Navigation intelligence tick
+      // If a nav session is active, advance it with current sensor heading and
+      // route guidance into the coordination queue.
+      if (navSessionRef.current && isRouteActive(navSessionRef.current)) {
+        const sensorUpdate =
+          sensorCtx?.headingDegrees != null
+            ? { headingDeg: sensorCtx.headingDegrees, distanceTraveledM: 0.5 }
+            : undefined;
+        const { session: updatedNav, guidance } = processNavigationTick(
+          navSessionRef.current,
+          navTickRef.current++,
+          navLastSpokenRef.current,
+          sensorUpdate,
+        );
+        navSessionRef.current = updatedNav;
+        if (guidance) {
+          navLastSpokenRef.current = Date.now();
+          speakCoordinated(buildNavigationAlert(guidance.text, guidance.priority === 'urgent'));
+          addLog(`[nav] ${guidance.text}`);
+        }
+      }
+
+      // 5d. Failure monitoring — announce each failure exactly once per session transition.
+      if (typeof navigator !== 'undefined') {
+        const isOnline = navigator.onLine;
+        const activeFailures = detectActiveFailures({
+          isOnline,
+          cameraDisconnected: cameraStatusRef.current !== 'active' && visionMode !== 'simulation',
+          batteryLevel: sensorCtx?.battery?.level ?? undefined,
+        });
+        for (const failureType of activeFailures) {
+          if (!announcedFailuresRef.current.has(failureType)) {
+            announcedFailuresRef.current.add(failureType);
+            const announcement = getFailureAnnouncement(failureType);
+            const isCritical = failureType === 'battery-critical' || failureType === 'camera-disconnected';
+            speakCoordinated(buildSystemAlert(announcement, isCritical));
+            addLog(`[failure→announced] ${failureType}: ${announcement}`);
+          }
+        }
+        // Clear resolved failures so they re-announce if they come back
+        for (const announced of [...announcedFailuresRef.current]) {
+          if (!activeFailures.includes(announced)) {
+            announcedFailuresRef.current.delete(announced);
           }
         }
       }
@@ -469,7 +581,7 @@ export function useVisionSession() {
       );
       if (recalled) {
         const memMsg = `You are near a previously saved location: ${recalled.label}.`;
-        speak(memMsg, 'normal');
+        speakCoordinated(buildCompanionAlert(memMsg));
         addLog(`Memory recall: ${memMsg}`);
       }
 
@@ -484,7 +596,7 @@ export function useVisionSession() {
       addLog(`Error: ${msg}`);
       setState((s) => ({ ...s, error: msg }));
     }
-  }, [speak, addLog, setGuidance, vibrate]);
+  }, [speak, addLog, setGuidance, vibrate, speakCoordinated]);
 
   const startSession = useCallback(async () => {
     setState((s) => ({ ...s, isLoading: true, error: null }));
@@ -514,6 +626,15 @@ export function useVisionSession() {
       personalityEngineRef.current.reset();
       worldModelEngineRef.current.reset();
       sensorFusionEngineRef.current.reset();
+      alertQualityEngineRef.current.reset();
+      coordinationStateRef.current = createCoordinationState();
+      prevRiskLevelRef.current = 'none';
+      prevUserActivityRef.current = undefined;
+      announcedFailuresRef.current = new Set();
+      ocrPendingRef.current = null;
+      navSessionRef.current = null;
+      navTickRef.current = 0;
+      navLastSpokenRef.current = 0;
 
       setState((s) => ({
         ...s,
@@ -536,7 +657,7 @@ export function useVisionSession() {
       }));
 
       const mode = cameraStatusRef.current === 'active' ? 'camera mode' : 'simulation mode';
-      speak(`Vision session started in ${mode}. Scanning your surroundings.`, 'high', true);
+      speakCoordinated(buildSystemAlert(`Vision session started in ${mode}. Scanning your surroundings.`, false));
       addLog(`Session started · ${mode} · personality: ${settings.guidancePersonality}`);
       intervalRef.current = setInterval(runFrame, FRAME_INTERVAL_MS);
       runFrame();
@@ -547,7 +668,7 @@ export function useVisionSession() {
         error: err instanceof Error ? err.message : 'Failed to start',
       }));
     }
-  }, [speak, addLog, runFrame, updateSettings, requestGPS, requestMotionSensors]);
+  }, [speak, addLog, runFrame, updateSettings, requestGPS, requestMotionSensors, speakCoordinated]);
 
   const saveMemoryEvent = useCallback(async () => {
     const scene = currentSceneRef.current;
@@ -627,6 +748,25 @@ export function useVisionSession() {
     localDetectionsRef.current = dets;
   }, []);
 
+  // Sprint 23: OCR → Guardian pipeline entry point.
+  // Call this when useOCR returns a new result so it enters the priority queue.
+  const reportOCRResult = useCallback((text: string, domain: string, isHazard: boolean) => {
+    ocrPendingRef.current = { text, domain, isHazard };
+  }, []);
+
+  // Sprint 23: Navigation integration — start a turn-by-turn nav session inside the pipeline.
+  const startNavigation = useCallback((destination: string, mode: NavigationMode = 'outdoor') => {
+    navSessionRef.current = createNavigationSession(destination, mode, false);
+    navTickRef.current = 0;
+    navLastSpokenRef.current = 0;
+    addLog(`[nav] Started → ${destination} (${mode})`);
+  }, [addLog]);
+
+  const stopNavigation = useCallback(() => {
+    navSessionRef.current = null;
+    addLog('[nav] Stopped');
+  }, [addLog]);
+
   return {
     state,
     cameraStatus: camera.status,
@@ -651,5 +791,9 @@ export function useVisionSession() {
     isMotionSupported,
     // Real AI Integration
     setLocalDetections,
+    // Sprint 23: pipeline connections
+    reportOCRResult,
+    startNavigation,
+    stopNavigation,
   };
 }

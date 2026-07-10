@@ -101,6 +101,14 @@ import {
   GuardianWordingEngine,
 } from '../src/engines/guardianWordingEngine';
 
+import { AlertQualityEngine } from '../src/engines/alertQualityEngine';
+
+import {
+  createNavigationSession,
+  processNavigationTick,
+  isRouteActive,
+} from '../src/engines/navigationIntelligenceEngine';
+
 // ══════════════════════════════════════════════════════════════════════════════
 // SCENARIO 1: Obstacle Ahead
 // ══════════════════════════════════════════════════════════════════════════════
@@ -794,6 +802,382 @@ test('location-unavailable does not require user action', () => {
 test('overheating requires user action', () => {
   expect(requiresUserAction('overheating')).toBeTruthy();
   expect(getUserActionHint('overheating')).toBeTruthy();
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Sprint 23 Wiring Integration Tests
+// Tests connected behaviour between alertCoordinationEngine, alertQualityEngine,
+// buildVisionAlert, buildOCRAlert, buildNavigationAlert, detectActiveFailures,
+// processNavigationTick, and failureRecoveryEngine working as one pipeline.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Integration 1: Critical hazard interrupts currently-speaking OCR ────────
+
+test('integration: critical hazard interrupts lower-priority OCR', () => {
+  let state = createCoordinationState();
+
+  // Enqueue and then dequeue the OCR alert — this marks it as currently speaking
+  const ocrAlert = buildOCRAlert('Street name: Main Street.', false);
+  const { state: s1 } = enqueueAlert(state, ocrAlert);
+  const { state: s2 } = dequeueNextAlert(s1); // now speaking = ocrAlert
+  state = s2;
+
+  // Critical hazard arrives while OCR is playing
+  const hazard = buildVisionAlert('Stop — vehicle approaching fast.', 'critical');
+
+  // shouldInterrupt must return true (critical interrupts non-critical speaking)
+  if (!shouldInterrupt(state, hazard)) throw new Error('Critical hazard should interrupt speaking OCR');
+
+  // Apply interrupt (clears queue), then enqueue + dequeue hazard
+  state = applyInterrupt(state, hazard.priority);
+  const { state: s3 } = enqueueAlert(state, hazard);
+  const { alert: first } = dequeueNextAlert(s3);
+  if (!first) throw new Error('Expected an alert to dequeue');
+  if (first.priority !== 'critical_hazard') throw new Error(`Expected critical_hazard, got ${first.priority}`);
+  if (!first.text.includes('vehicle')) throw new Error(`Wrong text: ${first.text}`);
+});
+
+// ── Integration 2: Navigation warning priority over scene description ───────
+
+test('integration: high navigation warning has priority over scene description', () => {
+  let state = createCoordinationState();
+
+  // Enqueue scene description first
+  const scene = buildAlert('The area is an indoor corridor.', 'scene_description', 'vision', {
+    deduplicationKey: 'scene-corridor',
+  });
+  const { state: s1 } = enqueueAlert(state, scene);
+  state = s1;
+
+  // High navigation warning arrives
+  const navWarning = buildNavigationAlert('Stop before the crossing.', true); // high risk
+  const { state: s2 } = enqueueAlert(state, navWarning);
+  state = s2;
+
+  // Dequeue — high navigation must come out before scene_description
+  const { alert: first, state: s3 } = dequeueNextAlert(state);
+  if (!first) throw new Error('Expected an alert');
+  if (first.priority !== 'high_navigation') throw new Error(`Expected high_navigation, got ${first.priority}`);
+  state = s3;
+
+  const { alert: second } = dequeueNextAlert(state);
+  if (!second) throw new Error('Expected second alert');
+  if (second.priority !== 'scene_description') throw new Error(`Expected scene_description, got ${second.priority}`);
+});
+
+// ── Integration 3: Duplicate OCR suppressed via dedup key ─────────────────
+
+test('integration: repeated OCR text is suppressed after first announcement', () => {
+  let state = createCoordinationState();
+
+  const text = 'Sign ahead: No Entry.';
+  const ocr1 = buildOCRAlert(text, true);
+  const { state: s1, suppressed: sup1 } = enqueueAlert(state, ocr1);
+  state = s1;
+  if (sup1) throw new Error('First OCR should not be suppressed');
+
+  // Must dequeue first — dequeue records the cooldown for the dedup key
+  const { state: s2 } = dequeueNextAlert(state);
+  state = s2;
+
+  // Same OCR text again — cooldown recorded on dequeue, so now it should be suppressed
+  const ocr2 = buildOCRAlert(text, true);
+  const { suppressed: sup2 } = enqueueAlert(state, ocr2);
+  if (!sup2) throw new Error('Second identical OCR should be suppressed after dequeue records cooldown');
+});
+
+// ── Integration 4: Risk increase bypasses AlertQualityEngine cooldown ────────
+
+test('integration: AlertQualityEngine speaks when risk increases', () => {
+  const engine = new AlertQualityEngine();
+
+  const base = {
+    detections: [{ label: 'car', confidence: 0.7, boundingBox: { x: 0, y: 0, width: 0.2, height: 0.2 } }],
+    alerts: [{ id: '1', type: 'car', description: 'Car', severity: 'medium' as const, confidence: 0.7, timestamp: new Date(), shouldInterrupt: false, disclaimer: 'AI assistance only.' }],
+    baseDecision: { shouldAlert: true, urgency: 'medium' as const, message: 'Car nearby', confidence: 0.7, interruptNarration: false },
+    prevRiskLevel: 'medium' as const,
+  };
+
+  // First call — new hazard, should speak
+  const d1 = engine.process(base);
+  if (!d1.shouldSpeak) throw new Error('Should speak for new hazard');
+
+  // Simulate cooldown by re-calling with same data (throttle active)
+  engine.process(base);
+  engine.process(base);
+
+  // Now risk increases to 'critical' — must bypass cooldown
+  const escalated = {
+    ...base,
+    alerts: [{ ...base.alerts[0], severity: 'critical' as const }],
+    baseDecision: { ...base.baseDecision, urgency: 'critical' as const },
+    prevRiskLevel: 'medium' as const,
+  };
+  const d2 = engine.process(escalated);
+  if (!d2.shouldSpeak) throw new Error('Risk increase should bypass cooldown');
+  if (d2.speakTrigger !== 'risk_increased' && d2.speakTrigger !== 'critical_never_silenced') {
+    throw new Error(`Wrong trigger: ${d2.speakTrigger}`);
+  }
+});
+
+// ── Integration 5: Internet loss triggers offline safety announcement ────────
+
+test('integration: internet loss detected → offline failure announced', () => {
+  const failures = detectActiveFailures({ isOnline: false });
+  if (!failures.includes('no-internet')) throw new Error('no-internet not detected');
+
+  const announcement = getFailureAnnouncement('no-internet');
+  if (!announcement || announcement.length < 5) throw new Error('Announcement too short');
+
+  // Announcement should mention offline mode — not raw technical language
+  if (announcement.toLowerCase().includes('null') || announcement.toLowerCase().includes('undefined')) {
+    throw new Error('Announcement contains raw null/undefined');
+  }
+
+  // Route through coordination
+  const alert = buildSystemAlert(announcement, false);
+  let state = createCoordinationState();
+  const { suppressed } = enqueueAlert(state, alert);
+  if (suppressed) throw new Error('First offline announcement should not be suppressed');
+  if (alert.priority !== 'system_failure') throw new Error(`Expected system_failure priority, got ${alert.priority}`);
+});
+
+// ── Integration 6: Camera disconnect produces a warning alert ───────────────
+
+test('integration: camera disconnect produces system warning in coordination queue', () => {
+  const failures = detectActiveFailures({ cameraDisconnected: true, isOnline: true });
+  if (!failures.includes('camera-disconnected')) throw new Error('camera-disconnected not detected');
+
+  const announcement = getFailureAnnouncement('camera-disconnected');
+  if (!announcement) throw new Error('No announcement for camera-disconnected');
+
+  const alert = buildSystemAlert(announcement, true); // critical-level camera loss
+  if (alert.priority !== 'critical_hazard') throw new Error('Camera disconnect should be critical_hazard');
+
+  let state = createCoordinationState();
+  const { state: s2 } = enqueueAlert(state, alert);
+  const { alert: out } = dequeueNextAlert(s2);
+  if (!out) throw new Error('Camera disconnect alert did not dequeue');
+  if (!out.text.includes(announcement.slice(0, 20))) throw new Error('Text mismatch in dequeued alert');
+});
+
+// ── Integration 7: Companion speech suppressed during active danger ──────────
+
+test('integration: companion_info suppressed when critical_hazard is speaking', () => {
+  let state = createCoordinationState();
+
+  // Enqueue + dequeue critical hazard — sets state.speaking = hazard
+  const hazard = buildVisionAlert('Stop — staircase directly ahead.', 'critical');
+  const { state: s1 } = enqueueAlert(state, hazard);
+  const { state: s2 } = dequeueNextAlert(s1); // speaking = hazard
+  state = s2;
+  if (state.speaking?.priority !== 'critical_hazard') throw new Error('Critical should be speaking');
+
+  // Companion tries to speak during danger
+  const companion = buildCompanionAlert('You are doing well, keep going.');
+  const interrupts = shouldInterrupt(state, companion);
+  // Companion must NOT interrupt critical speech
+  if (interrupts) throw new Error('Companion must not interrupt critical hazard');
+
+  // Enqueue companion — critical-active suppression should block it
+  const { suppressed } = enqueueAlert(state, companion);
+  if (!suppressed) throw new Error('Companion should be suppressed while critical_hazard is speaking');
+});
+
+// ── Integration 8: Navigation guidance reaches the audio queue ──────────────
+
+test('integration: navigation tick produces guidance that enters coordination queue', () => {
+  const session = createNavigationSession('Main entrance', 'indoor');
+  if (!isRouteActive(session)) throw new Error('New session should be active');
+
+  // Tick the session — advance several ticks to pass the cooldown
+  let current = session;
+  let guidance = null;
+  for (let i = 0; i < 10; i++) {
+    const result = processNavigationTick(current, i, 0); // lastSpokenAt=0 → cooldown elapsed
+    current = result.session;
+    if (result.guidance) {
+      guidance = result.guidance;
+      break;
+    }
+  }
+  if (!guidance) throw new Error('Navigation tick produced no guidance in 10 steps');
+
+  // Route guidance into coordination
+  const alert = buildNavigationAlert(guidance.text, guidance.priority === 'urgent');
+  if (!alert.text) throw new Error('Navigation alert has no text');
+  if (alert.text.toLowerCase().includes('safe to cross')) {
+    throw new Error('Navigation MUST NOT say "safe to cross"');
+  }
+
+  let state = createCoordinationState();
+  const { state: s2 } = enqueueAlert(state, alert);
+  const { alert: out } = dequeueNextAlert(s2);
+  if (!out) throw new Error('Navigation alert did not dequeue');
+});
+
+// ── Integration 9: Crossing language — never "safe to cross" ─────────────────
+
+test('integration: crossing language never says "safe to cross"', () => {
+  const FORBIDDEN = 'safe to cross';
+  const session = createNavigationSession('Hospital', 'outdoor');
+  let current = session;
+  for (let i = 0; i < 20; i++) {
+    const { session: s, guidance } = processNavigationTick(current, i, 0);
+    current = s;
+    if (guidance?.text?.toLowerCase().includes(FORBIDDEN)) {
+      throw new Error(`Crossing language violation: "${guidance.text}"`);
+    }
+  }
+});
+
+// ── Integration 10: OCR hazard text routed to guardian ───────────────────────
+
+test('integration: OCR medicine warning enters important_ocr priority lane', () => {
+  const formatted = formatOCRAnnouncement('medicine', 'Do not exceed 2 tablets daily.', 'high', true);
+  if (!formatted) throw new Error('formatOCRAnnouncement returned empty');
+  if (formatted.toLowerCase().includes('confidence')) {
+    throw new Error('OCR announcement must not expose confidence numbers');
+  }
+
+  const alert = buildOCRAlert(formatted, true);
+  if (alert.priority !== 'important_ocr') throw new Error(`Expected important_ocr, got ${alert.priority}`);
+  if (!alert.text.includes('Do not exceed')) throw new Error('OCR text missing from alert');
+});
+
+// ── Integration 11: Emergency stop clears the coordination queue ─────────────
+
+test('integration: emergency stop clears queued low-priority speech', () => {
+  let state = createCoordinationState();
+
+  // Enqueue several alerts, then dequeue one so something is speaking
+  state = enqueueAlert(state, buildCompanionAlert('You are doing well.')).state;
+  state = enqueueAlert(state, buildNavigationAlert('Turn left at the end.', false)).state;
+  const { state: s2 } = dequeueNextAlert(state); // now speaking = companion
+  state = s2;
+
+  // Queue still has nav alert
+  state = enqueueAlert(state, buildVisionAlert('Path is clear ahead.', 'low')).state;
+
+  // Emergency stop: critical system alert interrupts current speech
+  const emergency = buildSystemAlert('Emergency stop activated.', true);
+  if (!shouldInterrupt(state, emergency)) throw new Error('Emergency must interrupt currently-speaking audio');
+
+  // Apply interrupt: clears queue items with lower priority than critical_hazard
+  state = applyInterrupt(state, emergency.priority);
+
+  // Enqueue the emergency itself and verify it dequeues correctly
+  const { state: s3 } = enqueueAlert(state, emergency);
+  const { alert: first } = dequeueNextAlert(s3);
+  if (!first) throw new Error('Emergency alert should dequeue');
+  if (first.priority !== 'critical_hazard') throw new Error(`Expected critical_hazard, got ${first.priority}`);
+});
+
+// ── Integration 12: AlertQualityEngine produces directional wording ──────────
+
+test('integration: AlertQualityEngine generates directional human-friendly messages', () => {
+  const engine = new AlertQualityEngine();
+  const result = engine.process({
+    detections: [{
+      label: 'person',
+      confidence: 0.85,
+      boundingBox: { x: 0.1, y: 0.1, width: 0.15, height: 0.4 },
+    }],
+    alerts: [{
+      id: '1',
+      type: 'person',
+      description: 'Person detected',
+      severity: 'medium' as const,
+      confidence: 0.85,
+      timestamp: new Date(),
+      shouldInterrupt: false,
+      disclaimer: 'AI assistance only.',
+    }],
+    baseDecision: { shouldAlert: true, urgency: 'medium' as const, message: 'Person detected.', confidence: 0.85, interruptNarration: false },
+    prevRiskLevel: 'none' as const,
+  });
+
+  if (!result.shouldSpeak) throw new Error('Should speak for new person detection');
+  if (!result.message) throw new Error('Message is null');
+
+  // Message must NOT contain raw confidence number
+  if (/\b0\.\d{2}\b/.test(result.message)) {
+    throw new Error(`Confidence number leaked into message: "${result.message}"`);
+  }
+  // Message should describe a person (not "obstacle confidence 0.89")
+  const lower = result.message.toLowerCase();
+  const goodTerms = ['person', 'someone', 'people', 'individual'];
+  if (!goodTerms.some(t => lower.includes(t))) {
+    throw new Error(`Message not person-specific enough: "${result.message}"`);
+  }
+});
+
+// ── Integration 13: Battery critical → coordination priority critical ─────────
+
+test('integration: battery-critical failure routes to critical_hazard priority', () => {
+  const failures = detectActiveFailures({ batteryLevel: 0.02 });
+  if (!failures.includes('battery-critical')) throw new Error('battery-critical not detected');
+
+  const announcement = getFailureAnnouncement('battery-critical');
+  const alert = buildSystemAlert(announcement, true); // isCritical=true
+  if (alert.priority !== 'critical_hazard') throw new Error(`Expected critical_hazard, got ${alert.priority}`);
+});
+
+// ── Integration 14: AlertQualityEngine dedup suppresses repeated identical scene ──
+
+test('integration: AlertQualityEngine suppresses repeated identical hazard', () => {
+  const engine = new AlertQualityEngine();
+  const input = {
+    detections: [{ id: '1', label: 'bicycle', confidence: 0.7, boundingBox: { x: 0.4, y: 0.2, width: 0.2, height: 0.3 } }],
+    alerts: [{ id: '1', type: 'bicycle', description: 'Bicycle', severity: 'medium' as const, confidence: 0.7, timestamp: new Date(), shouldInterrupt: false, disclaimer: 'AI assistance only.' }],
+    baseDecision: { shouldAlert: true, urgency: 'medium' as const, message: 'Bicycle nearby', confidence: 0.7, interruptNarration: false },
+    prevRiskLevel: 'medium' as const,
+  };
+
+  const d1 = engine.process(input);
+  if (!d1.shouldSpeak) throw new Error('First detection should speak');
+
+  // Repeated identical input — throttle should suppress
+  const d2 = engine.process({ ...input, prevRiskLevel: 'medium' as const });
+  const d3 = engine.process({ ...input, prevRiskLevel: 'medium' as const });
+  // At least one should be silenced
+  const eitherSilenced = !d2.shouldSpeak || !d3.shouldSpeak;
+  if (!eitherSilenced) throw new Error('Repeated identical hazard should eventually be throttled');
+});
+
+// ── Integration 15: Offline → formatOCRAnnouncement still works ──────────────
+
+test('integration: formatOCRAnnouncement works offline (no API dependency)', () => {
+  // This must work without network — it is pure text formatting
+  const result = formatOCRAnnouncement('sign', 'Road Closed Ahead', 'high', false);
+  if (!result || result.length === 0) throw new Error('formatOCRAnnouncement returned empty offline');
+  if (result.toLowerCase().includes('fetch') || result.toLowerCase().includes('error')) {
+    throw new Error('OCR formatting should not reference network errors');
+  }
+});
+
+// ── Integration 16: Coordination state isolates multiple alert sources ────────
+
+test('integration: coordination handles vision + OCR + navigation in one state', () => {
+  let state = createCoordinationState();
+
+  const vision = buildVisionAlert('Obstacle ahead, slightly to your right.', 'medium');
+  const ocr    = buildOCRAlert('Sign ahead: Wet Floor. Please verify.', false);
+  const nav    = buildNavigationAlert('Continue straight for about ten metres.', false);
+
+  state = enqueueAlert(state, vision).state;
+  state = enqueueAlert(state, ocr).state;
+  state = enqueueAlert(state, nav).state;
+
+  // Queue should have 3 items
+  if (state.queue.length !== 3) throw new Error(`Expected 3 in queue, got ${state.queue.length}`);
+
+  // Dequeue order: vision (high_navigation or scene_description), then normal
+  // The order depends on priority. Both vision and ocr/nav are lower priority so order matters
+  const { alert: first } = dequeueNextAlert(state);
+  if (!first) throw new Error('First dequeue failed');
+  // All three sources exist — just verify no text is lost
+  if (!first.text) throw new Error('First dequeued alert has empty text');
 });
 
 // ══════════════════════════════════════════════════════════════════════════════

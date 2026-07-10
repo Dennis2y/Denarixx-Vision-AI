@@ -1,0 +1,298 @@
+Start Live Pipeline Completion Program.
+
+This is NOT a new architecture phase.
+
+Use the existing LIVE_PIPELINE_WIRING_AUDIT.md as the source of truth.
+
+Do not create duplicate engines.
+Do not add new broad features.
+The goal is to connect the engines that already exist into one real live-session pipeline.
+
+==================================================
+1. CONNECT ALERT COORDINATION TO REAL SPEECH
+==================================================
+
+Integrate alertCoordinationEngine into useVisionSession.ts.
+
+Every spoken output must go through the coordination queue.
+
+Required priority:
+
+1. Critical hazard
+2. High-risk navigation warning
+3. System or hardware failure
+4. Important OCR
+5. Normal navigation
+6. Scene description
+7. Companion information
+
+Critical alerts must:
+
+- interrupt current speech
+- clear lower-priority queued speech
+- trigger haptic fallback when enabled
+- never be blocked by cooldown
+
+Replace direct speak() calls where appropriate with coordinated dispatch.
+
+==================================================
+2. CONNECT ALERT QUALITY ENGINE
+==================================================
+
+Integrate alertQualityEngine into the live runFrame pipeline.
+
+The engine must decide:
+
+- whether to speak
+- whether to stay silent
+- whether the message is a duplicate
+- whether risk increased
+- whether distance decreased
+- whether cooldown expired
+- whether wording should be improved
+
+Use guardianWordingEngine for directional, human-friendly guidance.
+
+Examples:
+
+Bad:
+“Person detected.”
+
+Good:
+“Someone is approaching from your left.”
+
+Bad:
+“Obstacle confidence 0.89.”
+
+Good:
+“Obstacle ahead, slightly to your right.”
+
+==================================================
+3. CONNECT OCR TO THE GUARDIAN
+==================================================
+
+Feed OCR results into the Guardian and alert coordination pipeline.
+
+OCR should speak automatically only when relevant.
+
+Priority examples:
+
+High:
+- medicine warnings
+- emergency signs
+- road closure signs
+- danger notices
+
+Normal:
+- street names
+- bus numbers
+- menus
+- document text
+
+Do not read all visible text continuously.
+
+Add OCR deduplication so the same text is not repeatedly spoken.
+
+==================================================
+4. CONNECT NAVIGATION INTELLIGENCE
+==================================================
+
+Integrate navigationIntelligenceEngine into useVisionSession.ts.
+
+Per frame or sensor update, combine:
+
+- GPS
+- heading
+- movement state
+- spatial detections
+- landmarks
+- Guardian risk
+- crossing state
+
+Navigation guidance must enter the same speech priority queue.
+
+Examples:
+
+“Continue straight for about ten metres.”
+
+“Turn slightly left.”
+
+“Stop before the crossing.”
+
+“The doorway is ahead on your right.”
+
+Never say:
+“Safe to cross.”
+
+Use:
+“The crossing appears clear, but please check carefully.”
+
+==================================================
+5. CONNECT VOICE INTERACTION ENGINE
+==================================================
+
+Use voiceInteractionEngine as the central speech queue controller.
+
+Support:
+
+- speech interruption
+- repeat last guidance
+- emergency stop
+- clearing lower-priority speech
+- pause and resume
+- provider failure announcements
+- offline-mode announcements
+
+Do not allow OCR, navigation, scene description, and companion messages to speak over each other.
+
+==================================================
+6. CONNECT NETWORK AND FALLBACK ENGINES
+==================================================
+
+Connect:
+
+- networkMonitorEngine
+- connectivityFallbackEngine
+- failureRecoveryEngine
+
+Announce meaningful changes only once.
+
+Examples:
+
+“Internet is unavailable. Offline safety mode is active.”
+
+“Online enhancement has returned.”
+
+“Camera input is unavailable. Please stop and check carefully.”
+
+Do not repeatedly announce the same state.
+
+==================================================
+7. UNIFY THE LIVE PIPELINE
+==================================================
+
+Use livePerceptionEngine as the orchestration layer where practical.
+
+Target pipeline:
+
+Camera / glasses sensor input
+→ vision provider
+→ local detections
+→ OCR
+→ spatial and navigation context
+→ Guardian decision
+→ alert quality
+→ alert coordination
+→ speech or haptic output
+→ decision trace
+→ latency metrics
+
+If useVisionSession remains the orchestrator, clearly document why and remove or repurpose disconnected duplicate orchestration code.
+
+Do not leave two competing pipeline implementations.
+
+==================================================
+8. UPDATE THE E2E TESTS
+==================================================
+
+Expand tests/livePerceptionE2E.test.ts.
+
+Test actual integration behaviour for:
+
+- critical hazard interrupts OCR
+- navigation warning interrupts scene description
+- duplicate OCR is suppressed
+- repeated hazard is throttled
+- risk increase bypasses cooldown
+- internet loss activates offline safety
+- cloud timeout falls back locally
+- camera failure produces warning
+- emergency stop clears speech queue
+- navigation guidance reaches audio queue
+- OCR hazard reaches Guardian
+- companion speech is suppressed during danger
+
+Tests must validate connected behaviour, not only isolated engines.
+
+==================================================
+9. UPDATE THE AUDIT
+==================================================
+
+Update:
+
+docs/LIVE_PIPELINE_WIRING_AUDIT.md
+
+Move items from:
+
+- disconnected
+- partially connected
+
+to:
+
+- fully connected
+
+only after the code genuinely uses them.
+
+Clearly list anything that still remains disconnected.
+
+==================================================
+10. CORRECT README AND PROJECT STATISTICS
+==================================================
+
+Update README.md and replit.md.
+
+The current README is outdated.
+
+Count the actual source tree before writing:
+
+- pages
+- API routes
+- engine files
+- hooks
+- test files
+- documentation files
+
+Rewrite the project status into:
+
+REAL AND CONNECTED
+REAL BUT PARTIALLY CONNECTED
+SIMULATED
+HARDWARE PLACEHOLDER
+NOT YET VALIDATED
+
+Do not claim production readiness or measured safety accuracy without evidence.
+
+==================================================
+11. QUALITY GATE
+==================================================
+
+Run:
+
+npm run type-check
+npm test
+npx tsx tests/realPerception.test.ts
+npx tsx tests/visionProvider.test.ts
+npx tsx tests/livePerceptionE2E.test.ts
+npm run build
+
+Fix all errors and meaningful warnings.
+
+Do not mark this program complete until:
+
+- alert coordination controls real speech
+- OCR is connected to Guardian
+- navigation guidance reaches live audio
+- failure recovery is active
+- the E2E tests pass
+- README matches the real codebase
+
+Push all changes to GitHub.
+
+Provide:
+
+- commit hash
+- files changed
+- tests passed
+- what is now fully connected
+- what remains simulated
+- blockers before physical smart-glasses testing

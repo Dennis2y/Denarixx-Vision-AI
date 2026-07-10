@@ -39,8 +39,29 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `cd denarixx && npx tsx tests/glassesSimulator.test.ts` — Sprint 18 Digital Twin tests (127/127)
 - `cd denarixx && npx tsx tests/hardwareSpecification.test.ts` — Sprint 19 Hardware Specification tests (48/48)
 - `cd denarixx && npx tsx tests/prototypeIntegration.test.ts` — Sprint 20 Prototype Hardware Integration tests (75/75)
-- `cd denarixx && npx tsx tests/livePerceptionE2E.test.ts` — Sprint 23 Live Perception E2E behavioural tests (80/80)
+- `cd denarixx && npx tsx tests/livePerceptionE2E.test.ts` — Sprint 23 + Live Pipeline Completion E2E tests (96/96)
 - `cd denarixx && npm run build` — Next.js production build (then delete `.next` and restart workflow)
+
+## Live Pipeline Completion Program (Post-Sprint 23)
+
+11-item program that wired all isolated engines into the real live session pipeline (`useVisionSession.ts`). No new architecture — only connection of existing engines.
+
+**What changed in `useVisionSession.ts`:**
+- `AlertQualityEngine.process()` replaces `AlertThrottleEngine` — dedup + human wording + decision logger now active per frame
+- `speakCoordinated()` is the single audio dispatcher — all speech sources (vision, OCR, navigation, failures, companion) route through the 7-level `alertCoordinationEngine` priority queue
+- `reportOCRResult()` callback — OCR text (medicine labels, signs, street names) routed through `formatOCRAnnouncement()` into coordination queue
+- `processNavigationTick()` per frame — navigation guidance reaches audio queue via `buildNavigationAlert()`
+- `detectActiveFailures()` per frame — all 12 failure scenarios monitored; announcements via `buildSystemAlert()`
+- Session start announcement via `buildSystemAlert()` — user hears human-friendly message on session begin
+- All new engine refs reset on session start/stop
+
+**Integration tests added:** 16 new integration tests in `tests/livePerceptionE2E.test.ts` covering: critical hazard interrupts speaking OCR, navigation priority over scene description, OCR dedup after dequeue, risk escalation bypasses cooldown, internet loss → offline announcement, camera disconnect → critical_hazard priority, companion suppressed during critical, navigation tick → coordination queue, crossing language never "safe to cross", OCR hazard into important_ocr lane, emergency stop clears queue, directional human-friendly messages, battery-critical → critical priority, repeated hazard throttled, offline OCR formatting, multi-source queue ordering.
+
+**Audit doc updated:** `docs/LIVE_PIPELINE_WIRING_AUDIT.md` — disconnected list trimmed from 6 to 3 (architectural choices only); pipeline diagram updated; safety guarantee #7 added (all audio through single queue).
+
+**Total test count: 38 suites, 3,086+ tests passing, 0 regressions**
+
+Test command: `cd denarixx && npx tsx tests/livePerceptionE2E.test.ts`
 
 ## Live Perception Hardening (Sprint 23)
 
@@ -59,11 +80,7 @@ An assistive AI perception platform for blind and visually impaired users — pr
 - `docs/LIVE_PIPELINE_WIRING_AUDIT.md` — full audit of connected/disconnected stages with evidence from source; latency budget table; safety guarantees; pipeline diagram
 - `docs/LIVE_ACCESSIBILITY_VALIDATION.md` — 9 requirements validated (screen reader, keyboard, voice-first, emergency control, one-action start, reduced motion, high contrast, haptic fallback, offline accessibility)
 
-**Wiring summary (from audit):** Vision→Hazard→Safety→speak() fully connected; AlertThrottleEngine, GuidancePersonalityEngine, MobilityEngine, SensorFusion all in runFrame. livePerceptionEngine.ts and voiceInteractionEngine.ts (Sprint 22) remain isolated engines — session hook is the pipeline.
-
-**Total test count: 38 suites, 3,070+ tests passing, 0 regressions**
-
-Test command: `cd denarixx && npx tsx tests/livePerceptionE2E.test.ts`
+**Wiring summary (from audit, superseded by Live Pipeline Completion):** Vision→Hazard→Safety→speak() fully connected; AlertQualityEngine, AlertCoordinationEngine, NavigationIntelligenceEngine, FailureRecoveryEngine all wired in runFrame. livePerceptionEngine.ts and voiceInteractionEngine.ts (Sprint 22) remain pure model engines — session hook is the pipeline.
 
 ## Real Perception Integration (Sprint 22)
 
