@@ -15,9 +15,15 @@
 
 | Status | Count |
 |---|---|
-| READY | 9 |
-| PARTIAL | 8 |
-| BLOCKED | 4 |
+| READY | 7 |
+| PARTIAL | 7 |
+| BLOCKED | 5 |
+
+> **Items 18–21 updated 2026-07-10** by Bring-Up Program: Embedded Runtime Reality Check.  
+> Previously-claimed "READY" items for physical adapter factory and real ONNX inference have been  
+> reclassified to BLOCKED — they were architecture stubs, not connected implementations.  
+> The bring-up program adds real infrastructure (adapter factory, ONNX provider, Linux drivers, tests)  
+> and honest documentation replacing prior overclaims.
 
 ---
 
@@ -158,8 +164,40 @@
 - `wearableConnectionEngine.ts` — device registry, heartbeat — implemented.
 - `deviceCapabilityEngine.ts` — browser API detection, setup instructions — implemented.
 - 97 hardware bridge tests passing.
-- **Blocked:** No physical hardware connected. All adapters are browser/simulation stubs.
-- **Blocked:** No SPI, I2C, USB, or BLE communication layer implemented.
+- **New (bring-up):** `src/runtime/adapters/createHardwareAdapterSet.ts` — real adapter factory with `EmbeddedSimulationFallbackError` safety assertion. embedded-prototype mode never silently falls back to simulation-test.
+- **New (bring-up):** `src/runtime/adapters/hardwareAdapterTypes.ts` — `CameraFrame` gains `pixels: Uint8Array | null`, `pixelFormat`, `stride` fields.
+- **New (bring-up):** 9 Linux driver boundary files: `v4l2CameraDriver`, `alsaMicrophoneDriver`, `audioPlaybackDriver`, `gpioButtonDriver`, `hapticDriver`, `imuDriver`, `batteryDriver`, `thermalDriver`, `gnssDriver`, `networkDriver` — all in `src/runtime/drivers/linux/`. Document real Linux kernel calls; report errors honestly; never fabricate readings.
+- **Blocked:** No physical hardware connected. Drivers report 'failed' or 'unavailable' on non-Linux hosts.
+- **Blocked:** Native bindings (v4l2-camera, node-alsa, spi-device) not yet installed on target board.
+- **Note:** Thermal and network drivers CAN be tested on any Linux device via `/sys/class/thermal/` and `/sys/class/net/`.
+
+---
+
+### 18. Hardware Adapter Factory + Safety Assertion
+**Status: BLOCKED**
+
+- `src/runtime/adapters/createHardwareAdapterSet.ts` — factory with `EmbeddedSimulationFallbackError` safety assertion.
+- `src/runtime/inference/onnxLocalInferenceProvider.ts` — real ONNX inference provider using dynamic import of `onnxruntime-node`; `MockOnnxInferenceProvider` for tests (labeled `isSimulated: true`).
+- `src/runtime/inference/createLocalInferenceProvider.ts` — factory + `assertNoSimulatedDetectionsInEmbeddedMode` guard.
+- `src/types/hardwareValidation.ts` — `HardwareValidationRecord` schema for physical bring-up sign-off.
+- `src/runtime/startPrototypeRuntime.ts` — bug fixed: now uses `createHardwareAdapterSet()` (was hardcoded to `assembleSimulationAdapters(true)` regardless of mode).
+- Integration tests: `tests/embeddedRuntime.integration.test.ts` — 26+ assertions covering factory, safety guards, ONNX status, driver environment checks. No physical device required.
+- Hardware-only tests: `tests/hardwareOnDevice.test.ts` — skipped unless `DENARIXX_RUN_PHYSICAL_HARDWARE_TESTS=true`. Blocked until physical prototype exists.
+- **Blocked:** `onnxruntime-node` requires native compilation on target board; ONNX provider will report `runtime-unavailable` until installed.
+- **Blocked:** Real camera frames (`pixels !== null`) require V4L2 driver integration with native binding.
+- **Blocked:** No physical hardware tested.
+
+---
+
+### 19. Local ONNX Inference (Real Model)
+**Status: BLOCKED**
+
+- Architecture complete: `OnnxLocalInferenceProvider` handles preprocessing (bilinear resize → normalize → NCHW), YOLOv8 output decoding, NMS.
+- Graceful failure: all error paths return empty detections + explicit error message — never fabricated detections.
+- Safety invariant: `EmbeddedSimulatedDetectionError` thrown if mock detections reach Guardian in embedded-prototype mode.
+- **Blocked:** No ONNX hazard detection model exists yet. COCO-SSD (80 generic classes) is a placeholder; a domain-specific model tuned for pedestrian hazards, stairs, vehicles, and kerbs is required.
+- **Blocked:** `onnxruntime-node` not yet installed on compute module.
+- **Blocked:** No real camera frames (V4L2 pixels) to run inference on.
 
 ---
 

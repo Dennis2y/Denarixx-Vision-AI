@@ -1,0 +1,440 @@
+Start the Embedded Runtime Reality Check & Stub Elimination Program.
+
+This is NOT a new roadmap phase.
+
+Do not add more conceptual engines.
+Do not claim that physical hardware works inside Replit.
+Do not describe mocked values as real measurements.
+
+GOAL
+
+Turn the current hardware-bring-up architecture into an honest, executable embedded software baseline.
+
+The program must:
+
+1. stop embedded-prototype mode from silently using simulation adapters;
+2. add a genuine local ONNX inference implementation;
+3. create executable Linux adapter boundaries;
+4. keep mocks only for tests;
+5. correct all misleading documentation.
+
+==================================================
+1. FIX ADAPTER SELECTION
+==================================================
+
+The current startPrototypeRuntime.ts always calls:
+
+assembleSimulationAdapters(true)
+
+even when DENARIXX_HAL_ADAPTER=embedded-prototype.
+
+Replace this with a real adapter factory.
+
+Create or update:
+
+src/runtime/adapters/createHardwareAdapterSet.ts
+
+It must select exactly one mode:
+
+- simulation-test
+- browser-development
+- embedded-prototype
+
+Required behavior:
+
+simulation-test
+→ uses only simulationTestAdapter
+
+browser-development
+→ uses browser adapters
+
+embedded-prototype
+→ uses only embeddedPrototypeAdapter
+
+Embedded-prototype must never silently fall back to simulation.
+
+If required hardware cannot initialize in embedded-prototype mode:
+
+- fail startup clearly, or
+- enter explicit degraded mode with no fabricated detections.
+
+Return a structured result:
+
+- requestedMode
+- activeMode
+- initializedAdapters
+- unavailableAdapters
+- startupErrors
+- isSimulation
+
+Add a safety assertion:
+
+If requestedMode === embedded-prototype
+and activeMode === simulation-test
+then throw a startup safety error.
+
+==================================================
+2. IMPLEMENT A REAL ONNX LOCAL INFERENCE PROVIDER
+==================================================
+
+The existing localInferenceEngine currently creates mocked classes:
+
+person
+obstacle
+
+Remove that behavior from embedded-prototype mode.
+
+Create:
+
+src/runtime/inference/onnxLocalInferenceProvider.ts
+src/runtime/inference/localInferenceProviderTypes.ts
+src/runtime/inference/createLocalInferenceProvider.ts
+
+Use ONNX Runtime for Node/Linux where supported.
+
+Preferred package:
+
+onnxruntime-node
+
+If the Replit environment cannot install native ONNX Runtime:
+
+- keep the implementation behind dynamic import;
+- provide a clear unsupported-environment result;
+- do not substitute fabricated detections;
+- retain a mock provider only for automated tests.
+
+The ONNX provider must implement:
+
+- load model from DENARIXX_LOCAL_MODEL_PATH
+- verify file exists
+- verify model loads
+- inspect input and output names
+- preprocess RGB frame
+- execute inference
+- decode outputs
+- apply confidence threshold
+- run non-maximum suppression where required
+- return real measured inference latency
+- release model resources on shutdown
+
+Return detections containing:
+
+- className
+- confidence
+- boundingBox
+- source
+- capability
+- isSimulated=false
+
+Do not mark unsupported classes as reliably detected.
+
+==================================================
+3. ADD IMAGE DATA TO CAMERA FRAMES
+==================================================
+
+The current embedded camera adapter returns dimensions but no actual frame data.
+
+Update CameraFrame to support:
+
+- pixel format
+- byte buffer or typed array
+- stride
+- width
+- height
+- timestamp
+- frame ID
+
+For embedded Linux, define a V4L2-backed camera interface.
+
+Create:
+
+src/runtime/drivers/linux/v4l2CameraDriver.ts
+
+The first implementation may use one of these clearly documented approaches:
+
+A. direct V4L2 native binding;
+B. ffmpeg/gstreamer child process;
+C. injectable frame-source process for early prototype bring-up.
+
+Do not pretend the driver has captured a frame unless real bytes were received.
+
+The adapter must report:
+
+- unavailable
+- initializing
+- healthy
+- degraded
+- failed
+
+==================================================
+4. CREATE EXECUTABLE LINUX DRIVER BOUNDARIES
+==================================================
+
+Create concrete driver boundaries for:
+
+- ALSA microphone capture
+- ALSA/PipeWire audio playback
+- libgpiod hardware buttons
+- I2C haptic controller
+- I2C/SPI IMU
+- I2C battery gauge
+- Linux thermal zones
+- GNSS serial/NMEA input
+- network state
+
+Suggested location:
+
+src/runtime/drivers/linux/
+
+Create:
+
+alsaMicrophoneDriver.ts
+audioPlaybackDriver.ts
+gpioButtonDriver.ts
+hapticDriver.ts
+imuDriver.ts
+batteryDriver.ts
+thermalDriver.ts
+gnssDriver.ts
+networkDriver.ts
+
+Each driver must:
+
+- expose initialize
+- expose read/write where relevant
+- expose health
+- expose shutdown
+- return explicit unsupported/error states
+- never fabricate a successful reading
+
+It is acceptable for these drivers to require physical Linux hardware later.
+
+It is not acceptable to return made-up values while calling them real.
+
+==================================================
+5. CORRECT THE EMBEDDED RUNTIME
+==================================================
+
+Update embeddedVisionRuntime.ts and startPrototypeRuntime.ts.
+
+The runtime must:
+
+- initialize selected adapters
+- initialize real local inference provider
+- refuse real-user operation if the camera or local model is unavailable
+- never generate simulation detections in embedded-prototype mode
+- measure real frame and inference latency
+- propagate adapter failures
+- cleanly release camera, audio and inference resources
+- support SIGINT and SIGTERM shutdown
+- support recoverable camera restart
+- maintain emergency button behavior
+
+Create executable scripts:
+
+npm run start:prototype
+npm run test:embedded
+npm run validate:prototype
+
+The start command must read:
+
+DENARIXX_HAL_ADAPTER
+DENARIXX_LOCAL_MODEL_PATH
+DENARIXX_PROTOTYPE_PROFILE
+
+==================================================
+6. SEPARATE MOCK TESTS FROM HARDWARE TESTS
+==================================================
+
+The current hardwareBringup.test.ts is entirely mocked.
+
+Keep it, but rename or clearly categorize it as:
+
+tests/hardwareBringup.mock.test.ts
+
+Add:
+
+tests/embeddedRuntime.integration.test.ts
+
+This integration suite must test:
+
+- adapter factory selects requested mode
+- embedded mode never selects simulation
+- missing camera fails explicitly
+- missing model fails explicitly
+- invalid ONNX model fails explicitly
+- mock ONNX session can produce decoded detections
+- real-user mode never emits isSimulated=true
+- shutdown releases resources
+- emergency stop works during inference
+- health status reflects driver failures
+
+Also create a hardware-only test command that can be skipped in CI:
+
+tests/hardwareOnDevice.test.ts
+
+It should run only when:
+
+DENARIXX_RUN_PHYSICAL_HARDWARE_TESTS=true
+
+Never report those tests as passed unless a device was actually connected.
+
+==================================================
+7. FIX BASELINE VERSIONING
+==================================================
+
+The documents currently mix:
+
+v0.1.0
+v0.2.0-hardware-bringup
+
+Make them consistent.
+
+Use:
+
+DENARIXX_VISION_PROTOTYPE_BASELINE=v0.2.0-hardware-bringup
+
+Update:
+
+.env.example
+README.md
+docs/PHYSICAL_PROTOTYPE_SOFTWARE_BASELINE.md
+docs/PROTOTYPE_READINESS_REPORT.md
+docs/FIRST_PHYSICAL_PROTOTYPE_PROFILE.md
+
+The baseline document must state:
+
+- software interfaces are implemented;
+- hardware drivers are unvalidated until run on a physical Linux device;
+- ONNX inference is executable only when the runtime dependency and valid model are present;
+- no physical tests have passed unless supported by a captured hardware report.
+
+==================================================
+8. CORRECT SAFETY CLAIMS
+==================================================
+
+Remove or correct claims such as:
+
+“Guardian + hazard detection fully local — no cloud required”
+
+unless a real local model is loaded and tested.
+
+Use more accurate wording:
+
+“The Guardian decision pipeline is local. Hazard perception requires a loaded local model or an available configured vision provider.”
+
+Correct network fallback wording.
+
+Development mode:
+
+cloud unavailable
+→ simulation may be used for demonstration
+
+Real-user embedded mode:
+
+cloud unavailable
+→ real local ONNX inference continues
+
+If the local model is unavailable:
+
+→ announce limited functionality
+→ do not create synthetic hazards
+→ advise the user to stop and seek assistance
+
+==================================================
+9. CREATE A HARDWARE VALIDATION RECORD FORMAT
+==================================================
+
+Create:
+
+docs/HARDWARE_VALIDATION_RECORD_TEMPLATE.md
+
+and a machine-readable schema:
+
+src/types/hardwareValidation.ts
+
+Record:
+
+- device profile
+- operating-system version
+- compute board
+- camera
+- model checksum
+- test operator
+- timestamp
+- physical hardware connected
+- camera FPS
+- real inference latency
+- audio latency
+- temperature
+- battery drain
+- failures
+- raw test result references
+- pass/fail/blocked
+
+Do not automatically generate a passing hardware record.
+
+==================================================
+10. UPDATE READINESS STATUS
+==================================================
+
+Update docs/PROTOTYPE_READINESS_REPORT.md honestly.
+
+Expected status before physical device testing:
+
+- Embedded runtime architecture: READY
+- Adapter selection: READY after implementation
+- Real ONNX execution path: READY or PARTIAL
+- Linux driver boundaries: READY
+- Physical camera validated: BLOCKED
+- Physical audio validated: BLOCKED
+- Physical haptics validated: BLOCKED
+- Physical IMU/GNSS validated: BLOCKED
+- Battery/thermal validated: BLOCKED
+- Wearable latency validated: BLOCKED
+- Real-user safety validation: BLOCKED
+
+Do not mark physical functions READY based on mocked tests.
+
+==================================================
+11. QUALITY GATE
+==================================================
+
+Run:
+
+npm install
+npm run type-check
+npm test
+npm run test:embedded
+npm run build
+
+If onnxruntime-node cannot install in Replit:
+
+- document the exact limitation;
+- ensure dynamic imports and type checks still pass;
+- run inference decoding tests with an injected mock session;
+- do not claim real ONNX execution was tested.
+
+Do not mark complete until:
+
+- embedded-prototype no longer assembles simulation adapters;
+- localInferenceEngine no longer emits fake real detections;
+- embedded camera frames support real image bytes;
+- mock and physical tests are clearly separated;
+- baseline documentation is consistent;
+- safety claims are corrected;
+- all available software checks pass.
+
+Push all changes to GitHub.
+
+Return:
+
+- commit hash
+- adapter factory result
+- ONNX provider status
+- packages installed
+- tests passed
+- tests skipped
+- what is executable in Replit
+- what requires a physical Linux compute board
+- blockers before selecting and purchasing prototype components

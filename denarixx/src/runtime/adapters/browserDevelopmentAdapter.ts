@@ -33,6 +33,9 @@ export function createBrowserCameraAdapter(streamAvailable: boolean): CameraAdap
         timestampMs: Date.now(),
         width: 1280,
         height: 720,
+        stride: 0,
+        pixelFormat: 'unknown',
+        pixels: null,   // raw bytes captured separately via canvas.getImageData in browser
         source: MODE,
         isSimulated: false,
       };

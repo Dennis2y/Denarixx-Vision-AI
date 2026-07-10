@@ -39,8 +39,15 @@ import {
 import type { HardwareAdapterSet } from './adapters/hardwareAdapterTypes';
 import { selectHardwareAdapter, createModelState } from '@/engines/localInferenceEngine';
 import { createPressSequenceState, createEmergencyButtonState } from '@/engines/hardwareButtonEngine';
+import {
+  createHardwareAdapterSet,
+  EmbeddedSimulationFallbackError,
+} from './adapters/createHardwareAdapterSet';
 
 // ─── Adapter Assembly ─────────────────────────────────────────────────────────
+// assembleSimulationAdapters: kept for backward compatibility with unit tests.
+// New code should use createHardwareAdapterSet(env) which enforces the safety
+// invariant that embedded-prototype never falls back to simulation-test.
 
 export function assembleSimulationAdapters(online = true): HardwareAdapterSet {
   return {
@@ -95,7 +102,32 @@ export function runFullBootSequence(
   nowMs: number,
 ): BootSequenceOutcome {
   const adapterConfig = selectHardwareAdapter(config.halAdapterEnv);
-  const adapters = assembleSimulationAdapters(true);
+
+  // Use the real adapter factory — enforces the embedded-prototype safety invariant.
+  // For simulation-test (CI/dev): returns synthetic adapters.
+  // For embedded-prototype: returns physical HAL stubs; throws EmbeddedSimulationFallbackError
+  //   if any code path would silently activate simulation-test instead.
+  let adapterSetResult;
+  try {
+    adapterSetResult = createHardwareAdapterSet(config.halAdapterEnv);
+  } catch (err) {
+    if (err instanceof EmbeddedSimulationFallbackError) {
+      console.error('[BOOT_SAFETY]', err.message);
+      const failedState = createEmbeddedRuntimeState(config.sessionId);
+      return {
+        success: false,
+        state: { ...failedState, phase: 'failed' },
+        adapters: assembleSimulationAdapters(false),  // return something typed; never used
+        adapterConfig,
+        modelState: createModelState(adapterConfig.inferenceRuntime),
+        errors: [err.message],
+        announcements: ['Safety check failed. Cannot start in embedded mode with simulation adapters.'],
+      };
+    }
+    throw err;
+  }
+
+  const adapters = adapterSetResult.adapters;
   let state = createEmbeddedRuntimeState(config.sessionId);
   let modelState = createModelState(adapterConfig.inferenceRuntime);
   const allAnnouncements: string[] = [];

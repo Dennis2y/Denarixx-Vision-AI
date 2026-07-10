@@ -14,3 +14,7 @@
 - [Next.js .next cache corruption](next-cache-corruption.md) — stale chunks after build → 500s; fix: rm -rf denarixx/.next then restart workflow.
 - [Network event hook order](network-hook-order.md) — speakCoordinatedRef/addLogRef must init as no-ops; sync effects must come AFTER the useCallback declarations they reference.
 - [GitHub force-push pattern](github-force-push.md) — task agents push directly to remote; after merges use --force to avoid "fetch first" rejection.
+- [Embedded runtime safety pattern](embedded-runtime-safety.md) — embedded-prototype mode must never silently fall back to simulation; EmbeddedSimulationFallbackError thrown by createHardwareAdapterSet.
+- [tsx top-level await CJS failure](tsx-top-level-await.md) — tsx uses CJS by default; top-level await breaks. Wrap async test code in async function main() called at end.
+- [Triple-press button window](triple-press-detection.md) — triple-press detected only AFTER TRIPLE_PRESS_WINDOW_MS (600ms) elapses post 3rd press; use getDetectedEventType with future nowMs in tests.
+- [ONNX module ambient declaration](onnx-dynamic-import.md) — add src/runtime/inference/onnxruntime-node.d.ts (declare module 'onnxruntime-node') so tsc resolves without native package installed.

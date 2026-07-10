@@ -30,6 +30,9 @@ export function createSimulationCameraAdapter(): CameraAdapter {
       timestampMs: Date.now(),
       width: 640,
       height: 480,
+      stride: 0,
+      pixelFormat: 'unknown',
+      pixels: null,   // simulation never has real camera bytes
       source: MODE,
       isSimulated: true,
     }),

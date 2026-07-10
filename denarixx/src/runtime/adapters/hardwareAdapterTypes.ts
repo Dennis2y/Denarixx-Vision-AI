@@ -7,11 +7,16 @@ import type { HardwareAdapterMode } from '@/types/localInference';
 
 // ─── Camera Adapter ───────────────────────────────────────────────────────────
 
+export type CameraPixelFormat = 'rgb24' | 'bgr24' | 'yuv420' | 'nv12' | 'mjpeg' | 'unknown';
+
 export interface CameraFrame {
   frameId: number;
   timestampMs: number;
   width: number;
   height: number;
+  stride: number;           // bytes per row; 0 when pixels is null
+  pixelFormat: CameraPixelFormat;
+  pixels: Uint8Array | null; // real camera bytes; null when no physical frame available
   source: HardwareAdapterMode;
   isSimulated: boolean;
 }

@@ -43,11 +43,15 @@ export function createEmbeddedCameraAdapter(
       if (!state.isOpen) return null;
       // REAL IMPLEMENTATION: read V4L2 frame from mmap buffer
       // ioctl(fd, VIDIOC_DQBUF, &buf); mmap read; ioctl VIDIOC_QBUF
+      // pixels will be non-null when v4l2CameraDriver.captureV4L2Frame() is integrated here
       return {
         frameId: tick,
         timestampMs: Date.now(),
         width: 640,
         height: 480,
+        stride: 0,
+        pixelFormat: 'unknown',
+        pixels: null,   // populated by V4L2 driver when physical camera is connected
         source: MODE,
         isSimulated: false,
       };
