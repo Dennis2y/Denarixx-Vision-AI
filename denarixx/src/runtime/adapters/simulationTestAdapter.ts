@@ -43,7 +43,7 @@ export function createSimulationCameraAdapter(): CameraAdapter {
 // ─── Microphone ───────────────────────────────────────────────────────────────
 
 export function createSimulationMicrophoneAdapter(): MicrophoneAdapter {
-  let wakeWordTick = 50;
+  const wakeWordTick = 50;
   return {
     mode: MODE,
     id: 'sim-mic-0',

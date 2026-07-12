@@ -40,6 +40,7 @@ import {
   processFrame,
   createEmbeddedRuntimeState,
   runEmergencyStop,
+  runSessionStart,
 } from '../src/runtime/embeddedVisionRuntime';
 import {
   selectHardwareAdapter,

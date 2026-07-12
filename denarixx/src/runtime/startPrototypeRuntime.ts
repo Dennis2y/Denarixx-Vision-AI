@@ -248,8 +248,8 @@ export async function runOneTick(
   // Frame processing (async — ONNX inference + real Guardian pipeline)
   const frameResult = await processFrame(currentState, adapters, adapterConfig, modelState, nowMs, provider, currentGuardianCtx);
   currentState = frameResult.state;
-  let currentModelState = frameResult.modelState;
-  let updatedGuardianCtx = frameResult.guardianContext;
+  const currentModelState = frameResult.modelState;
+  const updatedGuardianCtx = frameResult.guardianContext;
 
   // Health check
   if (currentState.tick - currentState.lastHealthCheckTick >= config.healthCheckIntervalTicks) {
@@ -330,8 +330,8 @@ export async function startPrototypeRuntime(
   let modelState = bootOutcome.modelState;
   const adapters = bootOutcome.adapters;
   const adapterConfig = bootOutcome.adapterConfig;
-  let pressSequence = createPressSequenceState();
-  let emergencyState = createEmergencyButtonState();
+  const pressSequence = createPressSequenceState();
+  const emergencyState = createEmergencyButtonState();
   // Create the shared Guardian context (holds CognitiveGuardianEngine + CoordinationState)
   let guardianCtx = createEmbeddedGuardianContext();
   let shouldContinue = true;

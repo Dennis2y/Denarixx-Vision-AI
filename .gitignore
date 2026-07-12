@@ -60,3 +60,8 @@ out/
 next-env.d.ts
 *.db
 .config/
+
+# Local model-export environment and model binaries
+denarixx/.venv-model/
+denarixx/yolov8n.pt
+denarixx/models/*.onnx

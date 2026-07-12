@@ -86,7 +86,7 @@ export function assessAudioSystem(sensors: GlassesOSSensor[]): ComponentHealth {
   const activeMics = mics.filter(s => s.status === 'active');
   const issues: string[] = [];
 
-  let score = activeMics.length > 0 ? Math.round((activeMics.length / mics.length) * 100) : 0;
+  const score = activeMics.length > 0 ? Math.round((activeMics.length / mics.length) * 100) : 0;
   if (activeMics.length === 0) issues.push('No microphones active — voice input unavailable');
   else if (activeMics.length < mics.length) issues.push(`${mics.length - activeMics.length} microphone(s) not active`);
 
